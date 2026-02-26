@@ -628,9 +628,11 @@ function novamira_render_connect_page(): void
             <?php novamira_render_passwords_section($new_password); ?>
         </div>
 
+        <?php if ($new_password !== null || novamira_get_mcp_passwords() !== []): ?>
         <div class="novamira-connect-section">
             <?php novamira_render_config_section($rest_url, $username, $display_password, $new_password === null); ?>
         </div>
+        <?php endif; ?>
 
     </div>
 
