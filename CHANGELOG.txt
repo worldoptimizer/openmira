@@ -1,3 +1,6 @@
+v1.0.0-rc2 - 2026/02/26
+* Minor fixes.
+
 v1.0.0-rc1 - 2026/02/26
 * Release candidate for 1.0.
 * Eight abilities: execute-php, read-file, write-file, edit-file, delete-file, disable-file, enable-file, list-directory.
