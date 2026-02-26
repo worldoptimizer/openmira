@@ -1,4 +1,6 @@
-# Novamira
+<p align="center">
+  <img src=".github/banner.png" alt="Novamira" />
+</p>
 
 MCP server that gives AI agents full access to WordPress through PHP execution and filesystem operations. **For development and staging environments only.**
 
