@@ -162,14 +162,14 @@ if ($is_enabled) {
 
     add_action('admin_head', static function () {
         echo
-            '<style>#wp-admin-bar-novamira-mcp-status > .ab-item { background:#c00 !important; color:#fff !important; font-weight:600; }</style>'
+            '<style>#wp-admin-bar-novamira-mcp-status > .ab-item { background:#c00 !important; color:#fff !important; }</style>'
         ;
     });
 
     add_action('wp_head', static function () {
         if (is_admin_bar_showing()) {
             echo
-                '<style>#wp-admin-bar-novamira-mcp-status > .ab-item { background:#c00 !important; color:#fff !important; font-weight:600; }</style>'
+                '<style>#wp-admin-bar-novamira-mcp-status > .ab-item { background:#c00 !important; color:#fff !important; }</style>'
             ;
         }
     });
