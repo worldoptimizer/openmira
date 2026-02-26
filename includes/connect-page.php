@@ -227,6 +227,27 @@ function novamira_render_passwords_section(?string $new_password): void
 }
 
 /**
+ * Build the npx server config array shared across multiple MCP clients.
+ *
+ * @param string $rest_url        MCP REST endpoint URL.
+ * @param string $username        Current WordPress username.
+ * @param string $display_password Plaintext password or placeholder.
+ * @return array{command: string, args: list<string>, env: array<string, string>}
+ */
+function novamira_build_npx_server(string $rest_url, string $username, string $display_password): array
+{
+    return [
+        'command' => 'npx',
+        'args' => ['-y', '@automattic/mcp-wordpress-remote@latest'],
+        'env' => [
+            'WP_API_URL' => $rest_url,
+            'WP_API_USERNAME' => $username,
+            'WP_API_PASSWORD' => $display_password,
+        ],
+    ];
+}
+
+/**
  * Build all per-client, per-transport config entries.
  *
  * @param string $rest_url        MCP REST endpoint URL.
@@ -239,15 +260,7 @@ function novamira_build_configs(string $rest_url, string $username, string $disp
 {
     $opts = JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES;
 
-    $npx_server = [
-        'command' => 'npx',
-        'args' => ['-y', '@automattic/mcp-wordpress-remote@latest'],
-        'env' => [
-            'WP_API_URL' => $rest_url,
-            'WP_API_USERNAME' => $username,
-            'WP_API_PASSWORD' => $display_password,
-        ],
-    ];
+    $npx_server = novamira_build_npx_server($rest_url, $username, $display_password);
 
     $mcp_servers_json = (string) json_encode(['mcpServers' => [$mcp_name => $npx_server]], $opts);
 
@@ -349,14 +362,9 @@ function novamira_build_configs(string $rest_url, string $username, string $disp
  * @param string $rest_url        MCP REST endpoint URL.
  * @param string $username        Current WordPress username.
  * @param string $display_password Plaintext password or placeholder.
- * @param bool   $is_placeholder   Whether the password is a placeholder.
  */
-function novamira_render_config_section(
-    string $rest_url,
-    string $username,
-    string $display_password,
-    bool $is_placeholder,
-): void {
+function novamira_render_config_section(string $rest_url, string $username, string $display_password): void
+{
     $default_name = 'wordpress';
     $name_placeholder = '__NOVAMIRA_MCP_NAME__';
     $configs = novamira_build_configs($rest_url, $username, $display_password, $name_placeholder);
@@ -404,17 +412,6 @@ function novamira_render_config_section(
         >
     </p>
 
-    <?php if ($is_placeholder): ?>
-        <div class="notice notice-warning inline" style="margin:12px 0;">
-            <p>
-                <?php esc_html_e(
-                    'Replace YOUR-APP-PASSWORD in the config below with an application password from step 1.',
-                    domain: 'novamira',
-                ); ?>
-            </p>
-        </div>
-    <?php endif; ?>
-
     <div class="novamira-client-tabs">
         <?php foreach ($clients as $key => $label): ?>
             <button
@@ -443,7 +440,6 @@ function novamira_render_config_section(
     (function () {
         var configs = <?php echo $configs_json; ?>;
         var client = 'claude-code';
-        var isPlaceholder = <?php echo $is_placeholder ? 'true' : 'false'; ?>;
         var mcpName = '<?php echo esc_js($default_name); ?>';
         var namePlaceholder = '<?php echo esc_js($name_placeholder); ?>';
 
@@ -454,7 +450,7 @@ function novamira_render_config_section(
             var code = cfg.code.split(namePlaceholder).join(mcpName);
             var codeEl = document.getElementById('novamira-config-code');
             codeEl.textContent = code;
-            if (isPlaceholder) {
+            if (code.indexOf('YOUR-APP-PASSWORD') !== -1) {
                 codeEl.innerHTML = codeEl.innerHTML.replace(
                     /YOUR-APP-PASSWORD/g,
                     '<span class="novamira-placeholder">YOUR-APP-PASSWORD</span>'
@@ -637,7 +633,17 @@ function novamira_render_connect_page(): void
 
         <?php if ($new_password !== null || novamira_get_mcp_passwords() !== []): ?>
         <div class="novamira-connect-section">
-            <?php novamira_render_config_section($rest_url, $username, $display_password, $new_password === null); ?>
+            <?php if ($new_password === null): ?>
+                <div class="notice notice-warning inline" style="margin:12px 0;">
+                    <p>
+                        <?php esc_html_e(
+                            'Replace YOUR-APP-PASSWORD in the config below with an application password from step 1.',
+                            domain: 'novamira',
+                        ); ?>
+                    </p>
+                </div>
+            <?php endif; ?>
+            <?php novamira_render_config_section($rest_url, $username, $display_password); ?>
         </div>
         <?php endif; ?>
 
