@@ -379,7 +379,14 @@ function novamira_render_config_section(
     /* translators: step number and section title */
     esc_html_e('2. Add to Your MCP Client Config', domain: 'novamira');
     ?></h2>
-    <p><?php esc_html_e('Select your AI client to get the right config snippet.', domain: 'novamira'); ?></p>
+    <p>
+        <?php esc_html_e('Select your AI client to get the right config snippet.', domain: 'novamira'); ?>
+        <?php printf(
+            /* translators: %s: link to Node.js website */
+            esc_html__('Requires %s (provides npm/npx).', domain: 'novamira'),
+            '<a href="https://nodejs.org/" target="_blank" rel="noopener noreferrer">Node.js</a>',
+        ); ?>
+    </p>
 
     <p id="novamira-name-toggle" style="margin:12px 0;">
         <button type="button" class="button-link" onclick="novamiraShowNameInput()">
