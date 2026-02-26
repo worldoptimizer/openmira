@@ -174,7 +174,7 @@ function novamira_render_admin_header(): void
     <style>
         .novamira-admin-header-wrap {
             background: #000;
-            margin: -10px -20px 10px -22px;
+            margin: 0 -20px 10px -22px;
             padding: 20px;
         }
         .novamira-admin-header {
