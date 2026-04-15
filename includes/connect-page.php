@@ -518,6 +518,12 @@ function novamira_render_config_section(string $rest_url, string $username, stri
             oninput="novamiraUpdateName(this.value)"
         >
     </p>
+    <p id="novamira-name-warning" style="display:none; margin:0 0 12px; color:#b26200; font-size:13px;">
+        <?php esc_html_e(
+            'Long server names can cause some AI clients to reject tool calls. Keep the name under 25 characters for best compatibility.',
+            domain: 'novamira',
+        ); ?>
+    </p>
 
     <div class="novamira-client-tabs">
         <?php foreach ($clients as $key => $label): ?>
@@ -592,10 +598,17 @@ function novamira_render_config_section(string $rest_url, string $username, stri
             document.getElementById('novamira-name-toggle').style.display = 'none';
             document.getElementById('novamira-name-field').style.display = 'flex';
             document.getElementById('novamira-mcp-name').focus();
+            updateNameWarning(document.getElementById('novamira-mcp-name').value);
         };
+
+        function updateNameWarning(value) {
+            var warning = document.getElementById('novamira-name-warning');
+            warning.style.display = value.trim().length > 25 ? 'block' : 'none';
+        }
 
         window.novamiraUpdateName = function (value) {
             mcpName = value.trim() || '<?php echo esc_js($default_name); ?>';
+            updateNameWarning(value);
             render();
         };
 
@@ -724,10 +737,7 @@ function novamira_render_connect_page(): void
         <?php if ($new_password !== null): ?>
             <div class="notice notice-error" style="border-left-color:#d63638;">
                 <p style="font-size:14px;">
-                    <strong><?php esc_html_e(
-                        'Application password created — copy it now.',
-                        domain: 'novamira',
-                    ); ?></strong>
+                    <strong><?php esc_html_e('Application password created — copy it now.', domain: 'novamira'); ?></strong>
                     <?php esc_html_e('It will not be shown again after you leave this page.', domain: 'novamira'); ?>
                 </p>
             </div>
