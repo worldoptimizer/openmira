@@ -217,9 +217,7 @@ function novamira_render_sandbox_table(): void
                                 ? esc_html__('Enable', domain: 'novamira')
                                 : esc_html__('Disable', domain: 'novamira')
                         ; ?></a>
-                        <a href="<?php echo
-                            esc_url($delete_url)
-                        ; ?>" class="button button-small" onclick="return confirm('<?php echo
+                        <a href="<?php echo esc_url($delete_url); ?>" class="button button-small" onclick="return confirm('<?php echo
                             esc_js(__('Are you sure you want to delete this file?', domain: 'novamira'))
                         ; ?>');" style="color: #d63638; border-color: #d63638;"><?php esc_html_e(
                             'Delete',

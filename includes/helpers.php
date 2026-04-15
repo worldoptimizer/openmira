@@ -326,9 +326,7 @@ function novamira_render_admin_header(): void
     </style>
     <div class="novamira-admin-header-wrap">
         <div class="novamira-admin-header">
-            <img src="<?php echo
-                esc_url((string) NOVAMIRA_PLUGIN_URL . 'assets/novamira_logo.svg')
-            ; ?>" alt="Novamira" width="200" height="40">
+            <img src="<?php echo esc_url((string) NOVAMIRA_PLUGIN_URL . 'assets/novamira_logo.svg'); ?>" alt="Novamira" width="200" height="40">
         </div>
     </div>
     <?php }

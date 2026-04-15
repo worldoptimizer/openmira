@@ -96,7 +96,9 @@ function novamira_edit_replace_first(string $content, string $old_string, string
     $pos = strpos($content, $old_string);
 
     return (
-        substr($content, offset: 0, length: $pos) . $new_string . substr($content, offset: $pos + strlen($old_string))
+        substr($content, offset: 0, length: $pos)
+        . $new_string
+        . substr($content, offset: $pos + strlen($old_string))
     );
 }
 
