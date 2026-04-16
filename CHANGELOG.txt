@@ -1,4 +1,5 @@
 * Improvement: Discover-abilities tool now includes Novamira environment and usage instructions in its response, replacing the MCP initialize handshake's server description (which some clients ignore).
+* Improvement: Bump MCP Adapter to v0.5.0.
 
 v1.0.3 - 2026/04/02
 * Fix: Sandbox crash detection failed to detect fatal errors thrown indirectly from WordPress core or third-party code called by a sandbox file.
