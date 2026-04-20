@@ -1,7 +1,9 @@
+v1.1.0 - 2026/04/20
 * Fix: Recursive directory listings no longer fail when a folder contains a broken shortcut (symlink) — the listing now skips over it gracefully and includes the rest of the results.
 * Improvement: AI agents now reliably receive site context and usage instructions, even on MCP clients that previously ignored them during connection setup.
 * Improvement: Updated the bundled MCP Adapter library to version 0.5.0.
 * Fix: Ability failures are now surfaced as proper errors instead of being masked by a success response.
+* Minor Fixes
 
 v1.0.3 - 2026/04/02
 * Fix: Sandbox crash detection failed to detect fatal errors thrown indirectly from WordPress core or third-party code called by a sandbox file.
