@@ -179,6 +179,17 @@ if ($is_enabled) {
     // reasonable default — silently march past the error. Unwrap that shape
     // here so the adapter's backward-compat path (ToolsHandler) turns it into a
     // proper `isError: true` CallToolResult.
+    //
+    // ToolsHandler::create_error_result flattens the response to a bare
+    // `content: [text(error)], structuredContent: null, isError: true` — every
+    // sibling field on the ability's return is discarded. Validators attach
+    // structured repair hints (`invalid_values`, `unknown_properties`,
+    // `collision_paths`, `suggested_name`, `failed_paths`, `overwritten_paths`,
+    // `errors`, `schemas`, `style_errors`, `dynamic_tag_errors`, `dropped_keys`,
+    // `schema`, …) that the agent needs to self-correct without a
+    // round-trip — so embed whatever else the ability returned as a JSON
+    // suffix on the error message. The suffix rides inside the string and
+    // survives the downstream flatten.
     add_filter(
         'mcp_adapter_tool_call_result',
         static function (mixed $result, array $args, string $tool_name): mixed {
@@ -199,7 +210,17 @@ if ($is_enabled) {
             if (!is_string($error) || trim($error) === '') {
                 return $result;
             }
-            return ['success' => false, 'error' => $error];
+
+            $detail = $data;
+            unset($detail['success'], $detail['error']);
+            if ($detail !== []) {
+                $encoded = wp_json_encode($detail, JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE);
+                if (is_string($encoded)) {
+                    $data['error'] = $error . "\n\nStructured detail (JSON):\n" . $encoded;
+                }
+            }
+
+            return $data;
         },
         priority: 10,
         accepted_args: 3,

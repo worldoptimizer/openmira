@@ -1,3 +1,5 @@
+* Improvement: When an AI agent sends invalid input, the error message now includes the specific per-property details the agent needs to correct it — so the agent can fix its own mistake in one try instead of guessing or asking the user.
+
 v1.1.0 - 2026/04/20
 * Fix: Recursive directory listings no longer fail when a folder contains a broken shortcut (symlink) — the listing now skips over it gracefully and includes the rest of the results.
 * Improvement: AI agents now reliably receive site context and usage instructions, even on MCP clients that previously ignored them during connection setup.
