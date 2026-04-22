@@ -390,6 +390,26 @@ function novamira_build_opencode_json(
     ], $opts);
 }
 
+function novamira_build_codex_toml(
+    string $mcp_name,
+    string $rest_url,
+    string $username,
+    string $display_password,
+): string {
+    $esc = static fn(string $v): string => '"' . str_replace(['\\', '"'], ['\\\\', '\\"'], $v) . '"';
+
+    return implode("\n", [
+        '[mcp_servers.' . $mcp_name . ']',
+        'command = "npx"',
+        'args = ["-y", "@automattic/mcp-wordpress-remote@latest"]',
+        '',
+        '[mcp_servers.' . $mcp_name . '.env]',
+        'WP_API_URL = ' . $esc($rest_url),
+        'WP_API_USERNAME = ' . $esc($username),
+        'WP_API_PASSWORD = ' . $esc($display_password),
+    ]);
+}
+
 function novamira_build_claude_code_cmd(
     string $mcp_name,
     string $rest_url,
@@ -432,6 +452,15 @@ function novamira_build_configs(string $rest_url, string $username, string $disp
             'hint' => __('Run in your terminal.', domain: 'novamira'),
             'paths' => [],
             'isShell' => true,
+        ],
+        'codex' => [
+            'code' => novamira_build_codex_toml($mcp_name, $rest_url, $username, $display_password),
+            'hint' => sprintf($add_to, '<code>config.toml</code>'),
+            'paths' => [
+                'macOS / Linux' => '~/.codex/config.toml',
+                'Windows' => '%USERPROFILE%\\.codex\\config.toml',
+            ],
+            'isShell' => false,
         ],
         'zed' => [
             'code' => novamira_build_zed_json($mcp_name, $npx_server, $opts),
@@ -597,6 +626,7 @@ function novamira_render_config_section(string $rest_url, string $username, stri
     $clients = [
         'claude-code' => 'Claude Code',
         'claude-desktop' => 'Claude Desktop',
+        'codex' => 'Codex',
         'antigravity' => 'Antigravity',
         'cursor' => 'Cursor',
         'vscode' => 'VS Code',
