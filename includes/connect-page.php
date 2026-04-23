@@ -362,10 +362,14 @@ function novamira_build_npx_server(string $rest_url, string $username, string $d
 /** @param array<string, mixed> $npx_server */
 function novamira_build_zed_json(string $mcp_name, array $npx_server, int $opts): string
 {
-    return (string) json_encode(['context_servers' => [$mcp_name => array_merge([
-        'source' => 'custom',
-        'enabled' => true,
-    ], $npx_server)]], $opts);
+    return (string) json_encode([
+        'context_servers' => [
+            $mcp_name => array_merge([
+                'source' => 'custom',
+                'enabled' => true,
+            ], $npx_server),
+        ],
+    ], $opts);
 }
 
 function novamira_build_opencode_json(

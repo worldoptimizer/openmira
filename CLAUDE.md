@@ -9,9 +9,9 @@ Requires WordPress 6.9+. The MCP Adapter is bundled as a Composer dependency (`w
 All code changes must pass these before committing:
 
 ```sh
-mago format    # auto-format (print-width 120)
-mago lint      # lint checks
-mago analyze   # static analysis (PHP 8.0, includes WP stubs)
+./vendor/bin/mago format    # auto-format (print-width 120)
+./vendor/bin/mago lint      # lint checks
+./vendor/bin/mago analyze   # static analysis (PHP 8.0, includes WP stubs)
 ```
 
 Mago config is in `mago.toml`. Source paths: `includes/` and `novamira.php`. WordPress stubs are in `vendor/php-stubs/wordpress-stubs` and `stubs/`.
