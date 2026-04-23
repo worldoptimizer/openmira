@@ -50,6 +50,7 @@ require_once __DIR__ . '/includes/helpers.php';
 require_once __DIR__ . '/includes/updater.php';
 require_once __DIR__ . '/includes/admin-page.php';
 require_once __DIR__ . '/includes/connect-page.php';
+require_once __DIR__ . '/includes/pro-upsell.php';
 
 // Dependency check: Abilities API must be active.
 if (!class_exists('WP_Ability')) {

@@ -943,6 +943,8 @@ function novamira_render_connect_page(): void
             <?php endif; ?>
         <?php endif; ?>
 
+        <?php novamira_render_pro_upsell_card(); ?>
+
     </div>
 
     <script>
