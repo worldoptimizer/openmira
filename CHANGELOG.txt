@@ -1,5 +1,6 @@
 v1.1.2 - 2026/04/23
 * New: Configuration instructions for the OpenAI Codex CLI MCP client.
+* Fix: The Novamira ON admin bar indicator now only appears for administrators who can manage Novamira settings.
 * Minor Fixes
 
 v1.1.1 - 2026/04/22
