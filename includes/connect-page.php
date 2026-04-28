@@ -29,6 +29,10 @@ function novamira_handle_toggle_enabled(): ?bool
     check_admin_referer('novamira_settings');
 
     $enabled = ($_POST['novamira_ai_abilities_enabled'] ?? null) !== null;
+    if ($enabled && function_exists('novamira_get_mcp_dependency_error') && novamira_get_mcp_dependency_error() !== null) {
+        return false;
+    }
+
     update_option('novamira_ai_abilities_enabled', $enabled);
     if ($enabled) {
         update_option('novamira_ai_abilities_domain', (string) wp_parse_url(home_url(), PHP_URL_HOST));
@@ -40,7 +44,11 @@ function novamira_handle_toggle_enabled(): ?bool
 
 function novamira_render_enable_toggle(): void
 {
-    $enabled = novamira_is_enabled(); ?>
+    $enabled = novamira_is_enabled();
+    $dependency_error = function_exists('novamira_get_mcp_dependency_error') ? novamira_get_mcp_dependency_error() : null;
+    $toggle_disabled = $dependency_error !== null && !$enabled;
+    $submit_attributes = $toggle_disabled ? ['disabled' => 'disabled'] : [];
+    ?>
     <form method="post" action="" id="novamira-settings-form" style="margin-bottom: 24px;">
         <?php wp_nonce_field('novamira_settings'); ?>
         <table class="form-table">
@@ -51,7 +59,7 @@ function novamira_render_enable_toggle(): void
                         <input type="checkbox" name="novamira_ai_abilities_enabled" value="1" id="novamira-enable-checkbox" <?php checked(
                             checked: $enabled,
                             current: true,
-                        ); ?> />
+                        ); ?> <?php disabled($toggle_disabled); ?> />
                         <?php esc_html_e('Enable AI Abilities', domain: 'novamira'); ?>
                     </label>
                     <p class="description"><strong style="color:#d63638;"><?php esc_html_e(
@@ -72,7 +80,12 @@ function novamira_render_enable_toggle(): void
                 </td>
             </tr>
         </table>
-        <?php submit_button(text: __('Save Settings', domain: 'novamira'), type: 'primary', name: 'novamira_submit'); ?>
+        <?php submit_button(
+            text: __('Save Settings', domain: 'novamira'),
+            type: 'primary',
+            name: 'novamira_submit',
+            other_attributes: $submit_attributes,
+        ); ?>
     </form>
     <script>
     document.getElementById('novamira-settings-form').addEventListener('submit', function (e) {
@@ -784,6 +797,36 @@ function novamira_render_config_section(string $rest_url, string $username, stri
     <?php
 }
 
+function novamira_render_mcp_dependency_inline_notice(?WP_Error $dependency_error): void
+{
+    if ($dependency_error === null) {
+        return;
+    }
+
+    ?>
+    <div class="novamira-mcp-error-panel" role="alert">
+        <h2><?php esc_html_e('Novamira cannot expose MCP', domain: 'novamira'); ?></h2>
+        <p><?php echo esc_html($dependency_error->get_error_message()); ?></p>
+    </div>
+    <?php
+}
+
+function novamira_render_enable_prompt(?WP_Error $dependency_error): void
+{
+    if (novamira_is_enabled() || $dependency_error !== null) {
+        return;
+    }
+
+    ?>
+    <p style="color:#666; font-size:14px;">
+        <?php esc_html_e(
+            'Enable AI Abilities above to create application passwords and connect an MCP client.',
+            domain: 'novamira',
+        ); ?>
+    </p>
+    <?php
+}
+
 /**
  * Render the connect / setup dashboard page.
  */
@@ -793,10 +836,12 @@ function novamira_render_connect_page(): void
         return;
     }
 
+    $mcp_dependency_error = novamira_get_mcp_dependency_error();
     $toggle_saved = novamira_handle_toggle_enabled();
     $enabled = novamira_is_enabled();
+    $mcp_ready = $enabled && $mcp_dependency_error === null;
 
-    $password_result = novamira_handle_create_password();
+    $password_result = $mcp_ready ? novamira_handle_create_password() : null;
     $create_error = is_wp_error($password_result) ? $password_result : null;
     $new_password = is_string($password_result) ? $password_result : null;
 
@@ -869,11 +914,30 @@ function novamira_render_connect_page(): void
         .novamira-tab-content { border: 1px solid #c3c4c7; border-radius: 4px; }
         .novamira-revoke-btn { color: #d63638 !important; border-color: #d63638 !important; }
         .novamira-placeholder { background: #d63638; color: #fff; padding: 1px 4px; border-radius: 3px; }
+        .novamira-mcp-error-panel {
+            background: #fff;
+            border-left: 4px solid #d63638;
+            box-shadow: 0 1px 1px rgba(0, 0, 0, 0.04);
+            margin: 16px 0 24px;
+            padding: 12px 16px;
+        }
+        .novamira-mcp-error-panel h2 {
+            color: #1d2327;
+            font-size: 16px;
+            line-height: 1.4;
+            margin: 0 0 8px;
+        }
+        .novamira-mcp-error-panel p {
+            font-size: 14px;
+            margin: 0;
+        }
     </style>
 
     <?php novamira_render_admin_header(); ?>
     <div class="wrap">
         <h1><?php esc_html_e('Configuration', domain: 'novamira'); ?></h1>
+
+        <?php novamira_render_mcp_dependency_inline_notice($mcp_dependency_error); ?>
 
         <?php if ($toggle_saved === true): ?>
             <div class="notice notice-success is-dismissible"><p><?php
@@ -884,15 +948,8 @@ function novamira_render_connect_page(): void
 
         <?php novamira_render_enable_toggle(); ?>
 
-        <?php if (!$enabled): ?>
-            <p style="color:#666; font-size:14px;">
-                <?php esc_html_e(
-                    'Enable AI Abilities above to create application passwords and connect an MCP client.',
-                    domain: 'novamira',
-                ); ?>
-            </p>
-        <?php endif; ?>
-        <?php if ($enabled): ?>
+        <?php novamira_render_enable_prompt($mcp_dependency_error); ?>
+        <?php if ($mcp_ready): ?>
             <?php if ($create_error !== null): ?>
                 <div class="notice notice-error"><p><?php
 
