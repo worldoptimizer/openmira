@@ -957,21 +957,6 @@ function novamira_render_connect_page(): void
                 ?></p></div>
             <?php endif; ?>
 
-            <?php if ($new_password !== null): ?>
-                <div class="notice notice-error" style="border-left-color:#d63638;">
-                    <p style="font-size:14px;">
-                        <strong><?php esc_html_e(
-                            'Application password created — copy it now.',
-                            domain: 'novamira',
-                        ); ?></strong>
-                        <?php esc_html_e(
-                            'It will not be shown again after you leave this page.',
-                            domain: 'novamira',
-                        ); ?>
-                    </p>
-                </div>
-            <?php endif; ?>
-
             <?php if ($result_message !== null): ?>
                 <div class="notice notice-success is-dismissible"><p><?php
 
