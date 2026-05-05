@@ -29,7 +29,11 @@ function novamira_handle_toggle_enabled(): ?bool
     check_admin_referer('novamira_settings');
 
     $enabled = ($_POST['novamira_ai_abilities_enabled'] ?? null) !== null;
-    if ($enabled && function_exists('novamira_get_mcp_dependency_error') && novamira_get_mcp_dependency_error() !== null) {
+    if (
+        $enabled
+        && function_exists('novamira_get_mcp_dependency_error')
+        && novamira_get_mcp_dependency_error() !== null
+    ) {
         return false;
     }
 
@@ -45,7 +49,9 @@ function novamira_handle_toggle_enabled(): ?bool
 function novamira_render_enable_toggle(): void
 {
     $enabled = novamira_is_enabled();
-    $dependency_error = function_exists('novamira_get_mcp_dependency_error') ? novamira_get_mcp_dependency_error() : null;
+    $dependency_error = function_exists('novamira_get_mcp_dependency_error')
+        ? novamira_get_mcp_dependency_error()
+        : null;
     $toggle_disabled = $dependency_error !== null && !$enabled;
     $submit_attributes = $toggle_disabled ? ['disabled' => 'disabled'] : [];
     ?>

@@ -52,41 +52,32 @@ define(constant_name: 'NOVAMIRA_MCP_ADAPTER_CLASS', value: 'WP\\MCP\\Core\\McpAd
 function novamira_load_bundled_dependencies()
 {
     if (!file_exists(NOVAMIRA_VENDOR_AUTOLOAD)) {
-        return new WP_Error(
-            'novamira_missing_vendor',
-            __(
-                'Novamira is installed without its bundled vendor directory. This usually means the GitHub/source ZIP was installed instead of the Novamira release build ZIP. The MCP Adapter cannot load, so Novamira will not register an MCP endpoint. Install the Novamira release build ZIP before using Novamira.',
-                domain: 'novamira',
-            ),
-        );
+        return new WP_Error('novamira_missing_vendor', __(
+            'Novamira is installed without its bundled vendor directory. This usually means the GitHub/source ZIP was installed instead of the Novamira release build ZIP. The MCP Adapter cannot load, so Novamira will not register an MCP endpoint. Install the Novamira release build ZIP before using Novamira.',
+            domain: 'novamira',
+        ));
     }
 
     try {
         require_once NOVAMIRA_VENDOR_AUTOLOAD;
     } catch (\Throwable $e) {
-        return new WP_Error(
-            'novamira_autoload_failed',
-            sprintf(
-                __(
-                    'Novamira could not load its bundled Composer dependencies. The MCP Adapter cannot load, so Novamira will not register an MCP endpoint. Reinstall the Novamira release build ZIP. Error: %s',
-                    domain: 'novamira',
-                ),
-                $e->getMessage(),
+        return new WP_Error('novamira_autoload_failed', sprintf(
+            __(
+                'Novamira could not load its bundled Composer dependencies. The MCP Adapter cannot load, so Novamira will not register an MCP endpoint. Reinstall the Novamira release build ZIP. Error: %s',
+                domain: 'novamira',
             ),
-        );
+            $e->getMessage(),
+        ));
     }
 
     if (!class_exists(NOVAMIRA_MCP_ADAPTER_CLASS)) {
-        return new WP_Error(
-            'novamira_mcp_adapter_missing',
-            sprintf(
-                __(
-                    'Novamira loaded its Composer autoloader, but the MCP Adapter class (%s) is not available. Novamira will not register an MCP endpoint. Reinstall the Novamira release build ZIP.',
-                    domain: 'novamira',
-                ),
-                NOVAMIRA_MCP_ADAPTER_CLASS,
+        return new WP_Error('novamira_mcp_adapter_missing', sprintf(
+            __(
+                'Novamira loaded its Composer autoloader, but the MCP Adapter class (%s) is not available. Novamira will not register an MCP endpoint. Reinstall the Novamira release build ZIP.',
+                domain: 'novamira',
             ),
-        );
+            NOVAMIRA_MCP_ADAPTER_CLASS,
+        ));
     }
 
     return null;
@@ -164,11 +155,8 @@ function novamira_render_mcp_dependency_notice(): void
         return;
     }
 
-    if (
-        isset($_GET['page'])
-        && is_string($_GET['page'])
-        && in_array($_GET['page'], ['novamira-connect', 'novamira', 'novamira-sandbox'], strict: true)
-    ) {
+    $page = $_GET['page'] ?? null;
+    if (is_string($page) && in_array($page, ['novamira-connect', 'novamira', 'novamira-sandbox'], strict: true)) {
         return;
     }
 
@@ -177,13 +165,10 @@ function novamira_render_mcp_dependency_notice(): void
         return;
     }
 
-    wp_admin_notice(
-        esc_html($error->get_error_message()),
-        [
-            'type' => 'error',
-            'dismissible' => false,
-        ],
-    );
+    wp_admin_notice(esc_html($error->get_error_message()), [
+        'type' => 'error',
+        'dismissible' => false,
+    ]);
 }
 
 /**
@@ -206,11 +191,9 @@ function novamira_register_missing_mcp_endpoint(): void
 
     register_rest_route($route_namespace, $route, [
         'methods' => WP_REST_Server::ALLMETHODS,
-        'callback' => static fn() => new WP_Error(
-            'novamira_mcp_adapter_unavailable',
-            $error->get_error_message(),
-            ['status' => 500],
-        ),
+        'callback' => static fn() => new WP_Error('novamira_mcp_adapter_unavailable', $error->get_error_message(), [
+            'status' => 500,
+        ]),
         'permission_callback' => '__return_true',
     ]);
 }
@@ -228,16 +211,15 @@ function novamira_initialize_mcp_adapter(): bool
         \WP\MCP\Core\McpAdapter::instance();
         return true;
     } catch (\Throwable $e) {
-        novamira_set_mcp_dependency_error(new WP_Error(
-            'novamira_mcp_adapter_init_failed',
-            sprintf(
+        novamira_set_mcp_dependency_error(
+            new WP_Error('novamira_mcp_adapter_init_failed', sprintf(
                 __(
                     'Novamira found the MCP Adapter, but it failed during initialization. Novamira will not register an MCP endpoint. Error: %s',
                     domain: 'novamira',
                 ),
                 $e->getMessage(),
-            ),
-        ));
+            )),
+        );
         return false;
     }
 }
@@ -257,6 +239,7 @@ require_once __DIR__ . '/includes/updater.php';
 require_once __DIR__ . '/includes/admin-page.php';
 require_once __DIR__ . '/includes/connect-page.php';
 require_once __DIR__ . '/includes/pro-upsell.php';
+require_once __DIR__ . '/includes/upload-link.php';
 
 // Dependency check: Abilities API must be active.
 if (!class_exists('WP_Ability')) {
@@ -544,6 +527,7 @@ if ($is_enabled) {
         require_once $dir . 'write-file.php';
         require_once $dir . 'edit-file.php';
         require_once $dir . 'delete-file.php';
+        require_once $dir . 'create-upload-link.php';
         require_once $dir . 'disable-file.php';
         require_once $dir . 'enable-file.php';
         require_once $dir . 'list-directory.php';

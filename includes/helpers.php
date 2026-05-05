@@ -113,6 +113,64 @@ function novamira_validate_sandbox_path($resolved)
 }
 
 /**
+ * Check that a resolved PHP file path is inside the sandbox directory.
+ *
+ * @param string $resolved Absolute resolved path to the PHP file.
+ * @return bool|WP_Error True if valid, WP_Error if outside sandbox.
+ */
+function novamira_check_php_sandbox(string $resolved): bool|WP_Error
+{
+    $sandbox_dir = novamira_get_sandbox_dir(ensure_exists: false);
+    $real_sandbox = realpath($sandbox_dir);
+    $parent_dir = realpath(dirname($resolved));
+
+    // If sandbox doesn't exist yet, compare normalized paths.
+    if ($real_sandbox === false) {
+        $real_sandbox = rtrim(string: $sandbox_dir, characters: '/\\');
+    }
+    if ($parent_dir === false) {
+        $parent_dir = dirname($resolved);
+    }
+
+    if (!str_starts_with($parent_dir, $real_sandbox)) {
+        return new WP_Error('php_sandbox_required', sprintf(
+            'PHP files can only be written to the sandbox directory: %s. Use a path like "wp-content/novamira-sandbox/my-feature.php".',
+            $sandbox_dir,
+        ));
+    }
+
+    return true;
+}
+
+/**
+ * Create a parent directory and return the list of directories that were created.
+ *
+ * @param string $parent_dir Absolute path to the parent directory.
+ * @return array|WP_Error List of directories created, or WP_Error on failure.
+ */
+function novamira_ensure_parent_dir(string $parent_dir): array|WP_Error
+{
+    if (is_dir($parent_dir)) {
+        return [];
+    }
+
+    // Collect which directories will be created.
+    $dir_to_check = $parent_dir;
+    $dirs_to_create = [];
+    while (!is_dir($dir_to_check)) {
+        $dirs_to_create[] = $dir_to_check;
+        $dir_to_check = dirname($dir_to_check);
+    }
+    $directories_created = array_reverse($dirs_to_create);
+
+    if (!mkdir(directory: $parent_dir, permissions: 0755, recursive: true)) {
+        return new WP_Error('mkdir_failed', sprintf('Failed to create directory: %s', $parent_dir));
+    }
+
+    return $directories_created;
+}
+
+/**
  * Check whether a filename ends with the ".disabled" suffix.
  *
  * @param string $path File path to check.
