@@ -19,7 +19,14 @@ if (!defined('ABSPATH')) {
     exit();
 }
 
-wp_unregister_ability('mcp-adapter/discover-abilities');
+$existing_ability = wp_get_ability('mcp-adapter/discover-abilities');
+if ($existing_ability !== null) {
+    wp_unregister_ability('mcp-adapter/discover-abilities');
+}
+
+if (wp_get_ability('mcp-adapter/discover-abilities') !== null) {
+    return;
+}
 
 wp_register_ability('mcp-adapter/discover-abilities', [
     'label' => __('Discover Abilities', domain: 'novamira'),
