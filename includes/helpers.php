@@ -203,6 +203,257 @@ function novamira_is_enabled()
 }
 
 /**
+ * Heuristic: does this site look like a production environment?
+ *
+ * Default to production when in doubt — the warning's job is to prompt the user to think
+ * twice before enabling AI Abilities on something live. Hostnames and `wp_get_environment_type()`
+ * results that strongly suggest staging/dev/local short-circuit to `false`.
+ *
+ * @return bool
+ */
+function novamira_looks_like_production(): bool
+{
+    $host = (string) wp_parse_url(home_url(), PHP_URL_HOST);
+    $host = strtolower($host);
+    if ($host === '') {
+        return true;
+    }
+
+    // Strip an eventual port suffix.
+    $colon_pos = strpos(haystack: $host, needle: ':');
+    if ($colon_pos !== false) {
+        $host = substr($host, offset: 0, length: $colon_pos);
+    }
+
+    // No dot at all (e.g. "localhost", "wordpress") → not production.
+    if (!str_contains($host, '.')) {
+        return false;
+    }
+
+    // IP literals → not production.
+    if (filter_var($host, FILTER_VALIDATE_IP) !== false) {
+        return false;
+    }
+
+    $segments = explode('.', $host);
+    $tld = (string) end($segments);
+
+    /** @var array<int, string> $non_prod_tlds */
+    $non_prod_tlds = apply_filters('novamira_non_production_tlds', [
+        'dev',
+        'local',
+        'staging',
+        'test',
+        'example',
+        'invalid',
+        'backup',
+    ]);
+
+    if (in_array($tld, $non_prod_tlds, strict: true)) {
+        return false;
+    }
+
+    /** @var array<int, string> $non_prod_subdomain_segments */
+    $non_prod_subdomain_segments = apply_filters('novamira_non_production_subdomain_segments', [
+        'dev',
+        'local',
+        'test',
+        'staging',
+        'stage',
+        'stg',
+        'wp-staging',
+        'wpstaging',
+        'development',
+        'wptest',
+        'backup',
+        'preview',
+        'preprod',
+        'qa',
+        'uat',
+        'sandbox',
+        'demo',
+        'beta',
+        'mirror',
+    ]);
+
+    foreach ($segments as $segment) {
+        if (in_array($segment, $non_prod_subdomain_segments, strict: true)) {
+            return false;
+        }
+    }
+
+    /** @var array<int, string> $non_prod_keyword_regex_words */
+    $non_prod_keyword_regex_words = apply_filters('novamira_non_production_keyword_words', [
+        'test',
+        'dev',
+        'staging',
+        'stage',
+        'stg',
+        'local',
+        'wp-staging',
+        'development',
+        'wptest',
+        'backup',
+        'preview',
+        'preprod',
+        'sandbox',
+        'demo',
+        'beta',
+    ]);
+
+    $alternation = implode('|', array_map(static fn(string $w): string => preg_quote(
+        str: $w,
+        delimiter: '/',
+    ), $non_prod_keyword_regex_words));
+    if ($alternation !== '' && preg_match('/\b(?:' . $alternation . ')[0-9]*\b/i', $host) === 1) {
+        return false;
+    }
+
+    /** @var array<int, string> $non_prod_host_suffixes */
+    $non_prod_host_suffixes = apply_filters('novamira_production_host_patterns', [
+        'wpengine.com',
+        'wpenginepowered.com',
+        'sg-host.com',
+        'cloudwaysapps.com',
+        'closte.com',
+        'runcloud.link',
+        'kinsta.cloud',
+        'pantheonsite.io',
+        'onrocket.site',
+        'pressdns.com',
+        'bigscoots-staging.com',
+        'flywheelstaging.com',
+        'wpstage.net',
+        'wpserveur.net',
+        'myftpupload.com',
+        'myraidbox.de',
+        'elementor.cloud',
+        'lndo.site',
+        'ddev.site',
+    ]);
+
+    foreach ($non_prod_host_suffixes as $suffix) {
+        if ($suffix !== '' && str_ends_with($host, $suffix)) {
+            return false;
+        }
+    }
+
+    if (function_exists('wp_get_environment_type')) {
+        $env = wp_get_environment_type();
+        if (in_array($env, ['staging', 'development', 'local'], strict: true)) {
+            return false;
+        }
+    }
+
+    return true;
+}
+
+/**
+ * Heuristic: is this site likely served over plain HTTP on a local hostname?
+ *
+ * WordPress core blocks Application Passwords on HTTP unless `WP_ENVIRONMENT_TYPE` is set to
+ * 'local'. Detecting this lets us surface the exact wp-config snippet the user needs.
+ */
+function novamira_likely_local_http(): bool
+{
+    $home = home_url();
+    if (!str_starts_with(strtolower($home), 'http://')) {
+        return false;
+    }
+
+    $host = strtolower((string) wp_parse_url($home, PHP_URL_HOST));
+    if ($host === '') {
+        return false;
+    }
+
+    /** @var array<int, string> $local_substrings */
+    $local_substrings = apply_filters('novamira_self_signed_host_patterns', [
+        '.local',
+        '.test',
+        'localhost',
+        '.lndo.site',
+        '.ddev.site',
+    ]);
+
+    foreach ($local_substrings as $needle) {
+        if ($needle !== '' && str_contains($host, $needle)) {
+            return true;
+        }
+    }
+
+    return false;
+}
+
+/**
+ * Heuristic: is this site likely served from an HTTPS endpoint with a self-signed certificate?
+ *
+ * LocalWP, DDEV, Lando and similar dev tools commonly serve `.local` / `.test` hostnames over
+ * HTTPS with self-signed certs. The @automattic/mcp-wordpress-remote npx package rejects such
+ * certs by default, so the MCP client cannot connect unless `NODE_TLS_REJECT_UNAUTHORIZED=0` is
+ * passed in the env. Detecting this lets us inject that env var and warn the user about the trade.
+ */
+function novamira_likely_self_signed_https(): bool
+{
+    $home = home_url();
+    if (!str_starts_with(strtolower($home), 'https://')) {
+        return false;
+    }
+
+    $host = strtolower((string) wp_parse_url($home, PHP_URL_HOST));
+    if ($host === '') {
+        return false;
+    }
+
+    /** @var array<int, string> $self_signed_substrings */
+    $self_signed_substrings = apply_filters('novamira_self_signed_host_patterns', [
+        '.local',
+        '.test',
+        'localhost',
+        '.lndo.site',
+        '.ddev.site',
+    ]);
+
+    foreach ($self_signed_substrings as $needle) {
+        if ($needle !== '' && str_contains($host, $needle)) {
+            return true;
+        }
+    }
+
+    return false;
+}
+
+/**
+ * Has the current user dismissed the production warning?
+ */
+function novamira_production_warning_dismissed(): bool
+{
+    /** @var mixed $value */
+    $value = get_user_meta(get_current_user_id(), key: 'novamira_production_warning_dismissed', single: true);
+    return $value === '1' || $value === 1 || $value === true;
+}
+
+/**
+ * Handle the dismiss-production-warning form submission. Called from admin_init.
+ */
+function novamira_handle_dismiss_production_warning(): void
+{
+    if (($_POST['novamira_dismiss_production_warning'] ?? null) === null) {
+        return;
+    }
+
+    if (!current_user_can('manage_options')) {
+        return;
+    }
+
+    check_admin_referer('novamira_dismiss_production_warning');
+
+    update_user_meta(get_current_user_id(), meta_key: 'novamira_production_warning_dismissed', meta_value: '1');
+
+    wp_safe_redirect(admin_url('admin.php?page=novamira-connect'));
+    exit();
+}
+
+/**
  * Check whether abilities are nominally enabled but inactive due to a domain mismatch.
  *
  * @return bool

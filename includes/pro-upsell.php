@@ -122,7 +122,10 @@ add_action('admin_init', static function (): void {
 /**
  * Render the one-time welcome notice until dismissed.
  */
-add_action('admin_notices', static function (): void {
+add_action('admin_notices', 'novamira_render_pro_welcome_notice');
+
+function novamira_render_pro_welcome_notice(): void
+{
     if (!current_user_can('manage_options')) {
         return;
     }
@@ -181,7 +184,7 @@ add_action('admin_notices', static function (): void {
     })();
     </script>
     <?php
-});
+}
 
 /**
  * Render a Pro upsell card — called from the Connect page.

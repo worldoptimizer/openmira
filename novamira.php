@@ -9,7 +9,7 @@ declare(strict_types=1);
  * Plugin Name: Novamira
  * Plugin URI: https://www.novamira.ai
  * Description: MCP server that gives AI agents full access to WordPress through PHP execution and filesystem operations. For development and staging environments only.
- * Version: 1.1.2
+ * Version: 1.2.0
  * Requires at least: 6.9
  * Requires PHP: 8.0
  * Author: Dynamic.ooo
@@ -37,7 +37,7 @@ if (!defined('ABSPATH')) {
     exit();
 }
 
-define(constant_name: 'NOVAMIRA_VERSION', value: '1.1.2');
+define(constant_name: 'NOVAMIRA_VERSION', value: '1.2.0');
 define(constant_name: 'NOVAMIRA_MAX_EXECUTION_TIME', value: 30);
 define('NOVAMIRA_PLUGIN_URL', plugin_dir_url(__FILE__));
 define('NOVAMIRA_SANDBOX_DIR', WP_CONTENT_DIR . '/novamira-sandbox/');
@@ -182,20 +182,20 @@ function novamira_register_missing_mcp_endpoint(): void
     }
 
     $routes = rest_get_server()->get_routes();
-    if (array_key_exists('/mcp/mcp-adapter-default-server', $routes)) {
-        return;
-    }
-
-    $route_namespace = 'mcp';
-    $route = '/mcp-adapter-default-server';
-
-    register_rest_route($route_namespace, $route, [
-        'methods' => WP_REST_Server::ALLMETHODS,
-        'callback' => static fn() => new WP_Error('novamira_mcp_adapter_unavailable', $error->get_error_message(), [
-            'status' => 500,
-        ]),
-        'permission_callback' => '__return_true',
+    $callback = static fn() => new WP_Error('novamira_mcp_adapter_unavailable', $error->get_error_message(), [
+        'status' => 500,
     ]);
+
+    foreach (['novamira', 'mcp-adapter-default-server'] as $route_slug) {
+        if (array_key_exists('/mcp/' . $route_slug, $routes)) {
+            continue;
+        }
+        register_rest_route('mcp', '/' . $route_slug, [
+            'methods' => WP_REST_Server::ALLMETHODS,
+            'callback' => $callback,
+            'permission_callback' => '__return_true',
+        ]);
+    }
 }
 
 /**
@@ -272,6 +272,25 @@ add_filter(
     accepted_args: 2,
 );
 
+// Suppress noisy admin notices on the Configuration page via CSS: hide notices that are not
+// emitted by Novamira or Novamira Pro. Cheap and side-effect free, unlike iterating $wp_filter
+// with Reflection (which causes memory blow-ups when Query Monitor captures every remove_action).
+add_action('admin_head', static function () {
+    if (($_GET['page'] ?? null) !== 'novamira-connect') {
+        return;
+    }
+    ?>
+    <style id="novamira-suppress-foreign-notices">
+        .wrap > .notice:not(.novamira-pro-notice):not(.novamira-keep),
+        #wpbody-content > .notice:not(.novamira-pro-notice):not(.novamira-keep),
+        #wpbody-content > .updated:not(.novamira-keep),
+        #wpbody-content > .error:not(.novamira-keep) {
+            display: none !important;
+        }
+    </style>
+    <?php
+});
+
 // Handle form actions early (before headers are sent) for PRG redirect.
 add_action('admin_init', static function () {
     $page = $_GET['page'] ?? null;
@@ -280,6 +299,7 @@ add_action('admin_init', static function () {
     }
     if ($page === 'novamira-connect') {
         novamira_handle_revoke_password();
+        novamira_handle_dismiss_production_warning();
     }
 });
 
@@ -353,14 +373,85 @@ if ($is_enabled) {
         if (!is_array($config)) {
             return $config;
         }
+        $config['server_id'] = 'novamira';
+        $config['server_route'] = 'novamira';
         $config['server_name'] = 'Novamira';
         return $config;
     });
+
+    // Register a legacy alias server at the old slug so configs that still point at
+    // /wp-json/mcp/mcp-adapter-default-server keep working after the rename.
+    add_action('mcp_adapter_init', callback: 'novamira_register_legacy_mcp_server', priority: 20);
 
     // Initialize bundled MCP Adapter — its default server exposes our abilities automatically.
     if (!novamira_initialize_mcp_adapter()) {
         $is_enabled = false;
     }
+}
+
+/**
+ * Register a legacy alias of the canonical Novamira MCP server at the pre-rename slug.
+ *
+ * The canonical server is registered under `/mcp/novamira`. Older client configs may still
+ * point at `/mcp/mcp-adapter-default-server` from before the rename — this alias keeps them
+ * working with identical behavior (same tools, same auto-discovered resources and prompts).
+ */
+function novamira_register_legacy_mcp_server(mixed $adapter): void
+{
+    if (!$adapter instanceof \WP\MCP\Core\McpAdapter) {
+        return;
+    }
+
+    if ($adapter->get_server('novamira') === null) {
+        return;
+    }
+
+    $adapter->create_server(
+        'mcp-adapter-default-server',
+        'mcp',
+        'mcp-adapter-default-server',
+        'Novamira (legacy alias)',
+        'Legacy alias for the Novamira MCP server. New client configurations should use /wp-json/mcp/novamira.',
+        'v1.0.0',
+        [\WP\MCP\Transport\HttpTransport::class],
+        \WP\MCP\Infrastructure\ErrorHandling\ErrorLogMcpErrorHandler::class,
+        \WP\MCP\Infrastructure\Observability\NullMcpObservabilityHandler::class,
+        [
+            'mcp-adapter/discover-abilities',
+            'mcp-adapter/get-ability-info',
+            'mcp-adapter/execute-ability',
+        ],
+        novamira_discover_public_abilities('resource'),
+        novamira_discover_public_abilities('prompt'),
+    );
+}
+
+/**
+ * Replicate DefaultServerFactory::discover_abilities_by_type for reuse on the legacy alias.
+ *
+ * @return list<string>
+ */
+function novamira_discover_public_abilities(string $type): array
+{
+    if (!function_exists('wp_get_abilities')) {
+        return [];
+    }
+
+    $abilities = wp_get_abilities();
+    $filtered = [];
+    foreach ($abilities as $ability) {
+        $meta = $ability->get_meta();
+        if (!($meta['mcp']['public'] ?? false)) {
+            continue;
+        }
+        $ability_type = (string) ($meta['mcp']['type'] ?? 'tool');
+        if ($ability_type !== $type) {
+            continue;
+        }
+        $filtered[] = $ability->get_name();
+    }
+
+    return $filtered;
 }
 
 if ($is_enabled) {

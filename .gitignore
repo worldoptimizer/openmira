@@ -6,6 +6,9 @@
 .idea
 .vscode
 
+# Claude Code / Superpowers artifacts (specs, plans, etc.)
+/docs/superpowers
+
 # Claude Code sandbox artifacts
 .bash_profile
 .bashrc

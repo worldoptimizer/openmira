@@ -1,4 +1,14 @@
+v1.2.0 - 2026/05/13
 * New: AI agents can now upload plugin, theme, media, and other large files more easily.
+* New: A "paste to your AI agent" block on the Configuration page lets you copy a short description and have your AI client set up the MCP server connection for you, instead of editing JSON config files by hand.
+* New: The Configuration page warns when AI Abilities are turned on against what looks like a production site, with a reminder to keep them on staging or development copies only.
+* New: If you already have a saved application password (for example from a password manager), a new field on the Configuration page lets you paste it directly and skip generating a new one.
+* New: Local HTTPS development sites with self-signed certificates are detected automatically, and the generated client configs include the small flag Node.js needs to accept the certificate.
+* New: When the site is on a local hostname over HTTP, the Application Passwords notice now explains the exact line to add to wp-config.php to enable them.
+* Tweak: Redesigned the Configuration page into three numbered cards (Enable AI Abilities, Application Password, Connect Your AI Client) so the setup reads top to bottom.
+* Tweak: The MCP endpoint is now /wp-json/mcp/novamira. The previous /wp-json/mcp/mcp-adapter-default-server keeps working for AI clients that are already connected, no action needed.
+* Tweak: Per-client JSON snippets are collapsed by default behind a "Need the JSON config for a specific client?" link, since most setups now use the paste-to-agent block.
+* Minor Fixes
 
 v1.1.2 - 2026/04/23
 * New: Configuration instructions for the OpenAI Codex CLI MCP client.

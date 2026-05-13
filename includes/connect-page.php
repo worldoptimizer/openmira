@@ -54,42 +54,39 @@ function novamira_render_enable_toggle(): void
         : null;
     $toggle_disabled = $dependency_error !== null && !$enabled;
     $submit_attributes = $toggle_disabled ? ['disabled' => 'disabled'] : [];
+    $looks_production = novamira_looks_like_production();
     ?>
-    <form method="post" action="" id="novamira-settings-form" style="margin-bottom: 24px;">
+    <h2 class="novamira-step-heading">
+        <span class="novamira-step-badge">1</span>
+        <?php esc_html_e('Enable AI Abilities', domain: 'novamira'); ?>
+    </h2>
+    <form method="post" action="" id="novamira-settings-form" style="margin: 16px 0 0;">
         <?php wp_nonce_field('novamira_settings'); ?>
-        <table class="form-table">
-            <tr>
-                <th scope="row"><?php esc_html_e('AI Abilities', domain: 'novamira'); ?></th>
-                <td>
-                    <label>
-                        <input type="checkbox" name="novamira_ai_abilities_enabled" value="1" id="novamira-enable-checkbox" <?php checked(
-                            checked: $enabled,
-                            current: true,
-                        ); ?> <?php disabled($toggle_disabled); ?> />
-                        <?php esc_html_e('Enable AI Abilities', domain: 'novamira'); ?>
-                    </label>
-                    <p class="description"><strong style="color:#d63638;"><?php esc_html_e(
-                        'Security note:',
-                        domain: 'novamira',
-                    ); ?></strong> <?php esc_html_e(
-                        'When enabled, AI agents can execute PHP code and perform filesystem operations on this site. For development and staging environments only — always keep backups.',
-                        domain: 'novamira',
-                    ); ?></p>
-                    <p class="description"><?php esc_html_e(
-                        'For best results, use with capable, instruction-following AI models. Configure your MCP client to require approval before executing tools, and review each tool call before allowing it to run.',
-                        domain: 'novamira',
-                    ); ?></p>
-                    <p class="description"><?php esc_html_e(
-                        'You choose the AI model, you provide the API key, you review the output. We provide the plugin.',
-                        domain: 'novamira',
-                    ); ?></p>
-                </td>
-            </tr>
-        </table>
+        <label style="display:flex; align-items:center; gap:10px; font-size:16px; font-weight:600; color:#1d2327; margin:0 0 12px;">
+            <input type="checkbox" name="novamira_ai_abilities_enabled" value="1" id="novamira-enable-checkbox" style="width:18px; height:18px;" <?php checked(
+                checked: $enabled,
+                current: true,
+            ); ?> <?php disabled($toggle_disabled); ?> />
+            <span><?php esc_html_e('Turn on AI Abilities for this site', domain: 'novamira'); ?></span>
+        </label>
+        <p class="description" style="margin:0 0 8px;">
+            <strong style="color:#d63638;"><?php esc_html_e('Security note:', domain: 'novamira'); ?></strong>
+            <?php esc_html_e(
+                'When enabled, AI agents can execute PHP code and perform filesystem operations on this site. For development and staging environments only. Always keep backups.',
+                domain: 'novamira',
+            ); ?>
+        </p>
+        <p class="description" style="margin:0 0 14px;">
+            <?php esc_html_e(
+                'Use Novamira with a capable AI model and set your client to ask for confirmation before every action. Read what the agent is about to do before approving.',
+                domain: 'novamira',
+            ); ?>
+        </p>
         <?php submit_button(
             text: __('Save Settings', domain: 'novamira'),
             type: 'primary',
             name: 'novamira_submit',
+            wrap: false,
             other_attributes: $submit_attributes,
         ); ?>
     </form>
@@ -97,18 +94,118 @@ function novamira_render_enable_toggle(): void
     document.getElementById('novamira-settings-form').addEventListener('submit', function (e) {
         var cb = document.getElementById('novamira-enable-checkbox');
         if (cb.checked && !cb.defaultChecked) {
-            if (!confirm('<?php echo
-                esc_js(__(
-                    'AI agents will be able to execute PHP code and access the filesystem. For development and staging environments only. Continue?',
-                    domain: 'novamira',
-                ))
-            ; ?>')) {
+            var msg = <?php echo
+                wp_json_encode(
+                    $looks_production
+                        ? __(
+                            'This looks like a production site. The plugin can stay installed here, but AI Abilities are not meant for live sites: enable them only on a staging or development copy. Continue anyway?',
+                            domain: 'novamira',
+                        )
+                        : __(
+                            'AI agents will be able to execute PHP code and access the filesystem. For development and staging environments only. Continue?',
+                            domain: 'novamira',
+                        ),
+                )
+            ; ?>;
+            if (!confirm(msg)) {
                 e.preventDefault();
             }
         }
     });
     </script>
     <?php
+}
+
+/**
+ * Render the production-site warning banner above the enable toggle.
+ *
+ * Shown only when: AI Abilities are currently enabled AND the site looks like production
+ * AND the current user has not dismissed the warning.
+ */
+function novamira_render_production_warning(): void
+{
+    if (!novamira_is_enabled()) {
+        return;
+    }
+    if (!novamira_looks_like_production()) {
+        return;
+    }
+    if (novamira_production_warning_dismissed()) {
+        return;
+    }
+    ?>
+    <div class="novamira-production-warning" role="alert">
+        <p>
+            <strong><?php esc_html_e('⚠️ This looks like a production site.', domain: 'novamira'); ?></strong>
+            <?php esc_html_e(
+                'Keeping the plugin installed here is fine, but AI Abilities should only be active on a staging or development copy. Make your changes there, then deploy the result the regular way. On production, keep AI Abilities off.',
+                domain: 'novamira',
+            ); ?>
+        </p>
+        <form method="post" style="margin:0;">
+            <?php wp_nonce_field('novamira_dismiss_production_warning'); ?>
+            <button type="submit" name="novamira_dismiss_production_warning" class="button button-small">
+                <?php esc_html_e('Dismiss', domain: 'novamira'); ?>
+            </button>
+        </form>
+    </div>
+    <?php
+}
+
+/**
+ * Compute the default MCP server name from the current site host.
+ *
+ * Capped at 25 characters total ("novamira-" prefix + up to 16 chars of host slug)
+ * because some MCP clients reject longer server names. Used as the placeholder default
+ * when no name has been saved by the user.
+ */
+function novamira_get_mcp_server_name_default(): string
+{
+    /** @var string $site_host */
+    $site_host = wp_parse_url(home_url(), PHP_URL_HOST) ?? 'wordpress';
+    $site_slug = (string) preg_replace(pattern: '/^www\./', replacement: '', subject: $site_host);
+    $site_slug = (string) preg_replace(pattern: '/[^a-z0-9-]+/', replacement: '-', subject: strtolower($site_slug));
+    $site_slug = trim($site_slug, characters: '-');
+    $site_slug = substr($site_slug, offset: 0, length: 16);
+    $site_slug = rtrim($site_slug, characters: '-');
+    return 'novamira-' . $site_slug;
+}
+
+/**
+ * Handle the "use existing password" form submission.
+ *
+ * Returns the pasted plaintext value (only for the current request — never persisted),
+ * a WP_Error on validation failure, or null when no submission.
+ *
+ * @return string|WP_Error|null
+ */
+function novamira_handle_use_existing_password()
+{
+    if (($_POST['novamira_use_existing_password'] ?? null) === null) {
+        return null;
+    }
+
+    if (!current_user_can('manage_options')) {
+        return new WP_Error('forbidden', __(
+            'You do not have permission to use application passwords.',
+            domain: 'novamira',
+        ));
+    }
+
+    check_admin_referer('novamira_use_existing_password');
+
+    $raw = $_POST['novamira_existing_password'] ?? '';
+    $value = is_string($raw) ? trim($raw) : '';
+    if ($value === '') {
+        return new WP_Error('empty', __('Paste the application password value before submitting.', domain: 'novamira'));
+    }
+    if (strlen($value) < 16) {
+        return new WP_Error('too_short', __(
+            'That does not look like an application password. WordPress application passwords are at least 16 characters long.',
+            domain: 'novamira',
+        ));
+    }
+    return $value;
 }
 
 /**
@@ -140,7 +237,7 @@ function novamira_handle_create_password()
     $user_id = get_current_user_id();
     $raw_name = $_POST['novamira_password_name'] ?? '';
     $input_name = is_string($raw_name) ? trim($raw_name) : '';
-    $app_name = $input_name !== '' ? 'Novamira — ' . $input_name : 'Novamira';
+    $app_name = $input_name !== '' ? 'Novamira: ' . $input_name : 'Novamira';
 
     // Avoid duplicate names — append a counter if one already exists.
     $existing = WP_Application_Passwords::get_user_application_passwords($user_id);
@@ -239,122 +336,272 @@ function novamira_render_password_row(array $pw, string $dt_format): void
     <?php
 }
 
-function novamira_render_passwords_section(?string $new_password): void
-{
-    $mcp_passwords = novamira_get_mcp_passwords();
-    $dt_format = novamira_get_datetime_format('Y-m-d H:i');
+/**
+ * Render the "Step 2 — Application Password" card.
+ *
+ * Just the generate button (with a collapsible name input) and a success notice after generation.
+ * The list of existing passwords lives in the separate manage section at the bottom of the page.
+ */
+function novamira_render_password_step(
+    ?string $new_password,
+    ?string $existing_password = null,
+    ?WP_Error $existing_error = null,
+): void {
     $pw_status = novamira_app_passwords_status();
+    $has_existing = novamira_get_mcp_passwords() !== [];
+    $existing_section_open = $existing_password !== null || $existing_error !== null;
     ?>
-    <h2><?php
-
-    /* translators: step number and section title */
-    esc_html_e('1. Application Passwords', domain: 'novamira');
-    ?></h2>
-    <p>
+    <h2 class="novamira-step-heading">
+        <span class="novamira-step-badge">2</span>
+        <?php esc_html_e('Application Password', domain: 'novamira'); ?>
+    </h2>
+    <p class="description" style="margin:0 0 12px;">
         <?php esc_html_e(
-            'Application passwords let AI clients authenticate with WordPress over HTTP without using your main password.',
+            'Generate an application password that your AI client will use to authenticate with WordPress. The password is embedded into the connection text in step 3.',
             domain: 'novamira',
         ); ?>
     </p>
+
     <?php if (!$pw_status['available']): ?>
-        <div class="notice notice-error inline" style="margin:12px 0;">
+        <div class="notice notice-error inline" style="margin:12px 0 16px;">
             <p><strong><?php echo esc_html($pw_status['message']); ?></strong></p>
+            <?php if ($pw_status['reason'] === 'unsupported' && novamira_likely_local_http()): ?>
+                <p style="margin:8px 0 0;">
+                    <?php esc_html_e(
+                        'This site is on a local hostname over HTTP. Add this line to your wp-config.php (above the "/* That\'s all" comment), then reload:',
+                        domain: 'novamira',
+                    ); ?>
+                </p>
+                <pre style="background:#f6f7f7; border:1px solid #c3c4c7; padding:8px 12px; margin:6px 0 0; font-size:13px; border-radius:3px;">define('WP_ENVIRONMENT_TYPE', 'local');</pre>
+            <?php endif; ?>
         </div>
     <?php endif; ?>
 
     <?php if ($new_password !== null): ?>
-        <div class="novamira-password-box">
-            <span class="novamira-password-value" id="novamira-pw-value"><?php echo esc_html($new_password); ?></span>
-            <button type="button" class="button" onclick="novamiraCopy('novamira-pw-value', this)"><?php esc_html_e(
-                'Copy',
+        <div class="notice notice-success inline" style="margin:8px 0 16px;">
+            <p style="margin:0 0 8px;"><?php esc_html_e(
+                'Application password generated. It is now embedded in the connection text in step 3. Save it somewhere safe: it will not be shown in full again.',
                 domain: 'novamira',
-            ); ?></button>
-            <span style="color:#d63638; font-size:14px; font-weight:600;"><?php esc_html_e(
-                'Save this somewhere safe — it will not be shown again.',
+            ); ?></p>
+            <div style="display:flex; align-items:center; gap:8px; flex-wrap:wrap;">
+                <code id="novamira-new-pw-value" style="font-size:14px; font-weight:600; padding:6px 10px; background:#fff; border:1px solid #c3c4c7; border-radius:3px;"><?php echo
+                    esc_html($new_password)
+                ; ?></code>
+                <button type="button" class="button button-small" onclick="novamiraCopy('novamira-new-pw-value', this)">
+                    <?php esc_html_e('Copy password only', domain: 'novamira'); ?>
+                </button>
+            </div>
+        </div>
+    <?php elseif ($existing_password !== null): ?>
+        <div class="notice notice-success inline" style="margin:8px 0 16px;">
+            <p style="margin:0;"><?php esc_html_e(
+                'Password accepted. It is now embedded in the connection text in step 3.',
                 domain: 'novamira',
-            ); ?></span>
+            ); ?></p>
         </div>
     <?php endif; ?>
 
-    <form method="post" style="margin-bottom: 16px; display:flex; align-items:center; gap:8px;">
+    <form method="post" style="margin: 0;">
         <?php wp_nonce_field('novamira_create_password'); ?>
-        <input
-            type="text"
-            name="novamira_password_name"
-            placeholder="<?php esc_attr_e('Name (optional, defaults to Novamira)', domain: 'novamira'); ?>"
-            style="width:300px;"
-            class="regular-text"
-            maxlength="70"
-        />
+        <?php if (!$has_existing): ?>
+            <p style="margin:0 0 10px;">
+                <button
+                    type="button"
+                    class="button-link"
+                    id="novamira-password-name-toggle"
+                    aria-expanded="false"
+                    aria-controls="novamira-password-name-field"
+                    onclick="novamiraTogglePasswordName(this)"
+                ><?php esc_html_e('Customize password name (optional)', domain: 'novamira'); ?></button>
+            </p>
+        <?php endif; ?>
+        <div
+            id="novamira-password-name-field"
+            <?php echo $has_existing ? '' : 'hidden'; ?>
+            style="margin: 0 0 12px; <?php echo $has_existing ? '' : 'display:none;'; ?>"
+        >
+            <label for="novamira-password-name" style="display:block; margin-bottom:4px;">
+                <strong><?php esc_html_e('Name', domain: 'novamira'); ?></strong>
+            </label>
+            <input
+                type="text"
+                id="novamira-password-name"
+                name="novamira_password_name"
+                placeholder="<?php esc_attr_e('e.g. Cursor on laptop, Claude Desktop', domain: 'novamira'); ?>"
+                style="width:300px;"
+                class="regular-text"
+                maxlength="70"
+            />
+            <p class="description" style="margin-top:4px;">
+                <?php esc_html_e(
+                    'A label to identify this credential later. Leave blank to use "Novamira".',
+                    domain: 'novamira',
+                ); ?>
+            </p>
+        </div>
         <button
             type="submit"
             name="novamira_create_password"
             class="button button-primary"
             <?php echo !$pw_status['available'] ? 'disabled' : ''; ?>>
-            <?php esc_html_e('Create New Application Password', domain: 'novamira'); ?>
+            <?php echo
+                $has_existing
+                    ? esc_html__('Generate another application password', domain: 'novamira')
+                    : esc_html__('Generate application password', domain: 'novamira')
+            ; ?>
         </button>
     </form>
 
-    <?php if ($mcp_passwords !== []): ?>
-        <?php
-
-        $count = count($mcp_passwords);
-        /* translators: %d: number of existing application passwords */
-        $show_label = sprintf(
-            _n(single: 'Show existing (%d)', plural: 'Show existing (%d)', number: $count, domain: 'novamira'),
-            $count,
-        );
-        $hide_label = __('Hide existing', domain: 'novamira');
-        ?>
-        <p style="margin:8px 0 12px;">
-            <button
-                type="button"
-                class="button-link"
-                id="novamira-passwords-toggle"
-                aria-expanded="false"
-                aria-controls="novamira-passwords-list"
-                data-show-label="<?php echo esc_attr($show_label); ?>"
-                data-hide-label="<?php echo esc_attr($hide_label); ?>"
-                onclick="novamiraTogglePasswords(this)"
-            ><?php echo esc_html($show_label); ?></button>
-        </p>
-        <table id="novamira-passwords-list" class="wp-list-table widefat fixed striped" style="display:none;" hidden>
-            <thead>
-                <tr>
-                    <th><?php esc_html_e('Name', domain: 'novamira'); ?></th>
-                    <th style="width:180px;"><?php esc_html_e('Created', domain: 'novamira'); ?></th>
-                    <th style="width:180px;"><?php esc_html_e('Last Used', domain: 'novamira'); ?></th>
-                    <th style="width:80px;"><?php esc_html_e('Actions', domain: 'novamira'); ?></th>
-                </tr>
-            </thead>
-            <tbody>
-                <?php foreach ($mcp_passwords as $pw): ?>
-                    <?php novamira_render_password_row($pw, $dt_format); ?>
-                <?php endforeach; ?>
-            </tbody>
-        </table>
-        <script>
-        window.novamiraTogglePasswords = function (btn) {
-            var list = document.getElementById('novamira-passwords-list');
-            var expanded = btn.getAttribute('aria-expanded') === 'true';
-            if (expanded) {
-                list.style.display = 'none';
-                list.hidden = true;
-                btn.setAttribute('aria-expanded', 'false');
-                btn.textContent = btn.getAttribute('data-show-label');
-            } else {
-                list.style.display = '';
-                list.hidden = false;
-                btn.setAttribute('aria-expanded', 'true');
-                btn.textContent = btn.getAttribute('data-hide-label');
-            }
-        };
-        </script>
-    <?php endif; ?>
-    <?php if ($mcp_passwords === []): ?>
-        <p style="color:#888;"><?php esc_html_e('No Novamira application passwords yet.', domain: 'novamira'); ?></p>
-    <?php endif; ?>
+    <p style="margin:14px 0 4px;">
+        <button
+            type="button"
+            class="button-link"
+            id="novamira-use-existing-toggle"
+            aria-expanded="<?php echo $existing_section_open ? 'true' : 'false'; ?>"
+            aria-controls="novamira-use-existing-field"
+            onclick="novamiraToggleUseExisting(this)"
+        ><?php esc_html_e('I already have an application password', domain: 'novamira'); ?></button>
+    </p>
+    <div
+        id="novamira-use-existing-field"
+        <?php echo $existing_section_open ? '' : 'hidden'; ?>
+        style="margin:6px 0 0; <?php echo $existing_section_open ? '' : 'display:none;'; ?>"
+    >
+        <form method="post" style="margin:0;">
+            <?php wp_nonce_field('novamira_use_existing_password'); ?>
+            <label for="novamira-existing-password" style="display:block; margin-bottom:4px;">
+                <strong><?php esc_html_e('Paste the password value', domain: 'novamira'); ?></strong>
+            </label>
+            <input
+                type="text"
+                id="novamira-existing-password"
+                name="novamira_existing_password"
+                placeholder="xxxx xxxx xxxx xxxx xxxx xxxx"
+                style="width:340px; font-family:monospace;"
+                class="regular-text"
+                autocomplete="off"
+            />
+            <button type="submit" name="novamira_use_existing_password" class="button">
+                <?php esc_html_e('Use this password', domain: 'novamira'); ?>
+            </button>
+            <?php if ($existing_error !== null): ?>
+                <div class="notice notice-error inline" style="margin:8px 0 0;">
+                    <p style="margin:0;"><?php echo esc_html($existing_error->get_error_message()); ?></p>
+                </div>
+            <?php endif; ?>
+            <p class="description" style="margin-top:4px;">
+                <?php esc_html_e(
+                    'For reusing an application password you already saved (e.g. from a password manager). It is used only to fill the connection text and never stored on this site.',
+                    domain: 'novamira',
+                ); ?>
+            </p>
+        </form>
+    </div>
     <?php
+}
+
+/**
+ * Render the "Manage existing application passwords" collapsible section at the bottom of the page.
+ *
+ * Only meaningful when at least one Novamira-tagged password exists. Hosts the list with revoke
+ * buttons. Used both when AI Abilities are enabled (revoke + create lives elsewhere) and when
+ * disabled (revoke only).
+ */
+function novamira_render_manage_passwords_section(bool $allow_create_hint = true): void
+{
+    $mcp_passwords = novamira_get_mcp_passwords();
+    if ($mcp_passwords === []) {
+        return;
+    }
+
+    $dt_format = novamira_get_datetime_format('Y-m-d H:i');
+    $count = count($mcp_passwords);
+    $open_by_default = $count <= 3;
+    /* translators: %d: count of existing application passwords */
+    $summary = sprintf(
+        _n(
+            single: 'Manage existing application password (%d)',
+            plural: 'Manage existing application passwords (%d)',
+            number: $count,
+            domain: 'novamira',
+        ),
+        $count,
+    );
+    ?>
+    <details class="novamira-manage-passwords"<?php echo $open_by_default ? ' open' : ''; ?>>
+        <summary class="novamira-manage-passwords-summary">
+            <?php echo esc_html($summary); ?>
+        </summary>
+        <div class="novamira-manage-passwords-body">
+            <?php if (!$allow_create_hint): ?>
+                <p class="description" style="margin:0 0 12px;">
+                    <?php esc_html_e(
+                        'AI Abilities are disabled. These credentials remain valid for WordPress authentication, but the Novamira MCP endpoint will reject requests until AI Abilities are turned back on.',
+                        domain: 'novamira',
+                    ); ?>
+                </p>
+            <?php endif; ?>
+            <table class="wp-list-table widefat fixed striped">
+                <thead>
+                    <tr>
+                        <th><?php esc_html_e('Name', domain: 'novamira'); ?></th>
+                        <th style="width:180px;"><?php esc_html_e('Created', domain: 'novamira'); ?></th>
+                        <th style="width:180px;"><?php esc_html_e('Last Used', domain: 'novamira'); ?></th>
+                        <th style="width:80px;"><?php esc_html_e('Actions', domain: 'novamira'); ?></th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <?php foreach ($mcp_passwords as $pw): ?>
+                        <?php novamira_render_password_row($pw, $dt_format); ?>
+                    <?php endforeach; ?>
+                </tbody>
+            </table>
+        </div>
+    </details>
+    <?php
+}
+
+/**
+ * Build the paste-to-agent paragraph displayed in Option A of the Connect section.
+ *
+ * Returns a plain-text block the user can copy and paste into their AI client / agent.
+ * The MCP server name uses the same placeholder as the JSON snippets so the live JS
+ * preview can swap it in without re-rendering the page.
+ */
+function novamira_build_paste_to_agent_paragraph(
+    string $rest_url,
+    string $username,
+    string $display_password,
+    string $name_placeholder = '__NOVAMIRA_MCP_NAME__',
+    ?string $password_placeholder = null,
+): string {
+    $password_value = $password_placeholder ?? $display_password;
+    $lines = [
+        'I want to add this WordPress site as an MCP server to this AI client.',
+        '',
+        'Connection details:',
+        '- Server URL: ' . $rest_url,
+        '- Username: ' . $username,
+        '- Application password: ' . $password_value,
+        '- Server name to use in the config: ' . $name_placeholder,
+        '- Transport: @automattic/mcp-wordpress-remote via npx',
+        '',
+        'Setup rules:',
+        '- Pass credentials ONLY as env vars: WP_API_URL, WP_API_USERNAME, WP_API_PASSWORD. Do NOT use CLI flags like --url or --password (the package ignores them).',
+        '- args array must be exactly ["-y", "@automattic/mcp-wordpress-remote@latest"].'
+            . (
+                novamira_likely_self_signed_https()
+                    ? "\n"
+                    . '- Also set NODE_TLS_REJECT_UNAUTHORIZED="0" in env (this site uses a local self-signed TLS certificate).'
+                    : ''
+            ),
+        '',
+        'Don\'t ask me to confirm choices already specified above. After writing the config, restart or reload the MCP session (most clients require it), then verify by listing the server\'s tools. If it fails, show me the stderr from the npx process before proposing changes.',
+        '',
+        'If you cannot modify the config of this AI client from here, tell me to expand "Need the JSON config for a specific client?" on the Novamira Configuration page and copy the snippet manually.',
+    ];
+
+    return implode("\n", $lines);
 }
 
 /**
@@ -367,14 +614,18 @@ function novamira_render_passwords_section(?string $new_password): void
  */
 function novamira_build_npx_server(string $rest_url, string $username, string $display_password): array
 {
+    $env = [
+        'WP_API_URL' => $rest_url,
+        'WP_API_USERNAME' => $username,
+        'WP_API_PASSWORD' => $display_password,
+    ];
+    if (novamira_likely_self_signed_https()) {
+        $env['NODE_TLS_REJECT_UNAUTHORIZED'] = '0';
+    }
     return [
         'command' => 'npx',
         'args' => ['-y', '@automattic/mcp-wordpress-remote@latest'],
-        'env' => [
-            'WP_API_URL' => $rest_url,
-            'WP_API_USERNAME' => $username,
-            'WP_API_PASSWORD' => $display_password,
-        ],
+        'env' => $env,
     ];
 }
 
@@ -398,16 +649,20 @@ function novamira_build_opencode_json(
     string $display_password,
     int $opts,
 ): string {
+    $environment = [
+        'WP_API_URL' => $rest_url,
+        'WP_API_USERNAME' => $username,
+        'WP_API_PASSWORD' => $display_password,
+    ];
+    if (novamira_likely_self_signed_https()) {
+        $environment['NODE_TLS_REJECT_UNAUTHORIZED'] = '0';
+    }
     return (string) json_encode([
         'mcp' => [
             $mcp_name => [
                 'type' => 'local',
                 'command' => ['npx', '-y', '@automattic/mcp-wordpress-remote@latest'],
-                'environment' => [
-                    'WP_API_URL' => $rest_url,
-                    'WP_API_USERNAME' => $username,
-                    'WP_API_PASSWORD' => $display_password,
-                ],
+                'environment' => $environment,
             ],
         ],
     ], $opts);
@@ -421,7 +676,7 @@ function novamira_build_codex_toml(
 ): string {
     $esc = static fn(string $v): string => '"' . str_replace(['\\', '"'], ['\\\\', '\\"'], $v) . '"';
 
-    return implode("\n", [
+    $lines = [
         '[mcp_servers.' . $mcp_name . ']',
         'command = "npx"',
         'args = ["-y", "@automattic/mcp-wordpress-remote@latest"]',
@@ -430,7 +685,11 @@ function novamira_build_codex_toml(
         'WP_API_URL = ' . $esc($rest_url),
         'WP_API_USERNAME = ' . $esc($username),
         'WP_API_PASSWORD = ' . $esc($display_password),
-    ]);
+    ];
+    if (novamira_likely_self_signed_https()) {
+        $lines[] = 'NODE_TLS_REJECT_UNAUTHORIZED = "0"';
+    }
+    return implode("\n", $lines);
 }
 
 function novamira_build_claude_code_cmd(
@@ -441,13 +700,18 @@ function novamira_build_claude_code_cmd(
 ): string {
     $sq = static fn(string $v): string => "'" . str_replace(search: "'", replace: "'\\''", subject: $v) . "'";
 
-    return implode(" \\\n  ", [
+    $parts = [
         'claude mcp add ' . $sq($mcp_name),
         '--env WP_API_URL=' . $sq($rest_url),
         '--env WP_API_USERNAME=' . $sq($username),
         '--env WP_API_PASSWORD=' . $sq($display_password),
-        '-- npx -y @automattic/mcp-wordpress-remote@latest',
-    ]);
+    ];
+    if (novamira_likely_self_signed_https()) {
+        $parts[] = '--env NODE_TLS_REJECT_UNAUTHORIZED=' . $sq('0');
+    }
+    $parts[] = '-- npx -y @automattic/mcp-wordpress-remote@latest';
+
+    return implode(" \\\n  ", $parts);
 }
 
 /**
@@ -637,12 +901,10 @@ function novamira_build_standard_configs(string $mcp_servers_json, string $vscod
  */
 function novamira_render_config_section(string $rest_url, string $username, string $display_password): void
 {
-    /** @var string $site_host */
-    $site_host = wp_parse_url(home_url(), PHP_URL_HOST) ?? 'wordpress';
-    $site_slug = (string) preg_replace(pattern: '/^www\./', replacement: '', subject: $site_host);
-    $site_slug = (string) preg_replace(pattern: '/[^a-z0-9-]+/', replacement: '-', subject: strtolower($site_slug));
-    $default_name = 'novamira-' . trim($site_slug, characters: '-');
+    $default_name = novamira_get_mcp_server_name_default();
     $name_placeholder = '__NOVAMIRA_MCP_NAME__';
+    $pw_slot = '__NOVAMIRA_PW_SLOT__';
+    $password_is_placeholder = hash_equals('YOUR-APP-PASSWORD', $display_password);
     $configs = novamira_build_configs($rest_url, $username, $display_password, $name_placeholder);
     $configs_json = (string) wp_json_encode($configs);
 
@@ -665,44 +927,134 @@ function novamira_render_config_section(string $rest_url, string $username, stri
     ];
 
     $copied_label = esc_js(__('Copied!', domain: 'novamira'));
+    $paste_paragraph_initial = novamira_build_paste_to_agent_paragraph(
+        $rest_url,
+        $username,
+        $display_password,
+        $default_name,
+    );
+    $paste_paragraph_template = novamira_build_paste_to_agent_paragraph(
+        $rest_url,
+        $username,
+        $display_password,
+        $name_placeholder,
+        $pw_slot,
+    );
     ?>
-    <h2><?php
-
-    /* translators: step number and section title */
-    esc_html_e('2. Connect Your AI Client', domain: 'novamira');
-    ?></h2>
-    <p>
-        <?php esc_html_e('Select your AI client to get the connection instructions.', domain: 'novamira'); ?>
-        <?php printf(
-            /* translators: %s: link to Node.js website */
-            esc_html__('Requires %s (provides npm/npx).', domain: 'novamira'),
-            '<a href="https://nodejs.org/" target="_blank" rel="noopener noreferrer">Node.js</a>',
-        ); ?>
+    <h2 class="novamira-step-heading">
+        <span class="novamira-step-badge">3</span>
+        <?php esc_html_e('Connect Your AI Client', domain: 'novamira'); ?>
+    </h2>
+    <p style="margin:0 0 12px;">
+        <?php esc_html_e('Copy the block below and paste it to your AI agent.', domain: 'novamira'); ?>
     </p>
 
-    <p id="novamira-name-toggle" style="margin:12px 0;">
-        <button type="button" class="button-link" onclick="novamiraShowNameInput()">
-            <?php esc_html_e('Customize server name', domain: 'novamira'); ?>
-        </button>
+    <?php if (novamira_likely_self_signed_https()): ?>
+        <div class="notice notice-warning inline" style="margin:0 0 12px;">
+            <p style="margin:0;">
+                <strong><?php esc_html_e('Local HTTPS detected.', domain: 'novamira'); ?></strong>
+                <?php esc_html_e(
+                    'Your site uses HTTPS with a certificate that is not publicly trusted (normal for local development). The snippets below include a small flag so your AI client can connect anyway.',
+                    domain: 'novamira',
+                ); ?>
+            </p>
+        </div>
+    <?php endif; ?>
+
+    <div class="novamira-paste-block">
+        <div class="novamira-paste-content" id="novamira-paste-content">
+            <pre id="novamira-paste-text"><?php echo esc_html($paste_paragraph_initial); ?></pre>
+        </div>
+        <div class="novamira-paste-actions">
+            <button
+                type="button"
+                class="button-link"
+                id="novamira-paste-expand"
+                onclick="novamiraToggleExpandPaste(this)"
+                aria-expanded="false"
+                aria-controls="novamira-paste-content"
+            ><?php esc_html_e('Show full text', domain: 'novamira'); ?></button>
+            <button
+                type="button"
+                class="button button-primary"
+                onclick="novamiraCopyPaste(this)"
+            ><?php esc_html_e('Copy prompt', domain: 'novamira'); ?></button>
+            <p
+                id="novamira-paste-copied-warning"
+                style="display:none; margin:0; color:#d63638; font-size:13px; font-weight:600;"
+            >
+                <?php esc_html_e(
+                    "Don't share with anyone: it contains an application password that grants access to this WordPress site.",
+                    domain: 'novamira',
+                ); ?>
+            </p>
+        </div>
+    </div>
+
+    <p style="margin:14px 0 4px;">
+        <button
+            type="button"
+            class="button-link"
+            id="novamira-server-name-toggle"
+            aria-expanded="false"
+            aria-controls="novamira-server-name-field"
+            onclick="novamiraToggleServerName(this)"
+        ><?php esc_html_e('Change server name (optional)', domain: 'novamira'); ?></button>
     </p>
-    <p id="novamira-name-field" style="display:none; align-items:center; gap:8px; margin:12px 0;">
-        <label for="novamira-mcp-name"><strong><?php esc_html_e('Server name', domain: 'novamira'); ?></strong></label>
+    <div id="novamira-server-name-field" hidden style="display:none; margin: 6px 0 14px;">
         <input
             type="text"
             id="novamira-mcp-name"
             value="<?php echo esc_attr($default_name); ?>"
-            style="width:200px;"
+            placeholder="<?php echo esc_attr($default_name); ?>"
+            maxlength="25"
+            style="width:220px;"
             oninput="novamiraUpdateName(this.value)"
         >
-    </p>
-    <p id="novamira-name-warning" style="display:none; margin:0 0 12px; color:#b26200; font-size:13px;">
-        <?php esc_html_e(
-            'Long server names can cause some AI clients to reject tool calls. Keep the name under 25 characters for best compatibility.',
-            domain: 'novamira',
-        ); ?>
+        <p class="description" style="margin:6px 0 0;">
+            <?php esc_html_e(
+                'Editing here updates the connection text and JSON snippets below in real time. Each AI client config keeps its own name once saved on its side.',
+                domain: 'novamira',
+            ); ?>
+        </p>
+        <div id="novamira-name-warning" class="notice notice-warning inline" style="display:none; margin:8px 0 0;">
+            <p style="margin:0;">
+                <?php esc_html_e(
+                    'Maximum 25 characters reached. Required for client compatibility.',
+                    domain: 'novamira',
+                ); ?>
+            </p>
+        </div>
+        <div id="novamira-name-suggestion" class="notice notice-warning inline" style="display:none; margin:8px 0 0;">
+            <p style="margin:0;">
+                <?php esc_html_e(
+                    'Tip: keep "novamira" in the name so you (and your AI agent) can tell this MCP server apart from others.',
+                    domain: 'novamira',
+                ); ?>
+            </p>
+        </div>
+    </div>
+
+    <p style="margin:6px 0 4px;">
+        <button
+            type="button"
+            class="button-link"
+            id="novamira-manual-toggle"
+            aria-expanded="false"
+            aria-controls="novamira-manual-config"
+            onclick="novamiraToggleManualConfig(this)"
+        ><?php esc_html_e('Need the JSON config for a specific client?', domain: 'novamira'); ?></button>
     </p>
 
-    <div class="novamira-client-tabs">
+    <div id="novamira-manual-config" hidden style="display:none;">
+        <p class="description" style="margin:0 0 12px;">
+            <?php esc_html_e(
+                'Select your AI client to copy the JSON snippet for its config file.',
+                domain: 'novamira',
+            ); ?>
+        </p>
+
+        <div class="novamira-client-tabs">
         <?php foreach ($clients as $key => $label): ?>
             <button
                 type="button"
@@ -725,15 +1077,47 @@ function novamira_render_config_section(string $rest_url, string $username, stri
             <div id="novamira-config-paths" style="padding: 0 16px 10px;"></div>
         </div>
     </div>
+    </div>
 
     <script>
     (function () {
         var configs = <?php echo $configs_json; ?>;
         var client = 'claude-code';
-        var mcpName = '<?php echo esc_js($default_name); ?>';
-        var namePlaceholder = '<?php echo esc_js($name_placeholder); ?>';
+        var defaultName = <?php echo wp_json_encode($default_name); ?>;
+        var pasteTemplate = <?php echo wp_json_encode($paste_paragraph_template); ?>;
+        var mcpName = <?php echo wp_json_encode($default_name); ?>;
+        var namePlaceholder = <?php echo wp_json_encode($name_placeholder); ?>;
+        var passwordSentinel = <?php echo wp_json_encode($pw_slot); ?>;
+        var passwordValue = <?php echo wp_json_encode($display_password); ?>;
+        var passwordIsPlaceholder = <?php echo wp_json_encode($password_is_placeholder); ?>;
+
+        function renderPaste() {
+            var text = pasteTemplate.split(namePlaceholder).join(mcpName);
+            var container = document.getElementById('novamira-paste-text');
+            container.textContent = '';
+            var idx = text.indexOf(passwordSentinel);
+            if (idx === -1) {
+                container.appendChild(document.createTextNode(text));
+                return;
+            }
+            container.appendChild(document.createTextNode(text.substring(0, idx)));
+            if (passwordIsPlaceholder) {
+                var span = document.createElement('span');
+                span.className = 'novamira-placeholder';
+                span.textContent = 'YOUR-APP-PASSWORD';
+                container.appendChild(span);
+            } else {
+                container.appendChild(document.createTextNode(passwordValue));
+            }
+            container.appendChild(document.createTextNode(text.substring(idx + passwordSentinel.length)));
+        }
 
         function render() {
+            renderConfig();
+            renderPaste();
+        }
+
+        function renderConfig() {
             var cfg = configs[client];
             if (!cfg) { return; }
 
@@ -768,25 +1152,80 @@ function novamira_render_config_section(string $rest_url, string $username, stri
             client = key;
             document.querySelectorAll('.novamira-client-tab').forEach(function (t) { t.classList.remove('active'); });
             btn.classList.add('active');
-            render();
-        };
-
-        window.novamiraShowNameInput = function () {
-            document.getElementById('novamira-name-toggle').style.display = 'none';
-            document.getElementById('novamira-name-field').style.display = 'flex';
-            document.getElementById('novamira-mcp-name').focus();
-            updateNameWarning(document.getElementById('novamira-mcp-name').value);
+            renderConfig();
         };
 
         function updateNameWarning(value) {
             var warning = document.getElementById('novamira-name-warning');
-            warning.style.display = value.trim().length > 25 ? 'block' : 'none';
+            warning.style.display = value.length >= 25 ? 'block' : 'none';
+
+            var suggestion = document.getElementById('novamira-name-suggestion');
+            var trimmed = value.trim();
+            var missingNovamira = trimmed.length > 0 && trimmed.toLowerCase().indexOf('novamira') === -1;
+            suggestion.style.display = missingNovamira ? 'block' : 'none';
         }
 
         window.novamiraUpdateName = function (value) {
-            mcpName = value.trim() || '<?php echo esc_js($default_name); ?>';
+            mcpName = value.trim() || defaultName;
             updateNameWarning(value);
             render();
+        };
+
+        window.novamiraToggleServerName = function (btn) {
+            var field = document.getElementById('novamira-server-name-field');
+            var expanded = btn.getAttribute('aria-expanded') === 'true';
+            if (expanded) {
+                field.style.display = 'none';
+                field.hidden = true;
+                btn.setAttribute('aria-expanded', 'false');
+            } else {
+                field.style.display = 'block';
+                field.hidden = false;
+                btn.setAttribute('aria-expanded', 'true');
+                var input = document.getElementById('novamira-mcp-name');
+                if (input) { input.focus(); }
+            }
+        };
+
+        window.novamiraToggleManualConfig = function (btn) {
+            var panel = document.getElementById('novamira-manual-config');
+            var expanded = btn.getAttribute('aria-expanded') === 'true';
+            if (expanded) {
+                panel.style.display = 'none';
+                panel.hidden = true;
+                btn.setAttribute('aria-expanded', 'false');
+            } else {
+                panel.style.display = '';
+                panel.hidden = false;
+                btn.setAttribute('aria-expanded', 'true');
+            }
+        };
+
+        window.novamiraToggleExpandPaste = function (btn) {
+            var content = document.getElementById('novamira-paste-content');
+            var expanded = btn.getAttribute('aria-expanded') === 'true';
+            if (expanded) {
+                content.classList.remove('is-expanded');
+                btn.setAttribute('aria-expanded', 'false');
+                btn.textContent = <?php echo wp_json_encode(__('Show full text', domain: 'novamira')); ?>;
+            } else {
+                content.classList.add('is-expanded');
+                btn.setAttribute('aria-expanded', 'true');
+                btn.textContent = <?php echo wp_json_encode(__('Show less', domain: 'novamira')); ?>;
+            }
+        };
+
+        window.novamiraCopyPaste = function (btn) {
+            navigator.clipboard.writeText(document.getElementById('novamira-paste-text').textContent).then(function () {
+                var orig = btn.textContent;
+                btn.textContent = '<?php echo $copied_label; ?>';
+                var warning = document.getElementById('novamira-paste-copied-warning');
+                if (warning) { warning.style.display = 'block'; }
+                setTimeout(function () {
+                    btn.textContent = orig;
+                    if (warning) { warning.style.display = 'none'; }
+                }, 4000);
+            });
         };
 
         window.novamiraCopyConfig = function (btn) {
@@ -836,6 +1275,7 @@ function novamira_render_enable_prompt(?WP_Error $dependency_error): void
 /**
  * Render the connect / setup dashboard page.
  */
+// @mago-expect lint:cyclomatic-complexity
 function novamira_render_connect_page(): void
 {
     if (!current_user_can('manage_options')) {
@@ -851,6 +1291,10 @@ function novamira_render_connect_page(): void
     $create_error = is_wp_error($password_result) ? $password_result : null;
     $new_password = is_string($password_result) ? $password_result : null;
 
+    $existing_result = $mcp_ready ? novamira_handle_use_existing_password() : null;
+    $existing_error = is_wp_error($existing_result) ? $existing_result : null;
+    $existing_password = is_string($existing_result) ? $existing_result : null;
+
     $result_message = match ($_GET['novamira_result'] ?? null) {
         'revoked' => __('Application password revoked.', domain: 'novamira'),
         default => null,
@@ -858,15 +1302,43 @@ function novamira_render_connect_page(): void
 
     $current_user = wp_get_current_user();
     $username = $current_user->user_login;
-    $rest_url = rest_url('mcp/mcp-adapter-default-server');
-    $display_password = $new_password ?? 'YOUR-APP-PASSWORD';
+    $rest_url = rest_url('mcp/novamira');
+    $display_password = $new_password ?? $existing_password ?? 'YOUR-APP-PASSWORD';
 
     $copied_label = esc_js(__('Copied!', domain: 'novamira'));
 
     ?>
     <style>
-        .novamira-connect-section { margin: 24px 0; }
-        .novamira-connect-section h2 { margin-bottom: 8px; }
+        .novamira-connect-section {
+            background: #fff;
+            border: 1px solid #c3c4c7;
+            border-radius: 6px;
+            padding: 20px 24px;
+            margin: 0 0 20px;
+            box-shadow: 0 1px 1px rgba(0, 0, 0, 0.03);
+        }
+        .novamira-step-heading {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            margin: 0 0 12px;
+            font-size: 18px;
+            font-weight: 600;
+            color: #1d2327;
+        }
+        .novamira-step-badge {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            width: 28px;
+            height: 28px;
+            border-radius: 50%;
+            background: #1d2327;
+            color: #fff;
+            font-size: 14px;
+            font-weight: 700;
+            flex: 0 0 auto;
+        }
         .novamira-config-block { position: relative; }
         .novamira-config-block pre {
             background: #1e1e1e;
@@ -937,6 +1409,105 @@ function novamira_render_connect_page(): void
             font-size: 14px;
             margin: 0;
         }
+        .novamira-production-warning {
+            background: #fff8e1;
+            border-left: 4px solid #f0c040;
+            padding: 12px 16px;
+            margin: 12px 0 24px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            gap: 16px;
+            flex-wrap: wrap;
+        }
+        .novamira-production-warning p {
+            margin: 0;
+            font-size: 14px;
+            line-height: 1.5;
+            flex: 1 1 auto;
+        }
+        .novamira-paste-block {
+            margin: 12px 0;
+            border: 1px solid #c3c4c7;
+            border-radius: 4px;
+            overflow: hidden;
+        }
+        .novamira-paste-header {
+            background: #1d2327;
+            color: #fff;
+            padding: 10px 16px;
+            font-size: 13px;
+            font-weight: 600;
+            letter-spacing: 0.4px;
+            text-transform: uppercase;
+        }
+        .novamira-paste-content {
+            position: relative;
+            background: #f6f7f7;
+        }
+        .novamira-paste-content pre {
+            background: transparent;
+            color: #1d2327;
+            padding: 16px;
+            border: none;
+            white-space: pre-wrap;
+            word-wrap: break-word;
+            font-size: 13px;
+            line-height: 1.6;
+            margin: 0;
+            max-height: 6.5em;
+            overflow: hidden;
+        }
+        .novamira-paste-content.is-expanded pre {
+            max-height: none;
+            overflow: visible;
+        }
+        .novamira-paste-content:not(.is-expanded)::after {
+            content: '';
+            position: absolute;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            height: 32px;
+            background: linear-gradient(to bottom, rgba(246, 247, 247, 0), rgba(246, 247, 247, 1));
+            pointer-events: none;
+        }
+        .novamira-paste-actions {
+            display: flex;
+            flex-direction: column;
+            align-items: flex-start;
+            gap: 8px;
+            padding: 10px 14px 14px;
+            background: #fff;
+            border-top: 1px solid #c3c4c7;
+        }
+        .novamira-manage-passwords {
+            margin: 20px 0 0;
+            border-top: 1px solid #e0e0e0;
+            padding-top: 16px;
+        }
+        .novamira-manage-passwords-summary {
+            font-weight: 600;
+            cursor: pointer;
+            list-style: none;
+            color: #1d2327;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            padding: 4px 0;
+        }
+        .novamira-manage-passwords-summary::-webkit-details-marker { display: none; }
+        .novamira-manage-passwords-summary::before {
+            content: '▸';
+            color: #646970;
+            transition: transform 0.15s;
+        }
+        .novamira-manage-passwords[open] .novamira-manage-passwords-summary::before {
+            transform: rotate(90deg);
+        }
+        .novamira-manage-passwords-body {
+            padding-top: 12px;
+        }
     </style>
 
     <?php novamira_render_admin_header(); ?>
@@ -952,7 +1523,11 @@ function novamira_render_connect_page(): void
             ?></p></div>
         <?php endif; ?>
 
-        <?php novamira_render_enable_toggle(); ?>
+        <?php novamira_render_production_warning(); ?>
+
+        <div class="novamira-connect-section">
+            <?php novamira_render_enable_toggle(); ?>
+        </div>
 
         <?php novamira_render_enable_prompt($mcp_dependency_error); ?>
         <?php if ($mcp_ready): ?>
@@ -971,27 +1546,24 @@ function novamira_render_connect_page(): void
             <?php endif; ?>
 
             <div class="novamira-connect-section">
-                <?php novamira_render_passwords_section($new_password); ?>
+                <?php novamira_render_password_step($new_password, $existing_password, $existing_error); ?>
+                <?php novamira_render_manage_passwords_section(allow_create_hint: true); ?>
             </div>
 
-            <?php if ($new_password !== null || novamira_get_mcp_passwords() !== []): ?>
-            <div class="novamira-connect-section">
-                <?php if ($new_password === null): ?>
-                    <div class="notice notice-warning inline" style="margin:12px 0;">
-                        <p>
-                            <?php esc_html_e(
-                                'Replace YOUR-APP-PASSWORD in the config below with an application password from step 1.',
-                                domain: 'novamira',
-                            ); ?>
-                        </p>
-                    </div>
-                <?php endif; ?>
-                <?php novamira_render_config_section($rest_url, $username, $display_password); ?>
-            </div>
+            <?php if ($new_password !== null || $existing_password !== null): ?>
+                <div class="novamira-connect-section">
+                    <?php novamira_render_config_section($rest_url, $username, $display_password); ?>
+                </div>
             <?php endif; ?>
+        <?php elseif (novamira_get_mcp_passwords() !== []): ?>
+            <div class="novamira-connect-section">
+                <h2 class="novamira-step-heading">
+                    <span class="novamira-step-badge">2</span>
+                    <?php esc_html_e('Application Password', domain: 'novamira'); ?>
+                </h2>
+                <?php novamira_render_manage_passwords_section(allow_create_hint: false); ?>
+            </div>
         <?php endif; ?>
-
-        <?php novamira_render_pro_upsell_card(); ?>
 
     </div>
 
@@ -1003,6 +1575,36 @@ function novamira_render_connect_page(): void
             btn.textContent = '<?php echo $copied_label; ?>';
             setTimeout(function() { btn.textContent = orig; }, 1500);
         });
+    }
+    function novamiraTogglePasswordName(btn) {
+        var field = document.getElementById('novamira-password-name-field');
+        var expanded = btn.getAttribute('aria-expanded') === 'true';
+        if (expanded) {
+            field.style.display = 'none';
+            field.hidden = true;
+            btn.setAttribute('aria-expanded', 'false');
+        } else {
+            field.style.display = 'block';
+            field.hidden = false;
+            btn.setAttribute('aria-expanded', 'true');
+            var input = document.getElementById('novamira-password-name');
+            if (input) { input.focus(); }
+        }
+    }
+    function novamiraToggleUseExisting(btn) {
+        var field = document.getElementById('novamira-use-existing-field');
+        var expanded = btn.getAttribute('aria-expanded') === 'true';
+        if (expanded) {
+            field.style.display = 'none';
+            field.hidden = true;
+            btn.setAttribute('aria-expanded', 'false');
+        } else {
+            field.style.display = 'block';
+            field.hidden = false;
+            btn.setAttribute('aria-expanded', 'true');
+            var input = document.getElementById('novamira-existing-password');
+            if (input) { input.focus(); }
+        }
     }
     </script>
     <?php
