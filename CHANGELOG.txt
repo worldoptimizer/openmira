@@ -8,6 +8,8 @@ v1.2.0 - 2026/05/13
 * Tweak: Redesigned the Configuration page into three numbered cards (Enable AI Abilities, Application Password, Connect Your AI Client) so the setup reads top to bottom.
 * Tweak: The MCP endpoint is now /wp-json/mcp/novamira. The previous /wp-json/mcp/mcp-adapter-default-server keeps working for AI clients that are already connected, no action needed.
 * Tweak: Per-client JSON snippets are collapsed by default behind a "Need the JSON config for a specific client?" link, since most setups now use the paste-to-agent block.
+* Tweak: AI agents working with data-modeling plugins (ACF, JetEngine, Pods, ACPT, Meta Box, Toolset, CPT UI, WooCommerce, etc.) are now told to use the plugin's own UI or API instead of registering post types, taxonomies, or fields directly in PHP, avoiding broken slugs and labels later.
+* Fix: PHP notices about duplicate ability registration on every wp-cron tick no longer appear in the error log.
 * Minor Fixes
 
 v1.1.2 - 2026/04/23
