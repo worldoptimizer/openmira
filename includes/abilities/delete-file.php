@@ -13,11 +13,11 @@ if (!defined('ABSPATH')) {
     exit();
 }
 
-wp_register_ability('novamira/delete-file', [
-    'label' => __('Delete File', domain: 'novamira'),
+wp_register_ability('openmira/delete-file', [
+    'label' => __('Delete File', domain: 'open-mira'),
     'description' => __(
         'Deletes a file or directory from the server filesystem. Non-empty directories require the recursive flag. Critical WordPress directories (ABSPATH root, wp-admin, wp-includes) are protected from deletion. Idempotent: deleting a non-existent path succeeds with deleted=false.',
-        domain: 'novamira',
+        domain: 'open-mira',
     ),
     'category' => 'filesystem',
     'input_schema' => [
@@ -49,16 +49,16 @@ wp_register_ability('novamira/delete-file', [
             'items_deleted' => ['type' => 'integer', 'description' => 'Number of files/directories deleted.'],
         ],
     ],
-    'execute_callback' => 'novamira_delete_file',
-    'permission_callback' => 'novamira_permission_callback',
+    'execute_callback' => 'openmira_delete_file',
+    'permission_callback' => 'openmira_permission_callback',
     'meta' => [
         'show_in_rest' => true,
         'mcp' => ['public' => true],
         'annotations' => [
             'instructions' => implode("\n", [
                 'SANDBOX NOTES:',
-                '- Files in wp-content/novamira-sandbox/ (the PHP sandbox) can be deleted.',
-                '- To exit safe mode after a crash, delete: wp-content/novamira-sandbox/.crashed',
+                '- Files in wp-content/openmira-sandbox/ (the PHP sandbox) can be deleted.',
+                '- To exit safe mode after a crash, delete: wp-content/openmira-sandbox/.crashed',
             ]),
             'readonly' => false,
             'destructive' => true,
@@ -73,9 +73,9 @@ wp_register_ability('novamira/delete-file', [
  * @param array $input Input with 'path', optional 'recursive'.
  * @return array|WP_Error
  */
-function novamira_delete_file($input)
+function openmira_delete_file($input)
 {
-    $resolved = novamira_resolve_path((string) $input['path'], must_exist: false);
+    $resolved = openmira_resolve_path((string) $input['path'], must_exist: false);
     if (is_wp_error($resolved)) {
         return $resolved;
     }
@@ -120,7 +120,7 @@ function novamira_delete_file($input)
 
     // Delete a directory.
     if (is_dir($resolved)) {
-        return novamira_delete_directory($resolved, $recursive);
+        return openmira_delete_directory($resolved, $recursive);
     }
 
     return new WP_Error('unknown_type', sprintf('Path is not a file or directory: %s', $resolved));
@@ -133,7 +133,7 @@ function novamira_delete_file($input)
  * @param bool   $recursive Whether to delete contents recursively.
  * @return array|WP_Error
  */
-function novamira_delete_directory($resolved, $recursive)
+function openmira_delete_directory($resolved, $recursive)
 {
     $contents = scandir($resolved);
     if ($contents === false) {

@@ -6,7 +6,7 @@
 declare(strict_types=1);
 
 /**
- * Shared helper functions for Novamira.
+ * Shared helper functions for Open Mira.
  */
 
 if (!defined('ABSPATH')) {
@@ -20,7 +20,7 @@ if (!defined('ABSPATH')) {
  * @param bool   $must_exist Whether the path must already exist.
  * @return string|WP_Error   The resolved absolute path, or WP_Error on failure.
  */
-function novamira_resolve_path($path, $must_exist = false)
+function openmira_resolve_path($path, $must_exist = false)
 {
     // Prepend ABSPATH to relative paths.
     if (!str_starts_with($path, '/') && !str_starts_with($path, '\\')) {
@@ -34,7 +34,7 @@ function novamira_resolve_path($path, $must_exist = false)
      * @param string $base_dir The base directory. Defaults to ABSPATH.
      */
     /** @var string|false $base_dir */
-    $base_dir = apply_filters('novamira_filesystem_base_dir', ABSPATH);
+    $base_dir = apply_filters('openmira_filesystem_base_dir', ABSPATH);
 
     // Resolve path that may not exist yet via parent directory.
     $resolved_parent = realpath(dirname($path));
@@ -44,7 +44,7 @@ function novamira_resolve_path($path, $must_exist = false)
     if ($must_exist) {
         $resolved = realpath($path);
         if ($resolved === false) {
-            return new WP_Error('path_not_found', sprintf(__('Path does not exist: %s', domain: 'novamira'), $path));
+            return new WP_Error('path_not_found', sprintf(__('Path does not exist: %s', domain: 'open-mira'), $path));
         }
     }
 
@@ -57,7 +57,7 @@ function novamira_resolve_path($path, $must_exist = false)
 
         if (!str_starts_with($resolved, $real_base)) {
             return new WP_Error('path_outside_base', sprintf(
-                __('Path "%s" is outside the allowed base directory "%s".', domain: 'novamira'),
+                __('Path "%s" is outside the allowed base directory "%s".', domain: 'open-mira'),
                 $resolved,
                 $real_base,
             ));
@@ -73,13 +73,13 @@ function novamira_resolve_path($path, $must_exist = false)
  * @param bool $ensure_exists Whether to create the directory if it doesn't exist.
  * @return string Absolute path to the sandbox directory (with trailing slash).
  */
-function novamira_get_sandbox_dir($ensure_exists = false)
+function openmira_get_sandbox_dir($ensure_exists = false)
 {
-    if ($ensure_exists && !is_dir(NOVAMIRA_SANDBOX_DIR)) {
-        wp_mkdir_p(NOVAMIRA_SANDBOX_DIR);
+    if ($ensure_exists && !is_dir(OPENMIRA_SANDBOX_DIR)) {
+        wp_mkdir_p(OPENMIRA_SANDBOX_DIR);
     }
 
-    return NOVAMIRA_SANDBOX_DIR;
+    return OPENMIRA_SANDBOX_DIR;
 }
 
 /**
@@ -88,12 +88,12 @@ function novamira_get_sandbox_dir($ensure_exists = false)
  * @param string $resolved The resolved absolute path to check.
  * @return true|WP_Error True if inside the sandbox, WP_Error otherwise.
  */
-function novamira_validate_sandbox_path($resolved)
+function openmira_validate_sandbox_path($resolved)
 {
-    $sandbox_dir = novamira_get_sandbox_dir();
+    $sandbox_dir = openmira_get_sandbox_dir();
     $real_sandbox = realpath($sandbox_dir);
     if ($real_sandbox === false) {
-        return new WP_Error('sandbox_not_found', __('The sandbox directory does not exist.', domain: 'novamira'));
+        return new WP_Error('sandbox_not_found', __('The sandbox directory does not exist.', domain: 'open-mira'));
     }
 
     $real_resolved = realpath($resolved);
@@ -104,7 +104,7 @@ function novamira_validate_sandbox_path($resolved)
     if (!str_starts_with($real_resolved, $real_sandbox . DIRECTORY_SEPARATOR)) {
         return new WP_Error('outside_sandbox', sprintf(
             /* translators: %s: sandbox directory path */
-            __('Only files inside the sandbox (%s) can be modified.', domain: 'novamira'),
+            __('Only files inside the sandbox (%s) can be modified.', domain: 'open-mira'),
             $sandbox_dir,
         ));
     }
@@ -118,9 +118,9 @@ function novamira_validate_sandbox_path($resolved)
  * @param string $resolved Absolute resolved path to the PHP file.
  * @return bool|WP_Error True if valid, WP_Error if outside sandbox.
  */
-function novamira_check_php_sandbox(string $resolved): bool|WP_Error
+function openmira_check_php_sandbox(string $resolved): bool|WP_Error
 {
-    $sandbox_dir = novamira_get_sandbox_dir(ensure_exists: false);
+    $sandbox_dir = openmira_get_sandbox_dir(ensure_exists: false);
     $real_sandbox = realpath($sandbox_dir);
     $parent_dir = realpath(dirname($resolved));
 
@@ -134,7 +134,7 @@ function novamira_check_php_sandbox(string $resolved): bool|WP_Error
 
     if (!str_starts_with($parent_dir, $real_sandbox)) {
         return new WP_Error('php_sandbox_required', sprintf(
-            'PHP files can only be written to the sandbox directory: %s. Use a path like "wp-content/novamira-sandbox/my-feature.php".',
+            'PHP files can only be written to the sandbox directory: %s. Use a path like "wp-content/openmira-sandbox/my-feature.php".',
             $sandbox_dir,
         ));
     }
@@ -148,7 +148,7 @@ function novamira_check_php_sandbox(string $resolved): bool|WP_Error
  * @param string $parent_dir Absolute path to the parent directory.
  * @return array|WP_Error List of directories created, or WP_Error on failure.
  */
-function novamira_ensure_parent_dir(string $parent_dir): array|WP_Error
+function openmira_ensure_parent_dir(string $parent_dir): array|WP_Error
 {
     if (is_dir($parent_dir)) {
         return [];
@@ -176,7 +176,7 @@ function novamira_ensure_parent_dir(string $parent_dir): array|WP_Error
  * @param string $path File path to check.
  * @return bool
  */
-function novamira_is_disabled_file($path)
+function openmira_is_disabled_file($path)
 {
     return str_ends_with($path, '.disabled');
 }
@@ -186,17 +186,17 @@ function novamira_is_disabled_file($path)
  *
  * @return bool
  */
-function novamira_is_enabled()
+function openmira_is_enabled()
 {
     /** @var mixed $value */
-    $value = get_option('novamira_ai_abilities_enabled', default_value: false);
+    $value = get_option('openmira_ai_abilities_enabled', default_value: false);
     if ($value !== '1' && $value !== true) {
         return false;
     }
 
     // Abilities are locked to the domain they were enabled on.
     /** @var string $locked_domain */
-    $locked_domain = get_option('novamira_ai_abilities_domain', default_value: '');
+    $locked_domain = get_option('openmira_ai_abilities_domain', default_value: '');
     $current_domain = (string) wp_parse_url(home_url(), PHP_URL_HOST);
 
     return $locked_domain === $current_domain;
@@ -211,7 +211,7 @@ function novamira_is_enabled()
  *
  * @return bool
  */
-function novamira_looks_like_production(): bool
+function openmira_looks_like_production(): bool
 {
     $host = (string) wp_parse_url(home_url(), PHP_URL_HOST);
     $host = strtolower($host);
@@ -239,7 +239,7 @@ function novamira_looks_like_production(): bool
     $tld = end($segments);
 
     /** @var array<int, string> $non_prod_tlds */
-    $non_prod_tlds = apply_filters('novamira_non_production_tlds', [
+    $non_prod_tlds = apply_filters('openmira_non_production_tlds', [
         'dev',
         'local',
         'staging',
@@ -254,7 +254,7 @@ function novamira_looks_like_production(): bool
     }
 
     /** @var array<int, string> $non_prod_subdomain_segments */
-    $non_prod_subdomain_segments = apply_filters('novamira_non_production_subdomain_segments', [
+    $non_prod_subdomain_segments = apply_filters('openmira_non_production_subdomain_segments', [
         'dev',
         'local',
         'test',
@@ -283,7 +283,7 @@ function novamira_looks_like_production(): bool
     }
 
     /** @var array<int, string> $non_prod_keyword_regex_words */
-    $non_prod_keyword_regex_words = apply_filters('novamira_non_production_keyword_words', [
+    $non_prod_keyword_regex_words = apply_filters('openmira_non_production_keyword_words', [
         'test',
         'dev',
         'staging',
@@ -310,7 +310,7 @@ function novamira_looks_like_production(): bool
     }
 
     /** @var array<int, string> $non_prod_host_suffixes */
-    $non_prod_host_suffixes = apply_filters('novamira_production_host_patterns', [
+    $non_prod_host_suffixes = apply_filters('openmira_production_host_patterns', [
         'wpengine.com',
         'wpenginepowered.com',
         'sg-host.com',
@@ -354,7 +354,7 @@ function novamira_looks_like_production(): bool
  * WordPress core blocks Application Passwords on HTTP unless `WP_ENVIRONMENT_TYPE` is set to
  * 'local'. Detecting this lets us surface the exact wp-config snippet the user needs.
  */
-function novamira_likely_local_http(): bool
+function openmira_likely_local_http(): bool
 {
     $home = home_url();
     if (!str_starts_with(strtolower($home), 'http://')) {
@@ -367,7 +367,7 @@ function novamira_likely_local_http(): bool
     }
 
     /** @var array<int, string> $local_substrings */
-    $local_substrings = apply_filters('novamira_self_signed_host_patterns', [
+    $local_substrings = apply_filters('openmira_self_signed_host_patterns', [
         '.local',
         '.test',
         'localhost',
@@ -392,7 +392,7 @@ function novamira_likely_local_http(): bool
  * certs by default, so the MCP client cannot connect unless `NODE_TLS_REJECT_UNAUTHORIZED=0` is
  * passed in the env. Detecting this lets us inject that env var and warn the user about the trade.
  */
-function novamira_likely_self_signed_https(): bool
+function openmira_likely_self_signed_https(): bool
 {
     $home = home_url();
     if (!str_starts_with(strtolower($home), 'https://')) {
@@ -405,7 +405,7 @@ function novamira_likely_self_signed_https(): bool
     }
 
     /** @var array<int, string> $self_signed_substrings */
-    $self_signed_substrings = apply_filters('novamira_self_signed_host_patterns', [
+    $self_signed_substrings = apply_filters('openmira_self_signed_host_patterns', [
         '.local',
         '.test',
         'localhost',
@@ -425,19 +425,19 @@ function novamira_likely_self_signed_https(): bool
 /**
  * Has the current user dismissed the production warning?
  */
-function novamira_production_warning_dismissed(): bool
+function openmira_production_warning_dismissed(): bool
 {
     /** @var mixed $value */
-    $value = get_user_meta(get_current_user_id(), key: 'novamira_production_warning_dismissed', single: true);
+    $value = get_user_meta(get_current_user_id(), key: 'openmira_production_warning_dismissed', single: true);
     return $value === '1' || $value === 1 || $value === true;
 }
 
 /**
  * Handle the dismiss-production-warning form submission. Called from admin_init.
  */
-function novamira_handle_dismiss_production_warning(): void
+function openmira_handle_dismiss_production_warning(): void
 {
-    if (($_POST['novamira_dismiss_production_warning'] ?? null) === null) {
+    if (($_POST['openmira_dismiss_production_warning'] ?? null) === null) {
         return;
     }
 
@@ -445,11 +445,11 @@ function novamira_handle_dismiss_production_warning(): void
         return;
     }
 
-    check_admin_referer('novamira_dismiss_production_warning');
+    check_admin_referer('openmira_dismiss_production_warning');
 
-    update_user_meta(get_current_user_id(), meta_key: 'novamira_production_warning_dismissed', meta_value: '1');
+    update_user_meta(get_current_user_id(), meta_key: 'openmira_production_warning_dismissed', meta_value: '1');
 
-    wp_safe_redirect(admin_url('admin.php?page=novamira-connect'));
+    wp_safe_redirect(admin_url('admin.php?page=openmira-connect'));
     exit();
 }
 
@@ -458,16 +458,16 @@ function novamira_handle_dismiss_production_warning(): void
  *
  * @return bool
  */
-function novamira_is_domain_mismatch()
+function openmira_is_domain_mismatch()
 {
     /** @var mixed $value */
-    $value = get_option('novamira_ai_abilities_enabled', default_value: false);
+    $value = get_option('openmira_ai_abilities_enabled', default_value: false);
     if ($value !== '1' && $value !== true) {
         return false;
     }
 
     /** @var string $locked_domain */
-    $locked_domain = get_option('novamira_ai_abilities_domain', default_value: '');
+    $locked_domain = get_option('openmira_ai_abilities_domain', default_value: '');
     $current_domain = (string) wp_parse_url(home_url(), PHP_URL_HOST);
 
     return $locked_domain !== $current_domain;
@@ -481,7 +481,7 @@ function novamira_is_domain_mismatch()
  *
  * @return array{available: bool, reason: 'available'|'unsupported'|'filtered', message: string}
  */
-function novamira_app_passwords_status(): array
+function openmira_app_passwords_status(): array
 {
     if (wp_is_application_passwords_available()) {
         return ['available' => true, 'reason' => 'available', 'message' => ''];
@@ -493,7 +493,7 @@ function novamira_app_passwords_status(): array
             'reason' => 'unsupported',
             'message' => __(
                 'Application Passwords require HTTPS or WP_ENVIRONMENT_TYPE set to "local".',
-                domain: 'novamira',
+                domain: 'open-mira',
             ),
         ];
     }
@@ -503,7 +503,7 @@ function novamira_app_passwords_status(): array
         'reason' => 'filtered',
         'message' => __(
             'Application Passwords have been disabled on this site, likely by a security plugin. Check your security plugin settings (e.g. Solid Security, Wordfence, All In One WP Security) and re-enable Application Passwords to continue.',
-            domain: 'novamira',
+            domain: 'open-mira',
         ),
     ];
 }
@@ -516,7 +516,7 @@ function novamira_app_passwords_status(): array
  * @param string $fallback Optional fallback format.
  * @return string
  */
-function novamira_get_datetime_format($fallback = 'Y-m-d H:i:s')
+function openmira_get_datetime_format($fallback = 'Y-m-d H:i:s')
 {
     $date_format = (string) get_option('date_format');
     $time_format = (string) get_option('time_format');
@@ -533,7 +533,7 @@ function novamira_get_datetime_format($fallback = 'Y-m-d H:i:s')
  *
  * @return bool
  */
-function novamira_permission_callback()
+function openmira_permission_callback()
 {
     return current_user_can('manage_options');
 }
@@ -543,7 +543,7 @@ function novamira_permission_callback()
  *
  * @return array{plugin: string, languages: string[]}|null Plugin name and language codes, or null if no multilingual plugin is active.
  */
-function novamira_get_active_languages()
+function openmira_get_active_languages()
 {
     // WPML.
     if (function_exists('icl_get_languages')) {
@@ -581,7 +581,7 @@ function novamira_get_active_languages()
  *
  * @return string
  */
-function novamira_build_server_instructions()
+function openmira_build_server_instructions()
 {
     $lines = [
         'Open Mira gives you unrestricted control over this WordPress installation.',
@@ -592,7 +592,7 @@ function novamira_build_server_instructions()
     ];
 
     // Detect active languages from multilingual plugins.
-    $multilingual = novamira_get_active_languages();
+    $multilingual = openmira_get_active_languages();
     if ($multilingual !== null && $multilingual['languages'] !== []) {
         $lines[] = 'Multilingual (' . $multilingual['plugin'] . '): ' . implode(', ', $multilingual['languages']);
     }
@@ -640,9 +640,9 @@ function novamira_build_server_instructions()
         'conventions. Write code that integrates with WordPress, not code that ignores it.',
         '',
         'Use Open Mira builder and memory abilities when available:',
-        '- novamira/get-builder-context before changing Gutenberg, Bricks, ACF, or SCF structures',
-        '- novamira/read-memory at the start of substantial work',
-        '- novamira/write-memory after durable architecture or builder decisions',
+        '- openmira/get-builder-context before changing Gutenberg, Bricks, ACF, or SCF structures',
+        '- openmira/read-memory at the start of substantial work',
+        '- openmira/write-memory after durable architecture or builder decisions',
         '',
         'Clean-room rule: never copy proprietary plugin source, assets, or branding from',
         'reference folders. Use public APIs, documented hooks, observed data shapes, and',
@@ -655,37 +655,37 @@ function novamira_build_server_instructions()
 /**
  * Render the branded admin header with logo and background color.
  */
-function novamira_render_admin_header(): void
+function openmira_render_admin_header(): void
 { ?>
     <style>
-        .novamira-admin-header-wrap {
+        .openmira-admin-header-wrap {
             background: #000;
             margin: -1px 0 0 -20px;
             padding: 20px 20px 20px 22px;
         }
-        .novamira-admin-header {
+        .openmira-admin-header {
             margin: 0 auto;
             display: flex;
             align-items: center;
         }
-        .novamira-admin-header img {
+        .openmira-admin-header img {
             max-height: 40px;
         }
         @media screen and (max-width: 782px) {
-            .novamira-admin-header-wrap {
+            .openmira-admin-header-wrap {
                 margin: -1px 0 0 -10px;
                 padding: 15px;
             }
-            .novamira-admin-header {
+            .openmira-admin-header {
                 flex-direction: column;
                 text-align: center;
             }
         }
     </style>
-    <div class="novamira-admin-header-wrap">
-        <div class="novamira-admin-header">
+    <div class="openmira-admin-header-wrap">
+        <div class="openmira-admin-header">
             <span style="color:#fff;font-size:28px;font-weight:700;letter-spacing:-.03em;line-height:40px;">
-                <?php esc_html_e('Open Mira', domain: 'novamira'); ?>
+                <?php esc_html_e('Open Mira', domain: 'open-mira'); ?>
             </span>
         </div>
     </div>

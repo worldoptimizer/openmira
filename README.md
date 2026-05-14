@@ -17,15 +17,15 @@ Note: WordPress PHP exposes registered block metadata, but exact static block sa
 
 ## Gutenberg serialization flow
 
-Agents can call `novamira/create-gutenberg-serialization-job` with an array of block specs, open the returned admin URL in an authenticated browser, then call `novamira/read-gutenberg-serialization-job` to retrieve exact `wp.blocks.serialize()` output. This avoids vendoring Gutenberg save logic while still supporting core and third-party blocks loaded by the running site.
+Agents can call `openmira/create-gutenberg-serialization-job` with an array of block specs, open the returned admin URL in an authenticated browser, then call `openmira/read-gutenberg-serialization-job` to retrieve exact `wp.blocks.serialize()` output. This avoids vendoring Gutenberg save logic while still supporting core and third-party blocks loaded by the running site.
 
 ## Gutenberg profiling flow
 
-Agents can call `novamira/create-gutenberg-block-profile-job` with block names or a namespace filter, open the returned admin URL, then call `novamira/read-gutenberg-block-profile-job` or `novamira/list-gutenberg-block-profiles`. Profiles record whether a block can be safely serialized from an example or empty spec, which attributes are sourced from saved markup, and whether custom attribute generation should use a dedicated adapter instead of blind JSON. Profiles also include generation-quality signals so agents can distinguish valid-but-empty primitives from blocks that are safe and visually useful without a recipe.
+Agents can call `openmira/create-gutenberg-block-profile-job` with block names or a namespace filter, open the returned admin URL, then call `openmira/read-gutenberg-block-profile-job` or `openmira/list-gutenberg-block-profiles`. Profiles record whether a block can be safely serialized from an example or empty spec, which attributes are sourced from saved markup, and whether custom attribute generation should use a dedicated adapter instead of blind JSON. Profiles also include generation-quality signals so agents can distinguish valid-but-empty primitives from blocks that are safe and visually useful without a recipe.
 
 ## Project memory
 
-Agents can call `novamira/read-memory`, `novamira/write-memory`, and `novamira/delete-memory` to persist durable project facts in WordPress options. Site administrators can review, edit, delete, clear, and export those entries from **Open Mira → Memory** in the WordPress admin.
+Agents can call `openmira/read-memory`, `openmira/write-memory`, and `openmira/delete-memory` to persist durable project facts in WordPress options. Site administrators can review, edit, delete, clear, and export those entries from **Open Mira → Memory** in the WordPress admin.
 
 ## Contributing
 

@@ -13,19 +13,19 @@ if (!defined('ABSPATH')) {
 /**
  * Render the block tools page.
  */
-function novamira_render_block_tools_page(): void
+function openmira_render_block_tools_page(): void
 {
     if (!current_user_can('manage_options')) {
         return;
     }
 
-    novamira_enqueue_block_tools_assets();
+    openmira_enqueue_block_tools_assets();
 
-    $job_id = sanitize_key(novamira_block_tools_request_string($_GET['job'] ?? ''));
-    $job = $job_id !== '' ? novamira_get_block_serialization_job($job_id) : null;
+    $job_id = sanitize_key(openmira_block_tools_request_string($_GET['job'] ?? ''));
+    $job = $job_id !== '' ? openmira_get_block_serialization_job($job_id) : null;
     $example = is_array($job) && is_array($job['spec'] ?? null)
         ? $job['spec']
-        : novamira_get_block_serializer_example();
+        : openmira_get_block_serializer_example();
     $example_json = wp_json_encode($example, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE);
     $example_json = is_string($example_json) ? $example_json : '[]';
     $example_inline_json = wp_json_encode($example, JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE);
@@ -37,81 +37,84 @@ function novamira_render_block_tools_page(): void
             ? array_values($job['block_names'])
             : [],
         'ajaxUrl' => admin_url('admin-ajax.php'),
-        'nonce' => $job_id !== '' ? wp_create_nonce('novamira_block_serialization_job_' . $job_id) : '',
+        'nonce' => $job_id !== '' ? wp_create_nonce('openmira_block_serialization_job_' . $job_id) : '',
         'autoRun' => is_array($job),
     ];
     $job_payload_json = wp_json_encode($job_payload, JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE);
     $job_payload_json = is_string($job_payload_json) ? $job_payload_json : '{}';
 
-    novamira_render_admin_header();
+    openmira_render_admin_header();
     ?>
     <div class="wrap">
-        <h1><?php esc_html_e('Block Tools', domain: 'novamira'); ?></h1>
+        <h1><?php esc_html_e('Block Tools', domain: 'open-mira'); ?></h1>
         <p>
             <?php esc_html_e(
                 'Serialize block specs with the same WordPress editor JavaScript that validates saved static block markup.',
-                domain: 'novamira',
+                domain: 'open-mira',
             ); ?>
         </p>
-        <?php novamira_render_block_tools_job_notices($job, $job_id); ?>
+        <?php openmira_render_block_tools_job_notices($job, $job_id); ?>
         <div class="notice notice-info">
             <p>
                 <?php esc_html_e(
                     'Server-side block registry abilities discover block metadata. This page handles the other half: exact editor-side save() serialization for blocks loaded in this admin screen.',
-                    domain: 'novamira',
+                    domain: 'open-mira',
                 ); ?>
             </p>
         </div>
         <p>
-            <button type="button" class="button" id="novamira-refresh-block-types">
-                <?php esc_html_e('Refresh Loaded Block Types', domain: 'novamira'); ?>
+            <button type="button" class="button" id="openmira-refresh-block-types">
+                <?php esc_html_e('Refresh Loaded Block Types', domain: 'open-mira'); ?>
             </button>
-            <span id="novamira-loaded-block-summary" style="margin-left:8px;"></span>
+            <span id="openmira-loaded-block-summary" style="margin-left:8px;"></span>
         </p>
         <table class="form-table" role="presentation">
             <tr>
                 <th scope="row">
-                    <label for="novamira-block-spec"><?php esc_html_e('Block Spec JSON', domain: 'novamira'); ?></label>
+                    <label for="openmira-block-spec"><?php esc_html_e(
+                        'Block Spec JSON',
+                        domain: 'open-mira',
+                    ); ?></label>
                 </th>
                 <td>
-                    <textarea id="novamira-block-spec" class="large-text code" rows="18"><?php echo
+                    <textarea id="openmira-block-spec" class="large-text code" rows="18"><?php echo
                         esc_textarea($example_json)
                     ; ?></textarea>
                     <p class="description">
                         <?php esc_html_e(
                             'Use one block object or an array of block objects. Each object supports name, attrs, and innerBlocks.',
-                            domain: 'novamira',
+                            domain: 'open-mira',
                         ); ?>
                     </p>
                 </td>
             </tr>
             <tr>
-                <th scope="row"><?php esc_html_e('Actions', domain: 'novamira'); ?></th>
+                <th scope="row"><?php esc_html_e('Actions', domain: 'open-mira'); ?></th>
                 <td>
-                    <button type="button" class="button button-primary" id="novamira-serialize-blocks">
-                        <?php esc_html_e('Serialize With Editor JS', domain: 'novamira'); ?>
+                    <button type="button" class="button button-primary" id="openmira-serialize-blocks">
+                        <?php esc_html_e('Serialize With Editor JS', domain: 'open-mira'); ?>
                     </button>
-                    <button type="button" class="button" id="novamira-load-example">
-                        <?php esc_html_e('Reload Example', domain: 'novamira'); ?>
+                    <button type="button" class="button" id="openmira-load-example">
+                        <?php esc_html_e('Reload Example', domain: 'open-mira'); ?>
                     </button>
                 </td>
             </tr>
             <tr>
                 <th scope="row">
-                    <label for="novamira-serialized-output"><?php esc_html_e(
+                    <label for="openmira-serialized-output"><?php esc_html_e(
                         'Serialized Markup',
-                        domain: 'novamira',
+                        domain: 'open-mira',
                     ); ?></label>
                 </th>
                 <td>
-                    <textarea id="novamira-serialized-output" class="large-text code" rows="16" readonly></textarea>
-                    <p class="description" id="novamira-serializer-status"></p>
+                    <textarea id="openmira-serialized-output" class="large-text code" rows="16" readonly></textarea>
+                    <p class="description" id="openmira-serializer-status"></p>
                 </td>
             </tr>
         </table>
     </div>
-    <script type="application/json" id="novamira-block-tools-example"><?php echo $example_inline_json; ?></script>
-    <script type="application/json" id="novamira-block-tools-job"><?php echo $job_payload_json; ?></script>
+    <script type="application/json" id="openmira-block-tools-example"><?php echo $example_inline_json; ?></script>
+    <script type="application/json" id="openmira-block-tools-job"><?php echo $job_payload_json; ?></script>
     <?php
 }
 
@@ -120,14 +123,14 @@ function novamira_render_block_tools_page(): void
  *
  * @param array<array-key, mixed>|null $job
  */
-function novamira_render_block_tools_job_notices(?array $job, string $job_id): void
+function openmira_render_block_tools_job_notices(?array $job, string $job_id): void
 {
     if (is_array($job)) {
         ?>
         <div class="notice notice-success">
             <p><?php esc_html_e(
                 'Block tools job loaded. This page will run it automatically and save the result for MCP.',
-                domain: 'novamira',
+                domain: 'open-mira',
             ); ?></p>
         </div>
         <?php
@@ -140,7 +143,7 @@ function novamira_render_block_tools_job_notices(?array $job, string $job_id): v
     }
     ?>
     <div class="notice notice-error">
-        <p><?php esc_html_e('Block tools job not found or expired.', domain: 'novamira'); ?></p>
+        <p><?php esc_html_e('Block tools job not found or expired.', domain: 'open-mira'); ?></p>
     </div>
     <?php
 }
@@ -148,7 +151,7 @@ function novamira_render_block_tools_job_notices(?array $job, string $job_id): v
 /**
  * Enqueue editor-side block registration assets for serializer jobs.
  */
-function novamira_enqueue_block_tools_assets(): void
+function openmira_enqueue_block_tools_assets(): void
 {
     wp_enqueue_script('wp-blocks');
     wp_enqueue_script('wp-block-library');
@@ -163,32 +166,32 @@ function novamira_enqueue_block_tools_assets(): void
     do_action('enqueue_block_editor_assets');
     remove_filter('should_load_block_editor_scripts_and_styles', $load_editor_assets);
 
-    wp_add_inline_script('wp-blocks', novamira_get_block_tools_script(), position: 'after');
+    wp_add_inline_script('wp-blocks', openmira_get_block_tools_script(), position: 'after');
 }
 
-add_action('wp_ajax_novamira_save_block_serialization_job', callback: 'novamira_ajax_save_block_serialization_job');
+add_action('wp_ajax_openmira_save_block_serialization_job', callback: 'openmira_ajax_save_block_serialization_job');
 
 /**
  * Save a browser-completed serialization job.
  */
-function novamira_ajax_save_block_serialization_job(): void
+function openmira_ajax_save_block_serialization_job(): void
 {
     if (!current_user_can('manage_options')) {
         wp_send_json_error(['message' => 'Insufficient permissions.'], status_code: 403);
     }
 
-    $job_id = sanitize_key(novamira_block_tools_request_string($_POST['job_id'] ?? ''));
+    $job_id = sanitize_key(openmira_block_tools_request_string($_POST['job_id'] ?? ''));
     if ($job_id === '') {
         wp_send_json_error(['message' => 'Missing job_id.'], status_code: 400);
     }
-    check_ajax_referer('novamira_block_serialization_job_' . $job_id, query_arg: 'nonce');
+    check_ajax_referer('openmira_block_serialization_job_' . $job_id, query_arg: 'nonce');
 
-    $status = sanitize_key(novamira_block_tools_request_string($_POST['status'] ?? ''));
-    $markup = wp_unslash(novamira_block_tools_request_string($_POST['markup'] ?? ''));
-    $error = sanitize_textarea_field(wp_unslash(novamira_block_tools_request_string($_POST['error'] ?? '')));
+    $status = sanitize_key(openmira_block_tools_request_string($_POST['status'] ?? ''));
+    $markup = wp_unslash(openmira_block_tools_request_string($_POST['markup'] ?? ''));
+    $error = sanitize_textarea_field(wp_unslash(openmira_block_tools_request_string($_POST['error'] ?? '')));
     $loaded_block_count = max(0, (int) ($_POST['loaded_block_count'] ?? 0));
     $top_level_block_count = max(0, (int) ($_POST['top_level_block_count'] ?? 0));
-    $profiles = novamira_decode_block_profiles_payload(wp_unslash(novamira_block_tools_request_string(
+    $profiles = openmira_decode_block_profiles_payload(wp_unslash(openmira_block_tools_request_string(
         $_POST['profiles'] ?? '',
     )));
     if (is_wp_error($profiles)) {
@@ -205,10 +208,10 @@ function novamira_ajax_save_block_serialization_job(): void
     ];
     if ($profiles !== []) {
         $updates['profiles'] = $profiles;
-        novamira_save_gutenberg_block_profiles($profiles);
+        openmira_save_gutenberg_block_profiles($profiles);
     }
 
-    $result = novamira_update_block_serialization_job($job_id, $updates);
+    $result = openmira_update_block_serialization_job($job_id, $updates);
     if (is_wp_error($result)) {
         wp_send_json_error(['message' => $result->get_error_message()], status_code: 404);
     }
@@ -222,7 +225,7 @@ function novamira_ajax_save_block_serialization_job(): void
  * @param array<array-key, mixed> $spec
  * @return array<string, mixed>|WP_Error
  */
-function novamira_create_block_serialization_job(array $spec): array|WP_Error
+function openmira_create_block_serialization_job(array $spec): array|WP_Error
 {
     $encoded_spec = wp_json_encode($spec, JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE);
     if (!is_string($encoded_spec)) {
@@ -236,7 +239,7 @@ function novamira_create_block_serialization_job(array $spec): array|WP_Error
     $uuid = wp_generate_uuid4();
     $job_id = is_string($uuid)
         ? str_replace(search: '-', replace: '', subject: $uuid)
-        : hash('sha256', uniqid('novamira', more_entropy: true));
+        : hash('sha256', uniqid('openmira', more_entropy: true));
     $job = [
         'job_id' => $job_id,
         'kind' => 'serialize',
@@ -251,13 +254,13 @@ function novamira_create_block_serialization_job(array $spec): array|WP_Error
         'completed_at' => 0,
     ];
 
-    $jobs = novamira_get_block_serialization_jobs();
+    $jobs = openmira_get_block_serialization_jobs();
     $jobs[$job_id] = $job;
-    novamira_save_block_serialization_jobs($jobs);
+    openmira_save_block_serialization_jobs($jobs);
 
     return $job
     + [
-        'serializer_url' => novamira_get_block_serialization_job_url($job_id),
+        'serializer_url' => openmira_get_block_serialization_job_url($job_id),
     ];
 }
 
@@ -267,7 +270,7 @@ function novamira_create_block_serialization_job(array $spec): array|WP_Error
  * @param list<string> $block_names
  * @return array<string, mixed>|WP_Error
  */
-function novamira_create_block_profile_job(array $block_names): array|WP_Error
+function openmira_create_block_profile_job(array $block_names): array|WP_Error
 {
     $block_names = array_values(array_unique(array_filter($block_names, callback: 'is_string')));
     if ($block_names === []) {
@@ -286,7 +289,7 @@ function novamira_create_block_profile_job(array $block_names): array|WP_Error
     $uuid = wp_generate_uuid4();
     $job_id = is_string($uuid)
         ? str_replace(search: '-', replace: '', subject: $uuid)
-        : hash('sha256', uniqid('novamira_profile', more_entropy: true));
+        : hash('sha256', uniqid('openmira_profile', more_entropy: true));
     $job = [
         'job_id' => $job_id,
         'kind' => 'profile',
@@ -303,13 +306,13 @@ function novamira_create_block_profile_job(array $block_names): array|WP_Error
         'completed_at' => 0,
     ];
 
-    $jobs = novamira_get_block_serialization_jobs();
+    $jobs = openmira_get_block_serialization_jobs();
     $jobs[$job_id] = $job;
-    novamira_save_block_serialization_jobs($jobs);
+    openmira_save_block_serialization_jobs($jobs);
 
     return $job
     + [
-        'serializer_url' => novamira_get_block_serialization_job_url($job_id),
+        'serializer_url' => openmira_get_block_serialization_job_url($job_id),
     ];
 }
 
@@ -318,9 +321,9 @@ function novamira_create_block_profile_job(array $block_names): array|WP_Error
  *
  * @return array<array-key, mixed>|null
  */
-function novamira_get_block_serialization_job(string $job_id): ?array
+function openmira_get_block_serialization_job(string $job_id): ?array
 {
-    $jobs = novamira_get_block_serialization_jobs();
+    $jobs = openmira_get_block_serialization_jobs();
     $job = $jobs[$job_id] ?? null;
     return is_array($job) ? $job : null;
 }
@@ -331,9 +334,9 @@ function novamira_get_block_serialization_job(string $job_id): ?array
  * @param array<string, mixed> $updates
  * @return array<array-key, mixed>|WP_Error
  */
-function novamira_update_block_serialization_job(string $job_id, array $updates): array|WP_Error
+function openmira_update_block_serialization_job(string $job_id, array $updates): array|WP_Error
 {
-    $jobs = novamira_get_block_serialization_jobs();
+    $jobs = openmira_get_block_serialization_jobs();
     if (!is_array($jobs[$job_id] ?? null)) {
         return new WP_Error('serialization_job_not_found', 'Serialization job not found.');
     }
@@ -342,7 +345,7 @@ function novamira_update_block_serialization_job(string $job_id, array $updates)
     foreach ($updates as $key => $value) {
         $jobs[$job_id][$key] = $value;
     }
-    novamira_save_block_serialization_jobs($jobs);
+    openmira_save_block_serialization_jobs($jobs);
 
     return $jobs[$job_id];
 }
@@ -350,9 +353,9 @@ function novamira_update_block_serialization_job(string $job_id, array $updates)
 /**
  * Return the admin URL that executes a serialization job.
  */
-function novamira_get_block_serialization_job_url(string $job_id): string
+function openmira_get_block_serialization_job_url(string $job_id): string
 {
-    return admin_url('admin.php?page=novamira-block-tools&job=' . rawurlencode($job_id));
+    return admin_url('admin.php?page=openmira-block-tools&job=' . rawurlencode($job_id));
 }
 
 /**
@@ -360,10 +363,10 @@ function novamira_get_block_serialization_job_url(string $job_id): string
  *
  * @return array<string, array<array-key, mixed>>
  */
-function novamira_get_block_serialization_jobs(): array
+function openmira_get_block_serialization_jobs(): array
 {
     // @mago-expect analysis:mixed-assignment
-    $jobs = get_option('novamira_block_serialization_jobs', default_value: []);
+    $jobs = get_option('openmira_block_serialization_jobs', default_value: []);
     if (!is_array($jobs)) {
         return [];
     }
@@ -385,7 +388,7 @@ function novamira_get_block_serialization_jobs(): array
  *
  * @param array<string, array<array-key, mixed>> $jobs
  */
-function novamira_save_block_serialization_jobs(array $jobs): void
+function openmira_save_block_serialization_jobs(array $jobs): void
 {
     $cutoff = time() - 86_400;
     foreach ($jobs as $job_id => $job) {
@@ -403,7 +406,7 @@ function novamira_save_block_serialization_jobs(array $jobs): void
         $jobs = array_slice($jobs, offset: 0, length: 25, preserve_keys: true);
     }
 
-    update_option('novamira_block_serialization_jobs', $jobs, autoload: false);
+    update_option('openmira_block_serialization_jobs', $jobs, autoload: false);
 }
 
 /**
@@ -411,10 +414,10 @@ function novamira_save_block_serialization_jobs(array $jobs): void
  *
  * @return array<string, array<array-key, mixed>>
  */
-function novamira_get_gutenberg_block_profiles(): array
+function openmira_get_gutenberg_block_profiles(): array
 {
     // @mago-expect analysis:mixed-assignment
-    $profiles = get_option('novamira_gutenberg_block_profiles', default_value: []);
+    $profiles = get_option('openmira_gutenberg_block_profiles', default_value: []);
     if (!is_array($profiles)) {
         return [];
     }
@@ -436,9 +439,9 @@ function novamira_get_gutenberg_block_profiles(): array
  *
  * @param list<array<array-key, mixed>> $profiles
  */
-function novamira_save_gutenberg_block_profiles(array $profiles): void
+function openmira_save_gutenberg_block_profiles(array $profiles): void
 {
-    $cached = novamira_get_gutenberg_block_profiles();
+    $cached = openmira_get_gutenberg_block_profiles();
     foreach ($profiles as $profile) {
         $name = is_string($profile['name'] ?? null) ? $profile['name'] : '';
         if ($name === '') {
@@ -449,7 +452,7 @@ function novamira_save_gutenberg_block_profiles(array $profiles): void
     }
 
     ksort($cached);
-    update_option('novamira_gutenberg_block_profiles', $cached, autoload: false);
+    update_option('openmira_gutenberg_block_profiles', $cached, autoload: false);
 }
 
 /**
@@ -457,7 +460,7 @@ function novamira_save_gutenberg_block_profiles(array $profiles): void
  *
  * @return list<array<array-key, mixed>>|WP_Error
  */
-function novamira_decode_block_profiles_payload(string $payload): array|WP_Error
+function openmira_decode_block_profiles_payload(string $payload): array|WP_Error
 {
     if ($payload === '') {
         return [];
@@ -484,7 +487,7 @@ function novamira_decode_block_profiles_payload(string $payload): array|WP_Error
 /**
  * Return a scalar request value as a string.
  */
-function novamira_block_tools_request_string(mixed $value): string
+function openmira_block_tools_request_string(mixed $value): string
 {
     return is_scalar($value) ? (string) $value : '';
 }
@@ -494,7 +497,7 @@ function novamira_block_tools_request_string(mixed $value): string
  *
  * @return list<array<string, mixed>>
  */
-function novamira_get_block_serializer_example(): array
+function openmira_get_block_serializer_example(): array
 {
     return [
         [
@@ -569,16 +572,16 @@ function novamira_get_block_serializer_example(): array
 /**
  * Return the block tools browser script.
  */
-function novamira_get_block_tools_script(): string
+function openmira_get_block_tools_script(): string
 {
     return <<<'JS'
         document.addEventListener('DOMContentLoaded', function () {
-            const specInput = document.getElementById('novamira-block-spec');
-            const output = document.getElementById('novamira-serialized-output');
-            const status = document.getElementById('novamira-serializer-status');
-            const summary = document.getElementById('novamira-loaded-block-summary');
-            const exampleNode = document.getElementById('novamira-block-tools-example');
-            const jobNode = document.getElementById('novamira-block-tools-job');
+            const specInput = document.getElementById('openmira-block-spec');
+            const output = document.getElementById('openmira-serialized-output');
+            const status = document.getElementById('openmira-serializer-status');
+            const summary = document.getElementById('openmira-loaded-block-summary');
+            const exampleNode = document.getElementById('openmira-block-tools-example');
+            const jobNode = document.getElementById('openmira-block-tools-job');
 
             function setStatus(message, isError) {
                 status.textContent = message;
@@ -814,7 +817,7 @@ function novamira_get_block_tools_script(): string
                 }
 
                 const body = new URLSearchParams();
-                body.set('action', 'novamira_save_block_serialization_job');
+                body.set('action', 'openmira_save_block_serialization_job');
                 body.set('job_id', job.jobId);
                 body.set('nonce', job.nonce);
                 body.set('status', error ? 'failed' : 'complete');
@@ -883,15 +886,15 @@ function novamira_get_block_tools_script(): string
                 }
             }
 
-            document.getElementById('novamira-load-example').addEventListener('click', function () {
+            document.getElementById('openmira-load-example').addEventListener('click', function () {
                 specInput.value = JSON.stringify(getExample(), null, 2);
                 output.value = '';
                 setStatus('Example restored.', false);
             });
 
-            document.getElementById('novamira-refresh-block-types').addEventListener('click', refreshLoadedBlocks);
+            document.getElementById('openmira-refresh-block-types').addEventListener('click', refreshLoadedBlocks);
 
-            document.getElementById('novamira-serialize-blocks').addEventListener('click', function () {
+            document.getElementById('openmira-serialize-blocks').addEventListener('click', function () {
                 runSerialization(false);
             });
 

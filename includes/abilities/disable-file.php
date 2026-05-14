@@ -13,11 +13,11 @@ if (!defined('ABSPATH')) {
     exit();
 }
 
-wp_register_ability('novamira/disable-file', [
-    'label' => __('Disable File', domain: 'novamira'),
+wp_register_ability('openmira/disable-file', [
+    'label' => __('Disable File', domain: 'open-mira'),
     'description' => __(
-        'Disables a file in the sandbox (wp-content/novamira-sandbox/) by appending ".disabled" to its filename. The file is preserved on disk but no longer loaded by the sandbox loader. Use the same path with ".disabled" removed to re-enable. Only operates on files inside the sandbox directory. Idempotent: disabling an already-disabled file succeeds with disabled=false.',
-        domain: 'novamira',
+        'Disables a file in the sandbox (wp-content/openmira-sandbox/) by appending ".disabled" to its filename. The file is preserved on disk but no longer loaded by the sandbox loader. Use the same path with ".disabled" removed to re-enable. Only operates on files inside the sandbox directory. Idempotent: disabling an already-disabled file succeeds with disabled=false.',
+        domain: 'open-mira',
     ),
     'category' => 'filesystem',
     'input_schema' => [
@@ -25,7 +25,7 @@ wp_register_ability('novamira/disable-file', [
         'properties' => [
             'path' => [
                 'type' => 'string',
-                'description' => 'Path to the sandbox file to disable. Relative paths are resolved from ABSPATH. Must be inside wp-content/novamira-sandbox/.',
+                'description' => 'Path to the sandbox file to disable. Relative paths are resolved from ABSPATH. Must be inside wp-content/openmira-sandbox/.',
                 'minLength' => 1,
             ],
         ],
@@ -40,15 +40,15 @@ wp_register_ability('novamira/disable-file', [
             'disabled' => ['type' => 'boolean', 'description' => 'Whether the file was actually renamed.'],
         ],
     ],
-    'execute_callback' => 'novamira_disable_file',
-    'permission_callback' => 'novamira_permission_callback',
+    'execute_callback' => 'openmira_disable_file',
+    'permission_callback' => 'openmira_permission_callback',
     'meta' => [
         'show_in_rest' => true,
         'mcp' => ['public' => true],
         'annotations' => [
             'instructions' => implode("\n", [
                 'SANDBOX NOTES:',
-                '- Only files inside wp-content/novamira-sandbox/ (the PHP sandbox) can be disabled.',
+                '- Only files inside wp-content/openmira-sandbox/ (the PHP sandbox) can be disabled.',
                 '- Disabling appends ".disabled" to the filename so the loader skips it.',
                 '- To re-enable, rename the file back (remove the .disabled suffix).',
                 '- Safer than deleting: the file stays on disk for later re-use.',
@@ -66,14 +66,14 @@ wp_register_ability('novamira/disable-file', [
  * @param array $input Input with 'path'.
  * @return array|WP_Error
  */
-function novamira_disable_file($input)
+function openmira_disable_file($input)
 {
-    $resolved = novamira_resolve_path((string) $input['path'], must_exist: true);
+    $resolved = openmira_resolve_path((string) $input['path'], must_exist: true);
     if (is_wp_error($resolved)) {
         return $resolved;
     }
 
-    $sandbox_check = novamira_validate_sandbox_path($resolved);
+    $sandbox_check = openmira_validate_sandbox_path($resolved);
     if (is_wp_error($sandbox_check)) {
         return $sandbox_check;
     }
@@ -83,7 +83,7 @@ function novamira_disable_file($input)
     }
 
     // Idempotent: already disabled.
-    if (novamira_is_disabled_file($resolved)) {
+    if (openmira_is_disabled_file($resolved)) {
         return [
             'original_path' => $resolved,
             'disabled_path' => $resolved,

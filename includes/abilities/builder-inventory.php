@@ -10,11 +10,11 @@ if (!defined('ABSPATH')) {
     exit();
 }
 
-wp_register_ability('novamira/list-gutenberg-content', [
-    'label' => __('List Gutenberg Content', domain: 'novamira'),
+wp_register_ability('openmira/list-gutenberg-content', [
+    'label' => __('List Gutenberg Content', domain: 'open-mira'),
     'description' => __(
         'Lists posts/pages/custom post types that contain Gutenberg block markup. Read-only. Use this to find candidate content before editing with parse_blocks/serialize_blocks.',
-        domain: 'novamira',
+        domain: 'open-mira',
     ),
     'category' => 'wordpress-builders',
     'input_schema' => [
@@ -58,13 +58,13 @@ wp_register_ability('novamira/list-gutenberg-content', [
         ],
         'required' => ['posts', 'count'],
     ],
-    'execute_callback' => 'novamira_list_gutenberg_content',
-    'permission_callback' => 'novamira_permission_callback',
+    'execute_callback' => 'openmira_list_gutenberg_content',
+    'permission_callback' => 'openmira_permission_callback',
     'meta' => [
         'show_in_rest' => true,
         'mcp' => ['public' => true],
         'annotations' => [
-            'instructions' => 'Read-only. Use novamira/read-gutenberg-content for the selected post before editing.',
+            'instructions' => 'Read-only. Use openmira/read-gutenberg-content for the selected post before editing.',
             'readonly' => true,
             'destructive' => false,
             'idempotent' => true,
@@ -72,11 +72,11 @@ wp_register_ability('novamira/list-gutenberg-content', [
     ],
 ]);
 
-wp_register_ability('novamira/read-gutenberg-content', [
-    'label' => __('Read Gutenberg Content', domain: 'novamira'),
+wp_register_ability('openmira/read-gutenberg-content', [
+    'label' => __('Read Gutenberg Content', domain: 'open-mira'),
     'description' => __(
         'Reads one post containing Gutenberg block markup and returns block summary plus optional raw post_content and parsed block data. Read-only.',
-        domain: 'novamira',
+        domain: 'open-mira',
     ),
     'category' => 'wordpress-builders',
     'input_schema' => [
@@ -112,8 +112,8 @@ wp_register_ability('novamira/read-gutenberg-content', [
         ],
         'required' => ['post', 'has_blocks', 'blocks'],
     ],
-    'execute_callback' => 'novamira_read_gutenberg_content',
-    'permission_callback' => 'novamira_permission_callback',
+    'execute_callback' => 'openmira_read_gutenberg_content',
+    'permission_callback' => 'openmira_permission_callback',
     'meta' => [
         'show_in_rest' => true,
         'mcp' => ['public' => true],
@@ -126,11 +126,11 @@ wp_register_ability('novamira/read-gutenberg-content', [
     ],
 ]);
 
-wp_register_ability('novamira/list-bricks-content', [
-    'label' => __('List Bricks Content', domain: 'novamira'),
+wp_register_ability('openmira/list-bricks-content', [
+    'label' => __('List Bricks Content', domain: 'open-mira'),
     'description' => __(
         'Lists posts and Bricks templates that contain Bricks Builder data in known Bricks meta areas. Read-only.',
-        domain: 'novamira',
+        domain: 'open-mira',
     ),
     'category' => 'wordpress-builders',
     'input_schema' => [
@@ -172,13 +172,13 @@ wp_register_ability('novamira/list-bricks-content', [
         ],
         'required' => ['bricks_available', 'meta_keys', 'posts', 'count'],
     ],
-    'execute_callback' => 'novamira_list_bricks_content',
-    'permission_callback' => 'novamira_permission_callback',
+    'execute_callback' => 'openmira_list_bricks_content',
+    'permission_callback' => 'openmira_permission_callback',
     'meta' => [
         'show_in_rest' => true,
         'mcp' => ['public' => true],
         'annotations' => [
-            'instructions' => 'Read-only. Use novamira/read-bricks-content on a selected post before planning any Bricks change.',
+            'instructions' => 'Read-only. Use openmira/read-bricks-content on a selected post before planning any Bricks change.',
             'readonly' => true,
             'destructive' => false,
             'idempotent' => true,
@@ -186,11 +186,11 @@ wp_register_ability('novamira/list-bricks-content', [
     ],
 ]);
 
-wp_register_ability('novamira/read-bricks-content', [
-    'label' => __('Read Bricks Content', domain: 'novamira'),
+wp_register_ability('openmira/read-bricks-content', [
+    'label' => __('Read Bricks Content', domain: 'open-mira'),
     'description' => __(
         'Reads Bricks Builder data for one post/template from known Bricks meta areas. Read-only. Returns element arrays and summary counts.',
-        domain: 'novamira',
+        domain: 'open-mira',
     ),
     'category' => 'wordpress-builders',
     'input_schema' => [
@@ -221,8 +221,8 @@ wp_register_ability('novamira/read-bricks-content', [
         ],
         'required' => ['post', 'meta_keys', 'areas', 'summary'],
     ],
-    'execute_callback' => 'novamira_read_bricks_content',
-    'permission_callback' => 'novamira_permission_callback',
+    'execute_callback' => 'openmira_read_bricks_content',
+    'permission_callback' => 'openmira_permission_callback',
     'meta' => [
         'show_in_rest' => true,
         'mcp' => ['public' => true],
@@ -241,12 +241,12 @@ wp_register_ability('novamira/read-bricks-content', [
  * @param array<string, mixed> $input
  * @return array<string, mixed>
  */
-function novamira_list_gutenberg_content(array $input = []): array
+function openmira_list_gutenberg_content(array $input = []): array
 {
     $query = new WP_Query([
-        'post_type' => novamira_normalize_post_type_input((string) ($input['post_type'] ?? 'any')),
-        'post_status' => novamira_normalize_post_status_input((string) ($input['post_status'] ?? 'any')),
-        'posts_per_page' => novamira_normalize_limit($input['limit'] ?? 20),
+        'post_type' => openmira_normalize_post_type_input((string) ($input['post_type'] ?? 'any')),
+        'post_status' => openmira_normalize_post_status_input((string) ($input['post_status'] ?? 'any')),
+        'posts_per_page' => openmira_normalize_limit($input['limit'] ?? 20),
         'offset' => max(0, (int) ($input['offset'] ?? 0)),
         's' => (string) ($input['search'] ?? ''),
         'orderby' => 'modified',
@@ -259,7 +259,7 @@ function novamira_list_gutenberg_content(array $input = []): array
         if (!$post instanceof WP_Post || !has_blocks($post)) {
             continue;
         }
-        $posts[] = novamira_build_post_inventory_item($post)
+        $posts[] = openmira_build_post_inventory_item($post)
         + [
             'block_count' => count(parse_blocks($post->post_content)),
         ];
@@ -277,7 +277,7 @@ function novamira_list_gutenberg_content(array $input = []): array
  * @param array<string, mixed> $input
  * @return array<string, mixed>|WP_Error
  */
-function novamira_read_gutenberg_content(array $input): array|WP_Error
+function openmira_read_gutenberg_content(array $input): array|WP_Error
 {
     // @mago-expect analysis:mixed-assignment
     $post = get_post((int) ($input['post_id'] ?? 0));
@@ -287,15 +287,15 @@ function novamira_read_gutenberg_content(array $input): array|WP_Error
 
     $parsed_blocks = parse_blocks($post->post_content);
     $response = [
-        'post' => novamira_build_post_inventory_item($post),
+        'post' => openmira_build_post_inventory_item($post),
         'has_blocks' => has_blocks($post),
-        'blocks' => novamira_summarize_blocks($parsed_blocks),
+        'blocks' => openmira_summarize_blocks($parsed_blocks),
     ];
 
-    if (novamira_truthy_input($input['include_raw_content'] ?? false)) {
+    if (openmira_truthy_input($input['include_raw_content'] ?? false)) {
         $response['raw_content'] = $post->post_content;
     }
-    if (novamira_truthy_input($input['include_parsed_blocks'] ?? false)) {
+    if (openmira_truthy_input($input['include_parsed_blocks'] ?? false)) {
         $response['parsed_blocks'] = $parsed_blocks;
     }
 
@@ -308,18 +308,18 @@ function novamira_read_gutenberg_content(array $input): array|WP_Error
  * @param array<string, mixed> $input
  * @return array<string, mixed>
  */
-function novamira_list_bricks_content(array $input = []): array
+function openmira_list_bricks_content(array $input = []): array
 {
-    $meta_keys = novamira_get_bricks_meta_keys();
+    $meta_keys = openmira_get_bricks_meta_keys();
     $query = new WP_Query([
-        'post_type' => novamira_normalize_post_type_input((string) ($input['post_type'] ?? 'any')),
-        'post_status' => novamira_normalize_post_status_input((string) ($input['post_status'] ?? 'any')),
-        'posts_per_page' => novamira_normalize_limit($input['limit'] ?? 20),
+        'post_type' => openmira_normalize_post_type_input((string) ($input['post_type'] ?? 'any')),
+        'post_status' => openmira_normalize_post_status_input((string) ($input['post_status'] ?? 'any')),
+        'posts_per_page' => openmira_normalize_limit($input['limit'] ?? 20),
         'offset' => max(0, (int) ($input['offset'] ?? 0)),
         'orderby' => 'modified',
         'order' => 'DESC',
         'no_found_rows' => true,
-        'meta_query' => novamira_build_bricks_meta_query($meta_keys),
+        'meta_query' => openmira_build_bricks_meta_query($meta_keys),
     ]);
 
     $posts = [];
@@ -327,14 +327,14 @@ function novamira_list_bricks_content(array $input = []): array
         if (!$post instanceof WP_Post) {
             continue;
         }
-        $posts[] = novamira_build_post_inventory_item($post)
+        $posts[] = openmira_build_post_inventory_item($post)
         + [
-            'areas' => novamira_get_bricks_area_counts($post->ID, $meta_keys),
+            'areas' => openmira_get_bricks_area_counts($post->ID, $meta_keys),
         ];
     }
 
     return [
-        'bricks_available' => novamira_is_bricks_available(),
+        'bricks_available' => openmira_is_bricks_available(),
         'meta_keys' => $meta_keys,
         'posts' => $posts,
         'count' => count($posts),
@@ -347,7 +347,7 @@ function novamira_list_bricks_content(array $input = []): array
  * @param array<string, mixed> $input
  * @return array<string, mixed>|WP_Error
  */
-function novamira_read_bricks_content(array $input): array|WP_Error
+function openmira_read_bricks_content(array $input): array|WP_Error
 {
     // @mago-expect analysis:mixed-assignment
     $post = get_post((int) ($input['post_id'] ?? 0));
@@ -356,7 +356,7 @@ function novamira_read_bricks_content(array $input): array|WP_Error
     }
 
     $requested_area = (string) ($input['area'] ?? 'all');
-    $meta_keys = novamira_get_bricks_meta_keys();
+    $meta_keys = openmira_get_bricks_meta_keys();
     $areas = [];
     foreach ($meta_keys as $area => $meta_key) {
         if ($requested_area !== 'all' && $requested_area !== $area) {
@@ -373,11 +373,11 @@ function novamira_read_bricks_content(array $input): array|WP_Error
     }
 
     return [
-        'post' => novamira_build_post_inventory_item($post),
+        'post' => openmira_build_post_inventory_item($post),
         'meta_keys' => $meta_keys,
         'areas' => $areas,
         'summary' => [
-            'bricks_available' => novamira_is_bricks_available(),
+            'bricks_available' => openmira_is_bricks_available(),
             'total_elements' => array_sum(array_map(
                 static fn(array $area): int => (int) $area['element_count'],
                 $areas,
@@ -391,7 +391,7 @@ function novamira_read_bricks_content(array $input): array|WP_Error
  *
  * @return array<string, mixed>
  */
-function novamira_build_post_inventory_item(WP_Post $post): array
+function openmira_build_post_inventory_item(WP_Post $post): array
 {
     $edit_url = get_edit_post_link($post->ID, context: 'raw');
 
@@ -411,7 +411,7 @@ function novamira_build_post_inventory_item(WP_Post $post): array
  * @param array<array-key, mixed> $blocks
  * @return list<array<string, mixed>>
  */
-function novamira_summarize_blocks(array $blocks): array
+function openmira_summarize_blocks(array $blocks): array
 {
     $summary = [];
     // @mago-expect analysis:mixed-assignment
@@ -425,7 +425,7 @@ function novamira_summarize_blocks(array $blocks): array
             'blockName' => $block['blockName'] ?? null,
             'attrs' => $attrs,
             'innerBlockCount' => count($inner_blocks),
-            'innerBlocks' => novamira_summarize_blocks($inner_blocks),
+            'innerBlocks' => openmira_summarize_blocks($inner_blocks),
         ];
     }
 
@@ -438,7 +438,7 @@ function novamira_summarize_blocks(array $blocks): array
  * @param array<string, string> $meta_keys
  * @return array<int|string, mixed>
  */
-function novamira_build_bricks_meta_query(array $meta_keys): array
+function openmira_build_bricks_meta_query(array $meta_keys): array
 {
     $query = ['relation' => 'OR'];
     foreach ($meta_keys as $meta_key) {
@@ -457,7 +457,7 @@ function novamira_build_bricks_meta_query(array $meta_keys): array
  * @param array<string, string> $meta_keys
  * @return array<string, int>
  */
-function novamira_get_bricks_area_counts(int $post_id, array $meta_keys): array
+function openmira_get_bricks_area_counts(int $post_id, array $meta_keys): array
 {
     $counts = [];
     foreach ($meta_keys as $area => $meta_key) {
@@ -474,7 +474,7 @@ function novamira_get_bricks_area_counts(int $post_id, array $meta_keys): array
 /**
  * Detect Bricks runtime availability.
  */
-function novamira_is_bricks_available(): bool
+function openmira_is_bricks_available(): bool
 {
     return class_exists('Bricks\\Elements') || defined('BRICKS_VERSION') || post_type_exists('bricks_template');
 }
@@ -482,7 +482,7 @@ function novamira_is_bricks_available(): bool
 /**
  * Normalize limit input.
  */
-function novamira_normalize_limit(mixed $value): int
+function openmira_normalize_limit(mixed $value): int
 {
     return min(100, max(1, (int) $value));
 }
@@ -492,7 +492,7 @@ function novamira_normalize_limit(mixed $value): int
  *
  * @return string|list<string>
  */
-function novamira_normalize_post_type_input(string $post_type): string|array
+function openmira_normalize_post_type_input(string $post_type): string|array
 {
     $post_type = sanitize_key($post_type);
     if ($post_type === '' || $post_type === 'any') {
@@ -507,7 +507,7 @@ function novamira_normalize_post_type_input(string $post_type): string|array
  *
  * @return string|list<string>
  */
-function novamira_normalize_post_status_input(string $post_status): string|array
+function openmira_normalize_post_status_input(string $post_status): string|array
 {
     $post_status = sanitize_key($post_status);
     if ($post_status === '' || $post_status === 'any') {
@@ -520,7 +520,7 @@ function novamira_normalize_post_status_input(string $post_status): string|array
 /**
  * Normalize REST/Abilities boolean input.
  */
-function novamira_truthy_input(mixed $value): bool
+function openmira_truthy_input(mixed $value): bool
 {
     return $value === true || $value === 1 || $value === '1' || $value === 'true';
 }
@@ -528,7 +528,7 @@ function novamira_truthy_input(mixed $value): bool
 /**
  * Normalize false-like REST/Abilities boolean input.
  */
-function novamira_falsey_input(mixed $value): bool
+function openmira_falsey_input(mixed $value): bool
 {
     return $value === false || $value === 0 || $value === '0' || $value === 'false';
 }

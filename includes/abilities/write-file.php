@@ -13,11 +13,11 @@ if (!defined('ABSPATH')) {
     exit();
 }
 
-wp_register_ability('novamira/write-file', [
-    'label' => __('Write File', domain: 'novamira'),
+wp_register_ability('openmira/write-file', [
+    'label' => __('Write File', domain: 'open-mira'),
     'description' => __(
-        'Writes content to a file on the server filesystem. PHP files (*.php) can ONLY be written to the sandbox directory (wp-content/novamira-sandbox/). Non-PHP files can go anywhere under ABSPATH. Supports both UTF-8 text and base64-encoded binary content. Automatically creates parent directories when needed.',
-        domain: 'novamira',
+        'Writes content to a file on the server filesystem. PHP files (*.php) can ONLY be written to the sandbox directory (wp-content/openmira-sandbox/). Non-PHP files can go anywhere under ABSPATH. Supports both UTF-8 text and base64-encoded binary content. Automatically creates parent directories when needed.',
+        domain: 'open-mira',
     ),
     'category' => 'filesystem',
     'input_schema' => [
@@ -70,16 +70,16 @@ wp_register_ability('novamira/write-file', [
             'size' => ['type' => 'integer', 'description' => 'Final file size in bytes.'],
         ],
     ],
-    'execute_callback' => 'novamira_write_file',
-    'permission_callback' => 'novamira_permission_callback',
+    'execute_callback' => 'openmira_write_file',
+    'permission_callback' => 'openmira_permission_callback',
     'meta' => [
         'show_in_rest' => true,
         'mcp' => ['public' => true],
         'annotations' => [
             'instructions' => implode("\n", [
                 'PHP FILE SANDBOX:',
-                '- PHP files (*.php) can ONLY be written to: wp-content/novamira-sandbox/',
-                '- Use a path like "wp-content/novamira-sandbox/my-feature.php"',
+                '- PHP files (*.php) can ONLY be written to: wp-content/openmira-sandbox/',
+                '- Use a path like "wp-content/openmira-sandbox/my-feature.php"',
                 '- Non-PHP files can be written anywhere under ABSPATH.',
                 '- Sandbox plugins are loaded by a mu-plugin loader on every request.',
                 '',
@@ -87,7 +87,7 @@ wp_register_ability('novamira/write-file', [
                 '- If a sandbox plugin causes a fatal error, the loader auto-detects the crash',
                 '  and enters safe mode on the next request. All sandbox plugins are skipped.',
                 '- In safe mode, MCP still works. You can read, fix, or delete the broken file.',
-                '- After fixing, delete the file "wp-content/novamira-sandbox/.crashed"',
+                '- After fixing, delete the file "wp-content/openmira-sandbox/.crashed"',
                 '  to exit safe mode and resume loading sandbox plugins.',
                 '- If MCP suddenly stops responding after you wrote a PHP file, wait — the next',
                 '  request will auto-recover into safe mode and MCP will be available again.',
@@ -106,7 +106,7 @@ wp_register_ability('novamira/write-file', [
  * @param string $encoding Encoding type ('utf-8' or 'base64').
  * @return string|WP_Error Decoded content or WP_Error on failure.
  */
-function novamira_decode_write_content(string $content, string $encoding): string|WP_Error
+function openmira_decode_write_content(string $content, string $encoding): string|WP_Error
 {
     if ($encoding === 'base64') {
         $decoded = base64_decode(string: $content, strict: true);
@@ -126,9 +126,9 @@ function novamira_decode_write_content(string $content, string $encoding): strin
  * @param array $input Input with 'path', 'content', optional 'encoding', 'mode', 'create_directories'.
  * @return array|WP_Error
  */
-function novamira_write_file($input)
+function openmira_write_file($input)
 {
-    $resolved = novamira_resolve_path(path: (string) $input['path'], must_exist: false);
+    $resolved = openmira_resolve_path(path: (string) $input['path'], must_exist: false);
     if (is_wp_error($resolved)) {
         return $resolved;
     }
@@ -139,13 +139,13 @@ function novamira_write_file($input)
     $is_php = strtolower(pathinfo($resolved, PATHINFO_EXTENSION)) === 'php';
 
     if ($is_php) {
-        $sandbox_error = novamira_check_php_sandbox($resolved);
+        $sandbox_error = openmira_check_php_sandbox($resolved);
         if (is_wp_error($sandbox_error)) {
             return $sandbox_error;
         }
     }
 
-    $content = novamira_decode_write_content((string) $input['content'], $encoding);
+    $content = openmira_decode_write_content((string) $input['content'], $encoding);
     if (is_wp_error($content)) {
         return $content;
     }
@@ -157,7 +157,7 @@ function novamira_write_file($input)
         return new WP_Error('directory_not_found', sprintf('Parent directory does not exist: %s', $parent_dir));
     }
 
-    $directories_created = novamira_ensure_parent_dir($parent_dir);
+    $directories_created = openmira_ensure_parent_dir($parent_dir);
     if (is_wp_error($directories_created)) {
         return $directories_created;
     }

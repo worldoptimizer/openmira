@@ -12,11 +12,11 @@ if (!defined('ABSPATH')) {
 
 require_once dirname(__DIR__) . '/memory-store.php';
 
-wp_register_ability('novamira/read-memory', [
-    'label' => __('Read Memory', domain: 'novamira'),
+wp_register_ability('openmira/read-memory', [
+    'label' => __('Read Memory', domain: 'open-mira'),
     'description' => __(
         'Reads persistent project memory stored in WordPress options. Use this at the start of a session to recover user preferences, architecture decisions, active builder choices, and implementation notes from prior sessions.',
-        domain: 'novamira',
+        domain: 'open-mira',
     ),
     'category' => 'memory',
     'input_schema' => [
@@ -38,13 +38,13 @@ wp_register_ability('novamira/read-memory', [
         ],
         'required' => ['entries', 'count'],
     ],
-    'execute_callback' => 'novamira_read_memory',
-    'permission_callback' => 'novamira_permission_callback',
+    'execute_callback' => 'openmira_read_memory',
+    'permission_callback' => 'openmira_permission_callback',
     'meta' => [
         'show_in_rest' => true,
         'mcp' => ['public' => true],
         'annotations' => [
-            'instructions' => 'Read this before substantial work. Then write durable decisions back with novamira/write-memory.',
+            'instructions' => 'Read this before substantial work. Then write durable decisions back with openmira/write-memory.',
             'readonly' => true,
             'destructive' => false,
             'idempotent' => true,
@@ -52,11 +52,11 @@ wp_register_ability('novamira/read-memory', [
     ],
 ]);
 
-wp_register_ability('novamira/write-memory', [
-    'label' => __('Write Memory', domain: 'novamira'),
+wp_register_ability('openmira/write-memory', [
+    'label' => __('Write Memory', domain: 'open-mira'),
     'description' => __(
         'Creates or updates persistent project memory for future AI sessions. Store durable facts only: builder choices, coding conventions, site architecture, client preferences, and decisions that should survive context loss.',
-        domain: 'novamira',
+        domain: 'open-mira',
     ),
     'category' => 'memory',
     'input_schema' => [
@@ -85,8 +85,8 @@ wp_register_ability('novamira/write-memory', [
         ],
         'required' => ['key', 'created', 'entry'],
     ],
-    'execute_callback' => 'novamira_write_memory',
-    'permission_callback' => 'novamira_permission_callback',
+    'execute_callback' => 'openmira_write_memory',
+    'permission_callback' => 'openmira_permission_callback',
     'meta' => [
         'show_in_rest' => true,
         'mcp' => ['public' => true],
@@ -99,9 +99,9 @@ wp_register_ability('novamira/write-memory', [
     ],
 ]);
 
-wp_register_ability('novamira/delete-memory', [
-    'label' => __('Delete Memory', domain: 'novamira'),
-    'description' => __('Deletes one persistent project memory entry.', domain: 'novamira'),
+wp_register_ability('openmira/delete-memory', [
+    'label' => __('Delete Memory', domain: 'open-mira'),
+    'description' => __('Deletes one persistent project memory entry.', domain: 'open-mira'),
     'category' => 'memory',
     'input_schema' => [
         'type' => 'object',
@@ -123,8 +123,8 @@ wp_register_ability('novamira/delete-memory', [
         ],
         'required' => ['key', 'deleted'],
     ],
-    'execute_callback' => 'novamira_delete_memory',
-    'permission_callback' => 'novamira_permission_callback',
+    'execute_callback' => 'openmira_delete_memory',
+    'permission_callback' => 'openmira_permission_callback',
     'meta' => [
         'show_in_rest' => true,
         'mcp' => ['public' => true],

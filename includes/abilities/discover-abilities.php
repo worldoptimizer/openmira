@@ -28,16 +28,16 @@ if (wp_has_ability('mcp-adapter/discover-abilities')) {
 }
 
 wp_register_ability('mcp-adapter/discover-abilities', [
-    'label' => __('Discover Abilities', domain: 'novamira'),
+    'label' => __('Discover Abilities', domain: 'open-mira'),
     'description' => __(
         'Discover all available WordPress abilities in the system. Returns a list of all registered abilities with their basic information, plus Open Mira environment instructions.',
-        domain: 'novamira',
+        domain: 'open-mira',
     ),
     'category' => 'mcp-adapter',
     'output_schema' => [
         'type' => 'object',
         'properties' => [
-            'novamira_instructions' => [
+            'openmira_instructions' => [
                 'type' => 'string',
                 'description' => 'Open Mira environment and usage guidance for the agent.',
             ],
@@ -54,7 +54,7 @@ wp_register_ability('mcp-adapter/discover-abilities', [
                 ],
             ],
         ],
-        'required' => ['novamira_instructions', 'abilities'],
+        'required' => ['openmira_instructions', 'abilities'],
     ],
     'permission_callback' => static function (): bool|\WP_Error {
         if (!is_user_logged_in()) {
@@ -85,9 +85,9 @@ wp_register_ability('mcp-adapter/discover-abilities', [
         }
 
         return [
-            'novamira_instructions' => apply_filters(
-                'novamira_discover_abilities_instructions',
-                novamira_build_server_instructions(),
+            'openmira_instructions' => apply_filters(
+                'openmira_discover_abilities_instructions',
+                openmira_build_server_instructions(),
             ),
             'abilities' => $ability_list,
         ];

@@ -13,11 +13,11 @@ if (!defined('ABSPATH')) {
     exit();
 }
 
-wp_register_ability('novamira/execute-php', [
-    'label' => __('Execute PHP Code', domain: 'novamira'),
+wp_register_ability('openmira/execute-php', [
+    'label' => __('Execute PHP Code', domain: 'open-mira'),
     'description' => __(
         'Executes PHP code on the WordPress server. The full WordPress environment is available including $wpdb, all WordPress functions, and loaded plugins. Returns the return value, any echoed output, and captured warnings/notices.',
-        domain: 'novamira',
+        domain: 'open-mira',
     ),
     'category' => 'code-execution',
     'input_schema' => [
@@ -62,8 +62,8 @@ wp_register_ability('novamira/execute-php', [
             ],
         ],
     ],
-    'execute_callback' => 'novamira_execute_php',
-    'permission_callback' => 'novamira_permission_callback',
+    'execute_callback' => 'openmira_execute_php',
+    'permission_callback' => 'openmira_permission_callback',
     'meta' => [
         'show_in_rest' => true,
         'mcp' => ['public' => true],
@@ -77,11 +77,11 @@ wp_register_ability('novamira/execute-php', [
                 '- Any echo/print output is captured separately in the "output" field.',
                 '- The full WordPress API is available: $wpdb, get_option(), WP_Query, etc.',
                 '- All loaded plugin APIs are available.',
-                '- Execution has a ' . NOVAMIRA_MAX_EXECUTION_TIME . ' second time limit.',
+                '- Execution has a ' . OPENMIRA_MAX_EXECUTION_TIME . ' second time limit.',
                 '',
                 'SANDBOX CONTEXT:',
                 '- To create persistent PHP functionality, write files to the sandbox',
-                '  (wp-content/novamira-sandbox/) using the write-file ability.',
+                '  (wp-content/openmira-sandbox/) using the write-file ability.',
                 '- Code executed here via eval() is temporary and does not persist across requests.',
                 '- Do NOT use eval to require/include files that may have errors — use write-file',
                 '  to persist them instead.',
@@ -99,14 +99,14 @@ wp_register_ability('novamira/execute-php', [
  * @param array $input Input with 'code' key.
  * @return array|WP_Error
  */
-function novamira_execute_php($input)
+function openmira_execute_php($input)
 {
     $code = (string) $input['code'];
     $errors = [];
 
     // Save and set time limit.
     $original_time_limit = (int) ini_get('max_execution_time');
-    set_time_limit(NOVAMIRA_MAX_EXECUTION_TIME);
+    set_time_limit(OPENMIRA_MAX_EXECUTION_TIME);
 
     // Set up error handler to capture warnings/notices.
     $error_types = [

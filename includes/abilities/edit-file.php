@@ -13,11 +13,11 @@ if (!defined('ABSPATH')) {
     exit();
 }
 
-wp_register_ability('novamira/edit-file', [
-    'label' => __('Edit File', domain: 'novamira'),
+wp_register_ability('openmira/edit-file', [
+    'label' => __('Edit File', domain: 'open-mira'),
     'description' => __(
         'Edits an existing file by replacing an exact string match with new content. Works like the edit tool in AI code agents: specify the old text to find and the new text to replace it with. The old string must be unique in the file unless replace_all is set.',
-        domain: 'novamira',
+        domain: 'open-mira',
     ),
     'category' => 'filesystem',
     'input_schema' => [
@@ -53,8 +53,8 @@ wp_register_ability('novamira/edit-file', [
             'size' => ['type' => 'integer', 'description' => 'Final file size in bytes.'],
         ],
     ],
-    'execute_callback' => 'novamira_edit_file',
-    'permission_callback' => 'novamira_permission_callback',
+    'execute_callback' => 'openmira_edit_file',
+    'permission_callback' => 'openmira_permission_callback',
     'meta' => [
         'show_in_rest' => true,
         'mcp' => ['public' => true],
@@ -90,7 +90,7 @@ wp_register_ability('novamira/edit-file', [
  * @param string $new_string Text to replace with.
  * @return string The new content.
  */
-function novamira_edit_replace_first(string $content, string $old_string, string $new_string): string
+function openmira_edit_replace_first(string $content, string $old_string, string $new_string): string
 {
     /** @var int $pos — caller guarantees $old_string exists in $content */
     $pos = strpos($content, $old_string);
@@ -106,9 +106,9 @@ function novamira_edit_replace_first(string $content, string $old_string, string
  * @param array $input Input with 'path', 'old_string', 'new_string', optional 'replace_all'.
  * @return array|WP_Error
  */
-function novamira_edit_file($input)
+function openmira_edit_file($input)
 {
-    $resolved = novamira_resolve_path(path: (string) $input['path'], must_exist: true);
+    $resolved = openmira_resolve_path(path: (string) $input['path'], must_exist: true);
     if (is_wp_error($resolved)) {
         return $resolved;
     }
@@ -152,7 +152,7 @@ function novamira_edit_file($input)
 
     $new_content = $replace_all
         ? str_replace($old_string, $new_string, $content)
-        : novamira_edit_replace_first($content, $old_string, $new_string);
+        : openmira_edit_replace_first($content, $old_string, $new_string);
 
     $bytes_written = file_put_contents($resolved, $new_content, LOCK_EX);
     if ($bytes_written === false) {

@@ -13,11 +13,11 @@ if (!defined('ABSPATH')) {
     exit();
 }
 
-wp_register_ability('novamira/list-directory', [
-    'label' => __('List Directory', domain: 'novamira'),
+wp_register_ability('openmira/list-directory', [
+    'label' => __('List Directory', domain: 'open-mira'),
     'description' => __(
         'Lists files and directories at a given path. Supports glob pattern filtering, recursive listing with configurable depth, and hidden file inclusion. Results are sorted with directories first, then alphabetically. Output is capped at a configurable limit to prevent oversized responses.',
-        domain: 'novamira',
+        domain: 'open-mira',
     ),
     'category' => 'filesystem',
     'input_schema' => [
@@ -82,13 +82,13 @@ wp_register_ability('novamira/list-directory', [
             'truncated' => ['type' => 'boolean', 'description' => 'Whether results were truncated due to limit.'],
         ],
     ],
-    'execute_callback' => 'novamira_list_directory',
-    'permission_callback' => 'novamira_permission_callback',
+    'execute_callback' => 'openmira_list_directory',
+    'permission_callback' => 'openmira_permission_callback',
     'meta' => [
         'show_in_rest' => true,
         'mcp' => ['public' => true],
         'annotations' => [
-            'instructions' => 'TIP: AI-written PHP plugins live in wp-content/novamira-sandbox/. Check wp-content/novamira-sandbox/.crashed to see if safe mode is active.',
+            'instructions' => 'TIP: AI-written PHP plugins live in wp-content/openmira-sandbox/. Check wp-content/openmira-sandbox/.crashed to see if safe mode is active.',
             'readonly' => true,
             'destructive' => false,
             'idempotent' => true,
@@ -102,7 +102,7 @@ wp_register_ability('novamira/list-directory', [
  * @param array $input Input with optional 'path', 'pattern', 'recursive', 'max_depth', 'include_hidden', 'limit'.
  * @return array|WP_Error
  */
-function novamira_list_directory(array $input = [])
+function openmira_list_directory(array $input = [])
 {
     $path = (string) (($input['path'] ?? '') !== '' ? $input['path'] : ABSPATH);
     $pattern = (string) ($input['pattern'] ?? '*');
@@ -111,7 +111,7 @@ function novamira_list_directory(array $input = [])
     $include_hidden = ($input['include_hidden'] ?? false) === true;
     $limit = max(1, min(5000, (int) ($input['limit'] ?? 500)));
 
-    $resolved = novamira_resolve_path($path, must_exist: true);
+    $resolved = openmira_resolve_path($path, must_exist: true);
     if (is_wp_error($resolved)) {
         return $resolved;
     }
@@ -125,8 +125,8 @@ function novamira_list_directory(array $input = [])
     }
 
     $all_entries = $recursive
-        ? novamira_collect_recursive_entries($resolved, $pattern, $include_hidden, $max_depth)
-        : novamira_collect_flat_entries($resolved, $pattern, $include_hidden);
+        ? openmira_collect_recursive_entries($resolved, $pattern, $include_hidden, $max_depth)
+        : openmira_collect_flat_entries($resolved, $pattern, $include_hidden);
 
     if (is_wp_error($all_entries)) {
         return $all_entries;
@@ -162,7 +162,7 @@ function novamira_list_directory(array $input = [])
  * @param int    $max_depth      Maximum recursion depth.
  * @return list<array<array-key, mixed>>
  */
-function novamira_collect_recursive_entries($resolved, $pattern, $include_hidden, $max_depth)
+function openmira_collect_recursive_entries($resolved, $pattern, $include_hidden, $max_depth)
 {
     $entries = [];
     $iterator = new RecursiveDirectoryIterator($resolved, RecursiveDirectoryIterator::SKIP_DOTS);
@@ -173,7 +173,7 @@ function novamira_collect_recursive_entries($resolved, $pattern, $include_hidden
         if (!$item instanceof SplFileInfo) {
             continue;
         }
-        $entry = novamira_build_entry($item, $pattern, $include_hidden);
+        $entry = openmira_build_entry($item, $pattern, $include_hidden);
         if ($entry !== null) {
             $entries[] = $entry;
         }
@@ -190,7 +190,7 @@ function novamira_collect_recursive_entries($resolved, $pattern, $include_hidden
  * @param bool   $include_hidden Whether to include hidden entries.
  * @return list<array<array-key, mixed>>|WP_Error
  */
-function novamira_collect_flat_entries($resolved, $pattern, $include_hidden)
+function openmira_collect_flat_entries($resolved, $pattern, $include_hidden)
 {
     $dir_handle = opendir($resolved);
     if ($dir_handle === false) {
@@ -204,7 +204,7 @@ function novamira_collect_flat_entries($resolved, $pattern, $include_hidden)
         }
 
         $info = new SplFileInfo($resolved . DIRECTORY_SEPARATOR . $filename);
-        $entry = novamira_build_entry($info, $pattern, $include_hidden);
+        $entry = openmira_build_entry($info, $pattern, $include_hidden);
         if ($entry !== null) {
             $entries[] = $entry;
         }
@@ -222,7 +222,7 @@ function novamira_collect_flat_entries($resolved, $pattern, $include_hidden)
  * @param bool        $include_hidden Whether to include hidden entries.
  * @return array|null Entry array or null if filtered out.
  */
-function novamira_build_entry($info, $pattern, $include_hidden)
+function openmira_build_entry($info, $pattern, $include_hidden)
 {
     $name = $info->getFilename();
 

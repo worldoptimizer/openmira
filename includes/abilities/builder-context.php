@@ -10,11 +10,11 @@ if (!defined('ABSPATH')) {
     exit();
 }
 
-wp_register_ability('novamira/get-builder-context', [
-    'label' => __('Get Builder Context', domain: 'novamira'),
+wp_register_ability('openmira/get-builder-context', [
+    'label' => __('Get Builder Context', domain: 'open-mira'),
     'description' => __(
         'Discovers the active WordPress builder stack and returns practical guidance for Gutenberg, Bricks Builder, and ACF/SCF-compatible custom fields. Use this before creating blocks, Bricks templates/elements, dynamic data integrations, or field-backed content models.',
-        domain: 'novamira',
+        domain: 'open-mira',
     ),
     'category' => 'wordpress-builders',
     'input_schema' => [
@@ -46,8 +46,8 @@ wp_register_ability('novamira/get-builder-context', [
         ],
         'required' => ['instructions', 'gutenberg', 'bricks', 'custom_fields', 'sources'],
     ],
-    'execute_callback' => 'novamira_get_builder_context',
-    'permission_callback' => 'novamira_permission_callback',
+    'execute_callback' => 'openmira_get_builder_context',
+    'permission_callback' => 'openmira_permission_callback',
     'meta' => [
         'show_in_rest' => true,
         'mcp' => ['public' => true],
@@ -66,24 +66,24 @@ wp_register_ability('novamira/get-builder-context', [
  * @param array<string, mixed> $input Ability input.
  * @return array<string, mixed>
  */
-function novamira_get_builder_context(array $input = []): array
+function openmira_get_builder_context(array $input = []): array
 {
     $include_posts = ($input['include_posts'] ?? true) !== false;
     $limit = min(50, max(1, (int) ($input['limit'] ?? 10)));
-    $gutenberg_posts = $include_posts ? novamira_get_block_content_posts($limit) : [];
+    $gutenberg_posts = $include_posts ? openmira_get_block_content_posts($limit) : [];
     $bricks_templates = $include_posts
-        ? novamira_get_bricks_templates(
-            novamira_get_bricks_template_post_type(),
-            novamira_get_bricks_meta_keys(),
+        ? openmira_get_bricks_templates(
+            openmira_get_bricks_template_post_type(),
+            openmira_get_bricks_meta_keys(),
             $limit,
         )
         : [];
 
     return [
-        'instructions' => novamira_get_builder_context_instructions(),
-        'gutenberg' => novamira_get_gutenberg_context($gutenberg_posts),
-        'bricks' => novamira_get_bricks_context($bricks_templates),
-        'custom_fields' => novamira_get_custom_fields_context(),
+        'instructions' => openmira_get_builder_context_instructions(),
+        'gutenberg' => openmira_get_gutenberg_context($gutenberg_posts),
+        'bricks' => openmira_get_bricks_context($bricks_templates),
+        'custom_fields' => openmira_get_custom_fields_context(),
         'sources' => [
             'https://developer.wordpress.org/block-editor/getting-started/fundamentals/block-json/',
             'https://developer.wordpress.org/reference/functions/register_block_type/',
@@ -98,7 +98,7 @@ function novamira_get_builder_context(array $input = []): array
 /**
  * Return implementation guidance for AI agents.
  */
-function novamira_get_builder_context_instructions(): string
+function openmira_get_builder_context_instructions(): string
 {
     return implode("\n", [
         'Builder integration rules:',
@@ -119,7 +119,7 @@ function novamira_get_builder_context_instructions(): string
  * @param list<array<string, mixed>> $sample_posts
  * @return array<string, mixed>
  */
-function novamira_get_gutenberg_context(array $sample_posts): array
+function openmira_get_gutenberg_context(array $sample_posts): array
 {
     $registered_blocks = [];
     if (class_exists('WP_Block_Type_Registry')) {
@@ -160,7 +160,7 @@ function novamira_get_gutenberg_context(array $sample_posts): array
  *
  * @return list<array<string, mixed>>
  */
-function novamira_get_block_content_posts(int $limit): array
+function openmira_get_block_content_posts(int $limit): array
 {
     $query = new WP_Query([
         'post_type' => 'any',
@@ -197,12 +197,12 @@ function novamira_get_block_content_posts(int $limit): array
  * @param list<array<string, mixed>> $templates
  * @return array<string, mixed>
  */
-function novamira_get_bricks_context(array $templates): array
+function openmira_get_bricks_context(array $templates): array
 {
     $active = class_exists('Bricks\\Elements') || defined('BRICKS_VERSION') || post_type_exists('bricks_template');
     $version = defined('BRICKS_VERSION') ? (string) constant('BRICKS_VERSION') : '';
-    $template_post_type = novamira_get_bricks_template_post_type();
-    $meta_keys = novamira_get_bricks_meta_keys();
+    $template_post_type = openmira_get_bricks_template_post_type();
+    $meta_keys = openmira_get_bricks_meta_keys();
 
     return [
         'available' => $active,
@@ -251,7 +251,7 @@ function novamira_get_bricks_context(array $templates): array
 /**
  * Return the Bricks template post type.
  */
-function novamira_get_bricks_template_post_type(): string
+function openmira_get_bricks_template_post_type(): string
 {
     return defined('BRICKS_DB_TEMPLATE_SLUG') ? (string) constant('BRICKS_DB_TEMPLATE_SLUG') : 'bricks_template';
 }
@@ -261,7 +261,7 @@ function novamira_get_bricks_template_post_type(): string
  *
  * @return array<string, string>
  */
-function novamira_get_bricks_meta_keys(): array
+function openmira_get_bricks_meta_keys(): array
 {
     return [
         'header' => defined('BRICKS_DB_PAGE_HEADER')
@@ -282,7 +282,7 @@ function novamira_get_bricks_meta_keys(): array
  * @param array<string, string> $meta_keys
  * @return list<array<string, mixed>>
  */
-function novamira_get_bricks_templates(string $template_post_type, array $meta_keys, int $limit): array
+function openmira_get_bricks_templates(string $template_post_type, array $meta_keys, int $limit): array
 {
     if (!post_type_exists($template_post_type)) {
         return [];
@@ -329,7 +329,7 @@ function novamira_get_bricks_templates(string $template_post_type, array $meta_k
  *
  * @return array<string, mixed>
  */
-function novamira_get_custom_fields_context(): array
+function openmira_get_custom_fields_context(): array
 {
     $providers = [];
     if (function_exists('acf')) {

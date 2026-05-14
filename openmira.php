@@ -16,7 +16,7 @@ declare(strict_types=1);
  * Author URI: https://github.com/worldoptimizer
  * License: AGPL-3.0-or-later
  * License URI: https://www.gnu.org/licenses/agpl-3.0.html
- * Text Domain: novamira
+ * Text Domain: open-mira
  * Copyright: Ovation S.r.l.
  *
  * This program is free software: you can redistribute it and/or modify
@@ -37,46 +37,46 @@ if (!defined('ABSPATH')) {
     exit();
 }
 
-define(constant_name: 'NOVAMIRA_VERSION', value: '1.2.0');
-define(constant_name: 'NOVAMIRA_MAX_EXECUTION_TIME', value: 30);
-define('NOVAMIRA_PLUGIN_URL', plugin_dir_url(__FILE__));
-define('NOVAMIRA_SANDBOX_DIR', WP_CONTENT_DIR . '/novamira-sandbox/');
-define(constant_name: 'NOVAMIRA_VENDOR_AUTOLOAD', value: __DIR__ . '/vendor/autoload_packages.php');
-define(constant_name: 'NOVAMIRA_MCP_ADAPTER_CLASS', value: 'WP\\MCP\\Core\\McpAdapter');
+define(constant_name: 'OPENMIRA_VERSION', value: '1.2.0');
+define(constant_name: 'OPENMIRA_MAX_EXECUTION_TIME', value: 30);
+define('OPENMIRA_PLUGIN_URL', plugin_dir_url(__FILE__));
+define('OPENMIRA_SANDBOX_DIR', WP_CONTENT_DIR . '/openmira-sandbox/');
+define(constant_name: 'OPENMIRA_VENDOR_AUTOLOAD', value: __DIR__ . '/vendor/autoload_packages.php');
+define(constant_name: 'OPENMIRA_MCP_ADAPTER_CLASS', value: 'WP\\MCP\\Core\\McpAdapter');
 
 /**
  * Load bundled Composer dependencies and report the common source-ZIP install mistake clearly.
  *
  * @return WP_Error|null
  */
-function novamira_load_bundled_dependencies()
+function openmira_load_bundled_dependencies()
 {
-    if (!file_exists(NOVAMIRA_VENDOR_AUTOLOAD)) {
-        return new WP_Error('novamira_missing_vendor', __(
+    if (!file_exists(OPENMIRA_VENDOR_AUTOLOAD)) {
+        return new WP_Error('openmira_missing_vendor', __(
             'Open Mira is installed without its bundled vendor directory. This usually means the GitHub/source ZIP was installed instead of a built plugin ZIP. The MCP Adapter cannot load, so Open Mira will not register an MCP endpoint. Run Composer or install a build ZIP before using Open Mira.',
-            domain: 'novamira',
+            domain: 'open-mira',
         ));
     }
 
     try {
-        require_once NOVAMIRA_VENDOR_AUTOLOAD;
+        require_once OPENMIRA_VENDOR_AUTOLOAD;
     } catch (\Throwable $e) {
-        return new WP_Error('novamira_autoload_failed', sprintf(
+        return new WP_Error('openmira_autoload_failed', sprintf(
             __(
                 'Open Mira could not load its bundled Composer dependencies. The MCP Adapter cannot load, so Open Mira will not register an MCP endpoint. Reinstall a build ZIP or run Composer. Error: %s',
-                domain: 'novamira',
+                domain: 'open-mira',
             ),
             $e->getMessage(),
         ));
     }
 
-    if (!class_exists(NOVAMIRA_MCP_ADAPTER_CLASS)) {
-        return new WP_Error('novamira_mcp_adapter_missing', sprintf(
+    if (!class_exists(OPENMIRA_MCP_ADAPTER_CLASS)) {
+        return new WP_Error('openmira_mcp_adapter_missing', sprintf(
             __(
                 'Open Mira loaded its Composer autoloader, but the MCP Adapter class (%s) is not available. Open Mira will not register an MCP endpoint. Reinstall a build ZIP or run Composer.',
-                domain: 'novamira',
+                domain: 'open-mira',
             ),
-            NOVAMIRA_MCP_ADAPTER_CLASS,
+            OPENMIRA_MCP_ADAPTER_CLASS,
         ));
     }
 
@@ -86,9 +86,9 @@ function novamira_load_bundled_dependencies()
 /**
  * Store a runtime MCP dependency error.
  */
-function novamira_set_mcp_dependency_error(WP_Error $error): void
+function openmira_set_mcp_dependency_error(WP_Error $error): void
 {
-    novamira_mcp_dependency_error($error);
+    openmira_mcp_dependency_error($error);
 }
 
 /**
@@ -96,9 +96,9 @@ function novamira_set_mcp_dependency_error(WP_Error $error): void
  *
  * @return WP_Error|null
  */
-function novamira_get_mcp_dependency_error()
+function openmira_get_mcp_dependency_error()
 {
-    return novamira_mcp_dependency_error();
+    return openmira_mcp_dependency_error();
 }
 
 /**
@@ -106,7 +106,7 @@ function novamira_get_mcp_dependency_error()
  *
  * @return WP_Error|null
  */
-function novamira_mcp_dependency_error(?WP_Error $error = null)
+function openmira_mcp_dependency_error(?WP_Error $error = null)
 {
     static $current = null;
 
@@ -120,17 +120,17 @@ function novamira_mcp_dependency_error(?WP_Error $error = null)
 /**
  * Whether the bundled MCP Adapter is available for Open Mira to initialize.
  */
-function novamira_is_mcp_adapter_available(): bool
+function openmira_is_mcp_adapter_available(): bool
 {
-    return novamira_get_mcp_dependency_error() === null && class_exists(NOVAMIRA_MCP_ADAPTER_CLASS);
+    return openmira_get_mcp_dependency_error() === null && class_exists(OPENMIRA_MCP_ADAPTER_CLASS);
 }
 
 /**
  * Block activation when the distributable dependencies are missing.
  */
-function novamira_activation_check(): void
+function openmira_activation_check(): void
 {
-    $error = novamira_get_mcp_dependency_error();
+    $error = openmira_get_mcp_dependency_error();
     if ($error === null) {
         return;
     }
@@ -141,7 +141,7 @@ function novamira_activation_check(): void
 
     wp_die(
         '<p>' . esc_html($error->get_error_message()) . '</p>',
-        esc_html__('Open Mira installation is incomplete', domain: 'novamira'),
+        esc_html__('Open Mira installation is incomplete', domain: 'open-mira'),
         ['back_link' => true],
     );
 }
@@ -149,18 +149,18 @@ function novamira_activation_check(): void
 /**
  * Show a persistent admin error when Open Mira cannot expose MCP.
  */
-function novamira_render_mcp_dependency_notice(): void
+function openmira_render_mcp_dependency_notice(): void
 {
     if (!current_user_can('manage_options')) {
         return;
     }
 
     $page = $_GET['page'] ?? null;
-    if (is_string($page) && in_array($page, ['novamira-connect', 'novamira', 'novamira-sandbox'], strict: true)) {
+    if (is_string($page) && in_array($page, ['openmira-connect', 'openmira', 'openmira-sandbox'], strict: true)) {
         return;
     }
 
-    $error = novamira_get_mcp_dependency_error();
+    $error = openmira_get_mcp_dependency_error();
     if ($error === null) {
         return;
     }
@@ -174,19 +174,19 @@ function novamira_render_mcp_dependency_notice(): void
 /**
  * Return a clear REST error at the MCP endpoint when the adapter cannot register its own route.
  */
-function novamira_register_missing_mcp_endpoint(): void
+function openmira_register_missing_mcp_endpoint(): void
 {
-    $error = novamira_get_mcp_dependency_error();
+    $error = openmira_get_mcp_dependency_error();
     if ($error === null) {
         return;
     }
 
     $routes = rest_get_server()->get_routes();
-    $callback = static fn() => new WP_Error('novamira_mcp_adapter_unavailable', $error->get_error_message(), [
+    $callback = static fn() => new WP_Error('openmira_mcp_adapter_unavailable', $error->get_error_message(), [
         'status' => 500,
     ]);
 
-    foreach (['novamira', 'mcp-adapter-default-server'] as $route_slug) {
+    foreach (['openmira', 'mcp-adapter-default-server'] as $route_slug) {
         if (array_key_exists('/mcp/' . $route_slug, $routes)) {
             continue;
         }
@@ -201,9 +201,9 @@ function novamira_register_missing_mcp_endpoint(): void
 /**
  * Initialize the MCP Adapter and convert runtime failures into visible admin notices.
  */
-function novamira_initialize_mcp_adapter(): bool
+function openmira_initialize_mcp_adapter(): bool
 {
-    if (!novamira_is_mcp_adapter_available()) {
+    if (!openmira_is_mcp_adapter_available()) {
         return false;
     }
 
@@ -211,11 +211,11 @@ function novamira_initialize_mcp_adapter(): bool
         \WP\MCP\Core\McpAdapter::instance();
         return true;
     } catch (\Throwable $e) {
-        novamira_set_mcp_dependency_error(
-            new WP_Error('novamira_mcp_adapter_init_failed', sprintf(
+        openmira_set_mcp_dependency_error(
+            new WP_Error('openmira_mcp_adapter_init_failed', sprintf(
                 __(
                     'Open Mira found the MCP Adapter, but it failed during initialization. Open Mira will not register an MCP endpoint. Error: %s',
-                    domain: 'novamira',
+                    domain: 'open-mira',
                 ),
                 $e->getMessage(),
             )),
@@ -224,15 +224,15 @@ function novamira_initialize_mcp_adapter(): bool
     }
 }
 
-$novamira_dependency_error = novamira_load_bundled_dependencies();
-if ($novamira_dependency_error !== null) {
-    novamira_set_mcp_dependency_error($novamira_dependency_error);
+$openmira_dependency_error = openmira_load_bundled_dependencies();
+if ($openmira_dependency_error !== null) {
+    openmira_set_mcp_dependency_error($openmira_dependency_error);
 }
 
-register_activation_hook(__FILE__, callback: 'novamira_activation_check');
-add_action('admin_notices', callback: 'novamira_render_mcp_dependency_notice');
-add_action('network_admin_notices', callback: 'novamira_render_mcp_dependency_notice');
-add_action('rest_api_init', callback: 'novamira_register_missing_mcp_endpoint', priority: 999);
+register_activation_hook(__FILE__, callback: 'openmira_activation_check');
+add_action('admin_notices', callback: 'openmira_render_mcp_dependency_notice');
+add_action('network_admin_notices', callback: 'openmira_render_mcp_dependency_notice');
+add_action('rest_api_init', callback: 'openmira_register_missing_mcp_endpoint', priority: 999);
 
 require_once __DIR__ . '/includes/helpers.php';
 require_once __DIR__ . '/includes/admin-page.php';
@@ -248,7 +248,7 @@ if (!class_exists('WP_Ability')) {
         wp_admin_notice(
             esc_html__(
                 'Open Mira requires the Abilities API plugin to be installed and activated.',
-                domain: 'novamira',
+                domain: 'open-mira',
             ),
             [
                 'type' => 'error',
@@ -263,15 +263,15 @@ if (!class_exists('WP_Ability')) {
 // emitted by Open Mira. Cheap and side-effect free, unlike iterating $wp_filter
 // with Reflection (which causes memory blow-ups when Query Monitor captures every remove_action).
 add_action('admin_head', static function () {
-    if (($_GET['page'] ?? null) !== 'novamira-connect') {
+    if (($_GET['page'] ?? null) !== 'openmira-connect') {
         return;
     }
     ?>
-    <style id="novamira-suppress-foreign-notices">
-        .wrap > .notice:not(.novamira-pro-notice):not(.novamira-keep),
-        #wpbody-content > .notice:not(.novamira-pro-notice):not(.novamira-keep),
-        #wpbody-content > .updated:not(.novamira-keep),
-        #wpbody-content > .error:not(.novamira-keep) {
+    <style id="openmira-suppress-foreign-notices">
+        .wrap > .notice:not(.openmira-keep),
+        #wpbody-content > .notice:not(.openmira-keep),
+        #wpbody-content > .updated:not(.openmira-keep),
+        #wpbody-content > .error:not(.openmira-keep) {
             display: none !important;
         }
     </style>
@@ -281,15 +281,15 @@ add_action('admin_head', static function () {
 // Handle form actions early (before headers are sent) for PRG redirect.
 add_action('admin_init', static function () {
     $page = $_GET['page'] ?? null;
-    if ($page === 'novamira-sandbox') {
-        novamira_handle_sandbox_actions();
+    if ($page === 'openmira-sandbox') {
+        openmira_handle_sandbox_actions();
     }
-    if ($page === 'novamira-connect') {
-        novamira_handle_revoke_password();
-        novamira_handle_dismiss_production_warning();
+    if ($page === 'openmira-connect') {
+        openmira_handle_revoke_password();
+        openmira_handle_dismiss_production_warning();
     }
-    if ($page === 'novamira-memory') {
-        novamira_handle_memory_admin_actions();
+    if ($page === 'openmira-memory') {
+        openmira_handle_memory_admin_actions();
     }
 });
 
@@ -297,75 +297,75 @@ add_action('admin_init', static function () {
 add_action('admin_menu', static function () {
     // Top-level menu item (shows the Connect page).
     add_menu_page(
-        page_title: __('Configuration', domain: 'novamira'),
+        page_title: __('Configuration', domain: 'open-mira'),
         menu_title: 'Open Mira',
         capability: 'manage_options',
-        menu_slug: 'novamira-connect',
-        callback: 'novamira_render_connect_page',
-        icon_url: 'data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCAzMiAzMiI+PHBhdGggZmlsbD0iYmxhY2siIGQ9Ik01IDRoNi41bDkuNSAxNi41VjRIMjd2MjRoLTYuNUwxMSAxMS41VjI4SDVWNHoiLz48L3N2Zz4=',
+        menu_slug: 'openmira-connect',
+        callback: 'openmira_render_connect_page',
+        icon_url: 'data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCAzMiAzMiI+PHBhdGggZmlsbD0iYmxhY2siIGQ9Ik0xNiAzYTEzIDEzIDAgMSAwIDAgMjYgMTMgMTMgMCAwIDAgMC0yNlptMCA1YTggOCAwIDEgMSAwIDE2IDggOCAwIDAgMSAwLTE2WiIvPjxwYXRoIGZpbGw9ImJsYWNrIiBkPSJNMjUgNGwxLjIgMy44TDMwIDlsLTMuOCAxLjJMMjUgMTRsLTEuMi0zLjhMMjAgOWwzLjgtMS4yTDI1IDRaIi8+PC9zdmc+',
         position: 3,
     );
 
     // Rename the auto-created first submenu entry to match the page title.
     add_submenu_page(
-        parent_slug: 'novamira-connect',
-        page_title: __('Configuration', domain: 'novamira'),
-        menu_title: __('Configuration', domain: 'novamira'),
+        parent_slug: 'openmira-connect',
+        page_title: __('Configuration', domain: 'open-mira'),
+        menu_title: __('Configuration', domain: 'open-mira'),
         capability: 'manage_options',
-        menu_slug: 'novamira-connect',
-        callback: 'novamira_render_connect_page',
+        menu_slug: 'openmira-connect',
+        callback: 'openmira_render_connect_page',
     );
 
     // AI Abilities sub-page.
     add_submenu_page(
-        parent_slug: 'novamira-connect',
-        page_title: __('AI Abilities', domain: 'novamira'),
-        menu_title: __('AI Abilities', domain: 'novamira'),
+        parent_slug: 'openmira-connect',
+        page_title: __('AI Abilities', domain: 'open-mira'),
+        menu_title: __('AI Abilities', domain: 'open-mira'),
         capability: 'manage_options',
-        menu_slug: 'novamira',
-        callback: 'novamira_render_settings_page',
+        menu_slug: 'openmira',
+        callback: 'openmira_render_settings_page',
     );
 
     // Sandbox sub-page.
     add_submenu_page(
-        parent_slug: 'novamira-connect',
-        page_title: __('Sandbox', domain: 'novamira'),
-        menu_title: __('Sandbox', domain: 'novamira'),
+        parent_slug: 'openmira-connect',
+        page_title: __('Sandbox', domain: 'open-mira'),
+        menu_title: __('Sandbox', domain: 'open-mira'),
         capability: 'manage_options',
-        menu_slug: 'novamira-sandbox',
-        callback: 'novamira_render_sandbox_page',
+        menu_slug: 'openmira-sandbox',
+        callback: 'openmira_render_sandbox_page',
     );
 
     add_submenu_page(
-        parent_slug: 'novamira-connect',
-        page_title: __('Block Tools', domain: 'novamira'),
-        menu_title: __('Block Tools', domain: 'novamira'),
+        parent_slug: 'openmira-connect',
+        page_title: __('Block Tools', domain: 'open-mira'),
+        menu_title: __('Block Tools', domain: 'open-mira'),
         capability: 'manage_options',
-        menu_slug: 'novamira-block-tools',
-        callback: 'novamira_render_block_tools_page',
+        menu_slug: 'openmira-block-tools',
+        callback: 'openmira_render_block_tools_page',
     );
 
     add_submenu_page(
-        parent_slug: 'novamira-connect',
-        page_title: __('Memory', domain: 'novamira'),
-        menu_title: __('Memory', domain: 'novamira'),
+        parent_slug: 'openmira-connect',
+        page_title: __('Memory', domain: 'open-mira'),
+        menu_title: __('Memory', domain: 'open-mira'),
         capability: 'manage_options',
-        menu_slug: 'novamira-memory',
-        callback: 'novamira_render_memory_page',
+        menu_slug: 'openmira-memory',
+        callback: 'openmira_render_memory_page',
     );
 });
 
-$is_enabled = novamira_is_enabled();
+$is_enabled = openmira_is_enabled();
 
-if (!$is_enabled && novamira_is_domain_mismatch()) {
+if (!$is_enabled && openmira_is_domain_mismatch()) {
     add_action('admin_notices', static function () {
         /** @var string $locked */
-        $locked = get_option('novamira_ai_abilities_domain', default_value: '');
+        $locked = get_option('openmira_ai_abilities_domain', default_value: '');
         wp_admin_notice(
             sprintf(
                 esc_html__(
                     'Open Mira AI Abilities were disabled because the site domain changed (enabled on %s). Re-enable them from the Configuration page if this is intentional.',
-                    domain: 'novamira',
+                    domain: 'open-mira',
                 ),
                 '<code>' . esc_html($locked) . '</code>',
             ),
@@ -383,8 +383,8 @@ if ($is_enabled) {
         if (!is_array($config)) {
             return $config;
         }
-        $config['server_id'] = 'novamira';
-        $config['server_route'] = 'novamira';
+        $config['server_id'] = 'openmira';
+        $config['server_route'] = 'openmira';
         $config['server_name'] = 'Open Mira';
         return $config;
     });
@@ -393,10 +393,10 @@ if ($is_enabled) {
 
     // Register a legacy alias server at the old slug so configs that still point at
     // /wp-json/mcp/mcp-adapter-default-server keep working after the rename.
-    add_action('mcp_adapter_init', callback: 'novamira_register_legacy_mcp_server', priority: 20);
+    add_action('mcp_adapter_init', callback: 'openmira_register_legacy_mcp_server', priority: 20);
 
     // Initialize bundled MCP Adapter — its default server exposes our abilities automatically.
-    if (!novamira_initialize_mcp_adapter()) {
+    if (!openmira_initialize_mcp_adapter()) {
         $is_enabled = false;
     }
 }
@@ -404,17 +404,17 @@ if ($is_enabled) {
 /**
  * Register a legacy alias of the canonical Open Mira MCP server at the pre-rename slug.
  *
- * The canonical server is registered under `/mcp/novamira`. Older client configs may still
+ * The canonical server is registered under `/mcp/openmira`. Older client configs may still
  * point at `/mcp/mcp-adapter-default-server` from before the rename — this alias keeps them
  * working with identical behavior (same tools, same auto-discovered resources and prompts).
  */
-function novamira_register_legacy_mcp_server(mixed $adapter): void
+function openmira_register_legacy_mcp_server(mixed $adapter): void
 {
     if (!$adapter instanceof \WP\MCP\Core\McpAdapter) {
         return;
     }
 
-    if ($adapter->get_server('novamira') === null) {
+    if ($adapter->get_server('openmira') === null) {
         return;
     }
 
@@ -423,7 +423,7 @@ function novamira_register_legacy_mcp_server(mixed $adapter): void
         'mcp',
         'mcp-adapter-default-server',
         'Open Mira (legacy alias)',
-        'Legacy alias for the Open Mira MCP server. New client configurations should use /wp-json/mcp/novamira.',
+        'Legacy alias for the Open Mira MCP server. New client configurations should use /wp-json/mcp/openmira.',
         'v1.0.0',
         [\WP\MCP\Transport\HttpTransport::class],
         \WP\MCP\Infrastructure\ErrorHandling\ErrorLogMcpErrorHandler::class,
@@ -433,8 +433,8 @@ function novamira_register_legacy_mcp_server(mixed $adapter): void
             'mcp-adapter/get-ability-info',
             'mcp-adapter/execute-ability',
         ],
-        novamira_discover_public_abilities('resource'),
-        novamira_discover_public_abilities('prompt'),
+        openmira_discover_public_abilities('resource'),
+        openmira_discover_public_abilities('prompt'),
     );
 }
 
@@ -443,7 +443,7 @@ function novamira_register_legacy_mcp_server(mixed $adapter): void
  *
  * @return list<string>
  */
-function novamira_discover_public_abilities(string $type): array
+function openmira_discover_public_abilities(string $type): array
 {
     if (!function_exists('wp_get_abilities')) {
         return [];
@@ -561,10 +561,10 @@ if ($is_enabled) {
             }
 
             $wp_admin_bar->add_node([
-                'id' => 'novamira-mcp-status',
-                'title' => esc_html__('Open Mira ON', domain: 'novamira'),
-                'href' => admin_url('admin.php?page=novamira-connect'),
-                'meta' => ['class' => 'novamira-mcp-on'],
+                'id' => 'openmira-mcp-status',
+                'title' => esc_html__('Open Mira ON', domain: 'open-mira'),
+                'href' => admin_url('admin.php?page=openmira-connect'),
+                'meta' => ['class' => 'openmira-mcp-on'],
             ]);
         },
         priority: 999,
@@ -576,14 +576,14 @@ if ($is_enabled) {
         }
 
         echo
-            '<style>#wp-admin-bar-novamira-mcp-status > .ab-item { background:#c00 !important; color:#fff !important; }</style>'
+            '<style>#wp-admin-bar-openmira-mcp-status > .ab-item { background:#c00 !important; color:#fff !important; }</style>'
         ;
     });
 
     add_action('wp_head', static function () {
         if (current_user_can('manage_options') && is_admin_bar_showing()) {
             echo
-                '<style>#wp-admin-bar-novamira-mcp-status > .ab-item { background:#c00 !important; color:#fff !important; }</style>'
+                '<style>#wp-admin-bar-openmira-mcp-status > .ab-item { background:#c00 !important; color:#fff !important; }</style>'
             ;
         }
     });
@@ -594,7 +594,7 @@ if ($is_enabled) {
             wp_admin_notice(
                 esc_html__(
                     'Open Mira bundles the MCP Adapter. You can safely deactivate the standalone MCP Adapter plugin.',
-                    domain: 'novamira',
+                    domain: 'open-mira',
                 ),
                 [
                     'type' => 'info',
@@ -607,32 +607,32 @@ if ($is_enabled) {
     // Register ability categories.
     add_action('wp_abilities_api_categories_init', static function () {
         wp_register_ability_category('code-execution', [
-            'label' => __('Code Execution', domain: 'novamira'),
-            'description' => __('Abilities that execute code on the WordPress server.', domain: 'novamira'),
+            'label' => __('Code Execution', domain: 'open-mira'),
+            'description' => __('Abilities that execute code on the WordPress server.', domain: 'open-mira'),
         ]);
 
         wp_register_ability_category('filesystem', [
-            'label' => __('Filesystem', domain: 'novamira'),
-            'description' => __('Server filesystem operations.', domain: 'novamira'),
+            'label' => __('Filesystem', domain: 'open-mira'),
+            'description' => __('Server filesystem operations.', domain: 'open-mira'),
         ]);
 
         wp_register_ability_category('wordpress-builders', [
-            'label' => __('WordPress Builders', domain: 'novamira'),
+            'label' => __('WordPress Builders', domain: 'open-mira'),
             'description' => __(
                 'Discovery and guidance for Gutenberg, Bricks, and custom field integrations.',
-                domain: 'novamira',
+                domain: 'open-mira',
             ),
         ]);
 
         wp_register_ability_category('memory', [
-            'label' => __('Memory', domain: 'novamira'),
-            'description' => __('Persistent project facts shared across AI sessions.', domain: 'novamira'),
+            'label' => __('Memory', domain: 'open-mira'),
+            'description' => __('Persistent project facts shared across AI sessions.', domain: 'open-mira'),
         ]);
 
         if (!wp_has_ability_category('mcp-adapter')) {
             wp_register_ability_category('mcp-adapter', [
-                'label' => __('MCP Adapter', domain: 'novamira'),
-                'description' => __('Meta-abilities for MCP protocol bridging.', domain: 'novamira'),
+                'label' => __('MCP Adapter', domain: 'open-mira'),
+                'description' => __('Meta-abilities for MCP protocol bridging.', domain: 'open-mira'),
             ]);
         }
     });
@@ -666,7 +666,7 @@ if ($is_enabled) {
 }
 
 // Ensure sandbox directory exists.
-wp_mkdir_p(NOVAMIRA_SANDBOX_DIR);
+wp_mkdir_p(OPENMIRA_SANDBOX_DIR);
 
 // Load sandbox plugins.
 require_once __DIR__ . '/includes/sandbox-loader.php';

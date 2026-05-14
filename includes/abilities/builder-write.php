@@ -10,15 +10,15 @@ if (!defined('ABSPATH')) {
     exit();
 }
 
-const NOVAMIRA_BUILDER_BACKUPS_META_KEY = '_novamira_builder_backups';
+const OPENMIRA_BUILDER_BACKUPS_META_KEY = '_openmira_builder_backups';
 
-const NOVAMIRA_BUILDER_BACKUPS_MAX = 25;
+const OPENMIRA_BUILDER_BACKUPS_MAX = 25;
 
-wp_register_ability('novamira/backup-builder-content', [
-    'label' => __('Backup Builder Content', domain: 'novamira'),
+wp_register_ability('openmira/backup-builder-content', [
+    'label' => __('Backup Builder Content', domain: 'open-mira'),
     'description' => __(
         'Creates a post-local backup of Gutenberg post_content and Bricks Builder meta data before builder mutations. Use this before write-gutenberg-content or any future Bricks write.',
-        domain: 'novamira',
+        domain: 'open-mira',
     ),
     'category' => 'wordpress-builders',
     'input_schema' => [
@@ -48,8 +48,8 @@ wp_register_ability('novamira/backup-builder-content', [
         ],
         'required' => ['backup', 'backup_count'],
     ],
-    'execute_callback' => 'novamira_backup_builder_content',
-    'permission_callback' => 'novamira_permission_callback',
+    'execute_callback' => 'openmira_backup_builder_content',
+    'permission_callback' => 'openmira_permission_callback',
     'meta' => [
         'show_in_rest' => true,
         'mcp' => ['public' => true],
@@ -62,9 +62,9 @@ wp_register_ability('novamira/backup-builder-content', [
     ],
 ]);
 
-wp_register_ability('novamira/list-builder-backups', [
-    'label' => __('List Builder Backups', domain: 'novamira'),
-    'description' => __('Lists Open Mira builder backups stored on a post/template.', domain: 'novamira'),
+wp_register_ability('openmira/list-builder-backups', [
+    'label' => __('List Builder Backups', domain: 'open-mira'),
+    'description' => __('Lists Open Mira builder backups stored on a post/template.', domain: 'open-mira'),
     'category' => 'wordpress-builders',
     'input_schema' => [
         'type' => 'object',
@@ -88,8 +88,8 @@ wp_register_ability('novamira/list-builder-backups', [
         ],
         'required' => ['post', 'backups', 'count'],
     ],
-    'execute_callback' => 'novamira_list_builder_backups',
-    'permission_callback' => 'novamira_permission_callback',
+    'execute_callback' => 'openmira_list_builder_backups',
+    'permission_callback' => 'openmira_permission_callback',
     'meta' => [
         'show_in_rest' => true,
         'mcp' => ['public' => true],
@@ -101,11 +101,11 @@ wp_register_ability('novamira/list-builder-backups', [
     ],
 ]);
 
-wp_register_ability('novamira/write-gutenberg-content', [
-    'label' => __('Write Gutenberg Content', domain: 'novamira'),
+wp_register_ability('openmira/write-gutenberg-content', [
+    'label' => __('Write Gutenberg Content', domain: 'open-mira'),
     'description' => __(
         'Safely replaces one post post_content value with guarded Gutenberg content. Supports optimistic hash checks and automatic backups. Does not edit Bricks meta.',
-        domain: 'novamira',
+        domain: 'open-mira',
     ),
     'category' => 'wordpress-builders',
     'input_schema' => [
@@ -149,8 +149,8 @@ wp_register_ability('novamira/write-gutenberg-content', [
         ],
         'required' => ['post', 'previous_hash', 'new_hash', 'block_count', 'blocks'],
     ],
-    'execute_callback' => 'novamira_write_gutenberg_content',
-    'permission_callback' => 'novamira_permission_callback',
+    'execute_callback' => 'openmira_write_gutenberg_content',
+    'permission_callback' => 'openmira_permission_callback',
     'meta' => [
         'show_in_rest' => true,
         'mcp' => ['public' => true],
@@ -163,11 +163,11 @@ wp_register_ability('novamira/write-gutenberg-content', [
     ],
 ]);
 
-wp_register_ability('novamira/restore-builder-backup', [
-    'label' => __('Restore Builder Backup', domain: 'novamira'),
+wp_register_ability('openmira/restore-builder-backup', [
+    'label' => __('Restore Builder Backup', domain: 'open-mira'),
     'description' => __(
         'Restores a stored Open Mira builder backup. By default this restores post_content only and creates a new pre-restore backup. Bricks meta restore must be explicitly enabled.',
-        domain: 'novamira',
+        domain: 'open-mira',
     ),
     'category' => 'wordpress-builders',
     'input_schema' => [
@@ -214,8 +214,8 @@ wp_register_ability('novamira/restore-builder-backup', [
         ],
         'required' => ['post', 'restored', 'previous_hash', 'new_hash'],
     ],
-    'execute_callback' => 'novamira_restore_builder_backup',
-    'permission_callback' => 'novamira_permission_callback',
+    'execute_callback' => 'openmira_restore_builder_backup',
+    'permission_callback' => 'openmira_permission_callback',
     'meta' => [
         'show_in_rest' => true,
         'mcp' => ['public' => true],
@@ -228,11 +228,11 @@ wp_register_ability('novamira/restore-builder-backup', [
     ],
 ]);
 
-wp_register_ability('novamira/patch-gutenberg-blocks', [
-    'label' => __('Patch Gutenberg Blocks', domain: 'novamira'),
+wp_register_ability('openmira/patch-gutenberg-blocks', [
+    'label' => __('Patch Gutenberg Blocks', domain: 'open-mira'),
     'description' => __(
         'Applies a focused Gutenberg block operation to post_content, then serializes with serialize_blocks. Supports append, prepend, replace, remove, and update-attrs with hash checks and automatic backups.',
-        domain: 'novamira',
+        domain: 'open-mira',
     ),
     'category' => 'wordpress-builders',
     'input_schema' => [
@@ -292,8 +292,8 @@ wp_register_ability('novamira/patch-gutenberg-blocks', [
         ],
         'required' => ['post', 'operation', 'previous_hash', 'new_hash', 'block_count', 'blocks'],
     ],
-    'execute_callback' => 'novamira_patch_gutenberg_blocks',
-    'permission_callback' => 'novamira_permission_callback',
+    'execute_callback' => 'openmira_patch_gutenberg_blocks',
+    'permission_callback' => 'openmira_permission_callback',
     'meta' => [
         'show_in_rest' => true,
         'mcp' => ['public' => true],
@@ -312,26 +312,26 @@ wp_register_ability('novamira/patch-gutenberg-blocks', [
  * @param array<string, mixed> $input
  * @return array<string, mixed>|WP_Error
  */
-function novamira_backup_builder_content(array $input): array|WP_Error
+function openmira_backup_builder_content(array $input): array|WP_Error
 {
-    $post = novamira_get_post_or_error((int) ($input['post_id'] ?? 0));
+    $post = openmira_get_post_or_error((int) ($input['post_id'] ?? 0));
     if (is_wp_error($post)) {
         return $post;
     }
 
-    $backup = novamira_create_builder_backup_entry(
+    $backup = openmira_create_builder_backup_entry(
         $post,
         (string) ($input['note'] ?? ''),
-        novamira_falsey_input($input['include_post_content'] ?? true) === false,
-        novamira_falsey_input($input['include_bricks_data'] ?? true) === false,
+        openmira_falsey_input($input['include_post_content'] ?? true) === false,
+        openmira_falsey_input($input['include_bricks_data'] ?? true) === false,
     );
-    $backups = novamira_get_builder_backups($post->ID);
+    $backups = openmira_get_builder_backups($post->ID);
     array_unshift($backups, $backup);
-    $backups = array_slice($backups, offset: 0, length: NOVAMIRA_BUILDER_BACKUPS_MAX);
-    novamira_update_builder_backups($post->ID, $backups);
+    $backups = array_slice($backups, offset: 0, length: OPENMIRA_BUILDER_BACKUPS_MAX);
+    openmira_update_builder_backups($post->ID, $backups);
 
     return [
-        'backup' => novamira_summarize_builder_backup($backup, include_payload: true),
+        'backup' => openmira_summarize_builder_backup($backup, include_payload: true),
         'backup_count' => count($backups),
     ];
 }
@@ -342,21 +342,21 @@ function novamira_backup_builder_content(array $input): array|WP_Error
  * @param array<string, mixed> $input
  * @return array<string, mixed>|WP_Error
  */
-function novamira_list_builder_backups(array $input): array|WP_Error
+function openmira_list_builder_backups(array $input): array|WP_Error
 {
-    $post = novamira_get_post_or_error((int) ($input['post_id'] ?? 0));
+    $post = openmira_get_post_or_error((int) ($input['post_id'] ?? 0));
     if (is_wp_error($post)) {
         return $post;
     }
 
-    $include_payload = novamira_truthy_input($input['include_payload'] ?? false);
-    $backups = array_map(static fn(array $backup): array => novamira_summarize_builder_backup(
+    $include_payload = openmira_truthy_input($input['include_payload'] ?? false);
+    $backups = array_map(static fn(array $backup): array => openmira_summarize_builder_backup(
         $backup,
         $include_payload,
-    ), novamira_get_builder_backups($post->ID));
+    ), openmira_get_builder_backups($post->ID));
 
     return [
-        'post' => novamira_build_post_inventory_item($post),
+        'post' => openmira_build_post_inventory_item($post),
         'backups' => $backups,
         'count' => count($backups),
     ];
@@ -370,19 +370,19 @@ function novamira_list_builder_backups(array $input): array|WP_Error
  */
 // @mago-expect lint:cyclomatic-complexity
 // @mago-expect lint:halstead
-function novamira_restore_builder_backup(array $input): array|WP_Error
+function openmira_restore_builder_backup(array $input): array|WP_Error
 {
-    $post = novamira_get_post_or_error((int) ($input['post_id'] ?? 0));
+    $post = openmira_get_post_or_error((int) ($input['post_id'] ?? 0));
     if (is_wp_error($post)) {
         return $post;
     }
 
-    $backup = novamira_find_builder_backup($post->ID, (string) ($input['backup_id'] ?? ''));
+    $backup = openmira_find_builder_backup($post->ID, (string) ($input['backup_id'] ?? ''));
     if (is_wp_error($backup)) {
         return $backup;
     }
 
-    $previous_hash = novamira_hash_content($post->post_content);
+    $previous_hash = openmira_hash_content($post->post_content);
     $expected_hash = (string) ($input['expected_current_hash'] ?? '');
     if ($expected_hash !== '' && $expected_hash !== $previous_hash) {
         return new WP_Error('stale_post_content', 'Current post_content hash does not match expected_current_hash.', [
@@ -391,8 +391,8 @@ function novamira_restore_builder_backup(array $input): array|WP_Error
     }
 
     $pre_restore_backup = null;
-    if (!novamira_falsey_input($input['create_backup'] ?? true)) {
-        $backup_result = novamira_backup_builder_content([
+    if (!openmira_falsey_input($input['create_backup'] ?? true)) {
+        $backup_result = openmira_backup_builder_content([
             'post_id' => $post->ID,
             'note' => 'Automatic backup before restoring backup ' . (string) ($backup['id'] ?? ''),
             'include_post_content' => true,
@@ -412,35 +412,35 @@ function novamira_restore_builder_backup(array $input): array|WP_Error
         'bricks_data' => [],
     ];
 
-    if (!novamira_falsey_input($input['restore_post_content'] ?? true)) {
+    if (!openmira_falsey_input($input['restore_post_content'] ?? true)) {
         if (!is_string($payload['post_content'] ?? null)) {
             return new WP_Error('backup_missing_post_content', 'The selected backup does not contain post_content.');
         }
-        $update_result = novamira_update_post_content($post->ID, $payload['post_content']);
+        $update_result = openmira_update_post_content($post->ID, $payload['post_content']);
         if (is_wp_error($update_result)) {
             return $update_result;
         }
         $restored['post_content'] = true;
     }
 
-    if (novamira_truthy_input($input['restore_bricks_data'] ?? false)) {
-        $bricks_result = novamira_restore_bricks_backup_payload($post->ID, $payload);
+    if (openmira_truthy_input($input['restore_bricks_data'] ?? false)) {
+        $bricks_result = openmira_restore_bricks_backup_payload($post->ID, $payload);
         if (is_wp_error($bricks_result)) {
             return $bricks_result;
         }
         $restored['bricks_data'] = $bricks_result;
     }
 
-    $updated_post = novamira_get_post_or_error($post->ID);
+    $updated_post = openmira_get_post_or_error($post->ID);
     if (is_wp_error($updated_post)) {
         return $updated_post;
     }
 
     $response = [
-        'post' => novamira_build_post_inventory_item($updated_post),
+        'post' => openmira_build_post_inventory_item($updated_post),
         'restored' => $restored,
         'previous_hash' => $previous_hash,
-        'new_hash' => novamira_hash_content($updated_post->post_content),
+        'new_hash' => openmira_hash_content($updated_post->post_content),
     ];
     if (is_array($pre_restore_backup)) {
         $response['pre_restore_backup'] = $pre_restore_backup;
@@ -455,15 +455,15 @@ function novamira_restore_builder_backup(array $input): array|WP_Error
  * @param array<string, mixed> $input
  * @return array<string, mixed>|WP_Error
  */
-function novamira_patch_gutenberg_blocks(array $input): array|WP_Error
+function openmira_patch_gutenberg_blocks(array $input): array|WP_Error
 {
-    $post = novamira_get_post_or_error((int) ($input['post_id'] ?? 0));
+    $post = openmira_get_post_or_error((int) ($input['post_id'] ?? 0));
     if (is_wp_error($post)) {
         return $post;
     }
 
     $operation = (string) ($input['operation'] ?? '');
-    $previous_hash = novamira_hash_content($post->post_content);
+    $previous_hash = openmira_hash_content($post->post_content);
     $expected_hash = (string) ($input['expected_current_hash'] ?? '');
     if ($expected_hash !== '' && $expected_hash !== $previous_hash) {
         return new WP_Error('stale_post_content', 'Current post_content hash does not match expected_current_hash.', [
@@ -471,28 +471,28 @@ function novamira_patch_gutenberg_blocks(array $input): array|WP_Error
         ]);
     }
 
-    $path = novamira_normalize_block_path($input['block_path'] ?? []);
+    $path = openmira_normalize_block_path($input['block_path'] ?? []);
     if (is_wp_error($path)) {
         return $path;
     }
 
-    $params = novamira_build_block_patch_params($operation, $input);
+    $params = openmira_build_block_patch_params($operation, $input);
     if (is_wp_error($params)) {
         return $params;
     }
 
-    $patched_blocks = novamira_apply_block_patch(parse_blocks($post->post_content), $path, $operation, $params);
+    $patched_blocks = openmira_apply_block_patch(parse_blocks($post->post_content), $path, $operation, $params);
     if (is_wp_error($patched_blocks)) {
         return $patched_blocks;
     }
 
     // @mago-expect analysis:less-specific-nested-argument-type
     $content = serialize_blocks($patched_blocks);
-    $write_result = novamira_write_gutenberg_content([
+    $write_result = openmira_write_gutenberg_content([
         'post_id' => $post->ID,
         'content' => $content,
         'expected_current_hash' => $previous_hash,
-        'create_backup' => !novamira_falsey_input($input['create_backup'] ?? true),
+        'create_backup' => !openmira_falsey_input($input['create_backup'] ?? true),
         'backup_note' => (string) ($input['backup_note'] ?? 'Automatic backup before Gutenberg block patch'),
     ]);
     if (is_wp_error($write_result)) {
@@ -510,15 +510,15 @@ function novamira_patch_gutenberg_blocks(array $input): array|WP_Error
  * @return array<string, mixed>|WP_Error
  */
 // @mago-expect lint:cyclomatic-complexity
-function novamira_write_gutenberg_content(array $input): array|WP_Error
+function openmira_write_gutenberg_content(array $input): array|WP_Error
 {
-    $post = novamira_get_post_or_error((int) ($input['post_id'] ?? 0));
+    $post = openmira_get_post_or_error((int) ($input['post_id'] ?? 0));
     if (is_wp_error($post)) {
         return $post;
     }
 
     $content = (string) ($input['content'] ?? '');
-    $previous_hash = novamira_hash_content($post->post_content);
+    $previous_hash = openmira_hash_content($post->post_content);
     $expected_hash = (string) ($input['expected_current_hash'] ?? '');
     if ($expected_hash !== '' && $expected_hash !== $previous_hash) {
         return new WP_Error('stale_post_content', 'Current post_content hash does not match expected_current_hash.', [
@@ -527,7 +527,7 @@ function novamira_write_gutenberg_content(array $input): array|WP_Error
     }
 
     $has_blocks = has_blocks($content);
-    if (!$has_blocks && !novamira_truthy_input($input['allow_classic_content'] ?? false)) {
+    if (!$has_blocks && !openmira_truthy_input($input['allow_classic_content'] ?? false)) {
         return new WP_Error(
             'content_has_no_blocks',
             'Replacement content does not contain Gutenberg block markup. Set allow_classic_content=true to write classic HTML content.',
@@ -536,8 +536,8 @@ function novamira_write_gutenberg_content(array $input): array|WP_Error
 
     $parsed_blocks = parse_blocks($content);
     $backup = null;
-    if (!novamira_falsey_input($input['create_backup'] ?? true)) {
-        $backup_result = novamira_backup_builder_content([
+    if (!openmira_falsey_input($input['create_backup'] ?? true)) {
+        $backup_result = openmira_backup_builder_content([
             'post_id' => $post->ID,
             'note' => (string) ($input['backup_note'] ?? 'Automatic backup before Gutenberg write'),
             'include_post_content' => true,
@@ -559,17 +559,17 @@ function novamira_write_gutenberg_content(array $input): array|WP_Error
         return $update_result;
     }
 
-    $updated_post = novamira_get_post_or_error($post->ID);
+    $updated_post = openmira_get_post_or_error($post->ID);
     if (is_wp_error($updated_post)) {
         return $updated_post;
     }
 
     $response = [
-        'post' => novamira_build_post_inventory_item($updated_post),
+        'post' => openmira_build_post_inventory_item($updated_post),
         'previous_hash' => $previous_hash,
-        'new_hash' => novamira_hash_content($content),
+        'new_hash' => openmira_hash_content($content),
         'block_count' => count($parsed_blocks),
-        'blocks' => novamira_summarize_blocks($parsed_blocks),
+        'blocks' => openmira_summarize_blocks($parsed_blocks),
     ];
     if (is_array($backup)) {
         $response['backup'] = $backup;
@@ -581,7 +581,7 @@ function novamira_write_gutenberg_content(array $input): array|WP_Error
 /**
  * Update post_content.
  */
-function novamira_update_post_content(int $post_id, string $content): int|WP_Error
+function openmira_update_post_content(int $post_id, string $content): int|WP_Error
 {
     return wp_update_post([
         'ID' => $post_id,
@@ -594,13 +594,13 @@ function novamira_update_post_content(int $post_id, string $content): int|WP_Err
  *
  * @return array<array-key, mixed>|WP_Error
  */
-function novamira_find_builder_backup(int $post_id, string $backup_id): array|WP_Error
+function openmira_find_builder_backup(int $post_id, string $backup_id): array|WP_Error
 {
     if ($backup_id === '') {
         return new WP_Error('missing_backup_id', 'backup_id is required.');
     }
 
-    foreach (novamira_get_builder_backups($post_id) as $backup) {
+    foreach (openmira_get_builder_backups($post_id) as $backup) {
         if ((string) ($backup['id'] ?? '') === $backup_id) {
             return $backup;
         }
@@ -615,7 +615,7 @@ function novamira_find_builder_backup(int $post_id, string $backup_id): array|WP
  * @param array<array-key, mixed> $payload
  * @return array<string, bool>|WP_Error
  */
-function novamira_restore_bricks_backup_payload(int $post_id, array $payload): array|WP_Error
+function openmira_restore_bricks_backup_payload(int $post_id, array $payload): array|WP_Error
 {
     $bricks = is_array($payload['bricks'] ?? null) ? $payload['bricks'] : null;
     if ($bricks === null) {
@@ -623,7 +623,7 @@ function novamira_restore_bricks_backup_payload(int $post_id, array $payload): a
     }
 
     $restored = [];
-    $allowed_meta_keys = novamira_get_bricks_meta_keys();
+    $allowed_meta_keys = openmira_get_bricks_meta_keys();
     // @mago-expect analysis:mixed-assignment
     foreach ($bricks as $area => $data) {
         if (!is_string($area) || !is_array($data) || !array_key_exists($area, $allowed_meta_keys)) {
@@ -649,7 +649,7 @@ function novamira_restore_bricks_backup_payload(int $post_id, array $payload): a
  *
  * @return list<int>|WP_Error
  */
-function novamira_normalize_block_path(mixed $value): array|WP_Error
+function openmira_normalize_block_path(mixed $value): array|WP_Error
 {
     if ($value === null || $value === '') {
         return [];
@@ -677,10 +677,10 @@ function novamira_normalize_block_path(mixed $value): array|WP_Error
  * @param array<string, mixed> $input
  * @return array<string, mixed>|WP_Error
  */
-function novamira_build_block_patch_params(string $operation, array $input): array|WP_Error
+function openmira_build_block_patch_params(string $operation, array $input): array|WP_Error
 {
     if (in_array($operation, ['append', 'prepend', 'replace'], strict: true)) {
-        $block = novamira_parse_single_block_markup((string) ($input['block_markup'] ?? ''));
+        $block = openmira_parse_single_block_markup((string) ($input['block_markup'] ?? ''));
         if (is_wp_error($block)) {
             return $block;
         }
@@ -709,7 +709,7 @@ function novamira_build_block_patch_params(string $operation, array $input): arr
  *
  * @return array<string, mixed>|WP_Error
  */
-function novamira_parse_single_block_markup(string $markup): array|WP_Error
+function openmira_parse_single_block_markup(string $markup): array|WP_Error
 {
     if (trim($markup) === '') {
         return new WP_Error('missing_block_markup', 'block_markup is required for this operation.');
@@ -740,7 +740,7 @@ function novamira_parse_single_block_markup(string $markup): array|WP_Error
  * @param array<string, mixed>   $params
  * @return array<array-key, mixed>|WP_Error
  */
-function novamira_apply_block_patch(array $blocks, array $path, string $operation, array $params): array|WP_Error
+function openmira_apply_block_patch(array $blocks, array $path, string $operation, array $params): array|WP_Error
 {
     if ($path === []) {
         if ($operation === 'append') {
@@ -760,11 +760,11 @@ function novamira_apply_block_patch(array $blocks, array $path, string $operatio
     }
 
     if ($path === []) {
-        return novamira_apply_block_patch_at_target($blocks, $index, $operation, $params);
+        return openmira_apply_block_patch_at_target($blocks, $index, $operation, $params);
     }
 
     $inner_blocks = is_array($blocks[$index]['innerBlocks'] ?? null) ? $blocks[$index]['innerBlocks'] : [];
-    $patched_inner_blocks = novamira_apply_block_patch($inner_blocks, $path, $operation, $params);
+    $patched_inner_blocks = openmira_apply_block_patch($inner_blocks, $path, $operation, $params);
     if (is_wp_error($patched_inner_blocks)) {
         return $patched_inner_blocks;
     }
@@ -781,7 +781,7 @@ function novamira_apply_block_patch(array $blocks, array $path, string $operatio
  * @param array<string, mixed>   $params
  * @return array<array-key, mixed>|WP_Error
  */
-function novamira_apply_block_patch_at_target(
+function openmira_apply_block_patch_at_target(
     array $blocks,
     int $index,
     string $operation,
@@ -824,7 +824,7 @@ function novamira_apply_block_patch_at_target(
 /**
  * Return a post or a WP_Error.
  */
-function novamira_get_post_or_error(int $post_id): WP_Post|WP_Error
+function openmira_get_post_or_error(int $post_id): WP_Post|WP_Error
 {
     // @mago-expect analysis:mixed-assignment
     $post = get_post($post_id);
@@ -840,7 +840,7 @@ function novamira_get_post_or_error(int $post_id): WP_Post|WP_Error
  *
  * @return array<string, mixed>
  */
-function novamira_create_builder_backup_entry(
+function openmira_create_builder_backup_entry(
     WP_Post $post,
     string $note,
     bool $include_post_content,
@@ -851,7 +851,7 @@ function novamira_create_builder_backup_entry(
         $payload['post_content'] = $post->post_content;
     }
     if ($include_bricks_data) {
-        $payload['bricks'] = novamira_collect_bricks_backup_payload($post->ID);
+        $payload['bricks'] = openmira_collect_bricks_backup_payload($post->ID);
     }
 
     return [
@@ -860,8 +860,8 @@ function novamira_create_builder_backup_entry(
         'created_at' => current_time(type: 'mysql', gmt: true),
         'created_by' => get_current_user_id(),
         'note' => $note,
-        'post' => novamira_build_post_inventory_item($post),
-        'content_hash' => novamira_hash_content($post->post_content),
+        'post' => openmira_build_post_inventory_item($post),
+        'content_hash' => openmira_hash_content($post->post_content),
         'payload' => $payload,
     ];
 }
@@ -871,10 +871,10 @@ function novamira_create_builder_backup_entry(
  *
  * @return array<string, array<string, mixed>>
  */
-function novamira_collect_bricks_backup_payload(int $post_id): array
+function openmira_collect_bricks_backup_payload(int $post_id): array
 {
     $payload = [];
-    foreach (novamira_get_bricks_meta_keys() as $area => $meta_key) {
+    foreach (openmira_get_bricks_meta_keys() as $area => $meta_key) {
         // @mago-expect analysis:mixed-assignment
         $value = get_post_meta($post_id, $meta_key, single: true);
         $payload[$area] = [
@@ -892,10 +892,10 @@ function novamira_collect_bricks_backup_payload(int $post_id): array
  *
  * @return list<array<array-key, mixed>>
  */
-function novamira_get_builder_backups(int $post_id): array
+function openmira_get_builder_backups(int $post_id): array
 {
     // @mago-expect analysis:mixed-assignment
-    $backups = get_post_meta($post_id, NOVAMIRA_BUILDER_BACKUPS_META_KEY, single: true);
+    $backups = get_post_meta($post_id, OPENMIRA_BUILDER_BACKUPS_META_KEY, single: true);
     if (!is_array($backups)) {
         return [];
     }
@@ -917,9 +917,9 @@ function novamira_get_builder_backups(int $post_id): array
  *
  * @param list<array<array-key, mixed>> $backups
  */
-function novamira_update_builder_backups(int $post_id, array $backups): void
+function openmira_update_builder_backups(int $post_id, array $backups): void
 {
-    update_post_meta($post_id, NOVAMIRA_BUILDER_BACKUPS_META_KEY, $backups);
+    update_post_meta($post_id, OPENMIRA_BUILDER_BACKUPS_META_KEY, $backups);
 }
 
 /**
@@ -928,7 +928,7 @@ function novamira_update_builder_backups(int $post_id, array $backups): void
  * @param array<array-key, mixed> $backup
  * @return array<string, mixed>
  */
-function novamira_summarize_builder_backup(array $backup, bool $include_payload): array
+function openmira_summarize_builder_backup(array $backup, bool $include_payload): array
 {
     $summary = [
         'id' => (string) ($backup['id'] ?? ''),
@@ -937,7 +937,7 @@ function novamira_summarize_builder_backup(array $backup, bool $include_payload)
         'note' => (string) ($backup['note'] ?? ''),
         'content_hash' => (string) ($backup['content_hash'] ?? ''),
         'post' => is_array($backup['post'] ?? null) ? $backup['post'] : [],
-        'payload_summary' => novamira_summarize_backup_payload(
+        'payload_summary' => openmira_summarize_backup_payload(
             is_array($backup['payload'] ?? null) ? $backup['payload'] : [],
         ),
     ];
@@ -954,7 +954,7 @@ function novamira_summarize_builder_backup(array $backup, bool $include_payload)
  * @param array<array-key, mixed> $payload
  * @return array<string, mixed>
  */
-function novamira_summarize_backup_payload(array $payload): array
+function openmira_summarize_backup_payload(array $payload): array
 {
     $bricks = is_array($payload['bricks'] ?? null) ? $payload['bricks'] : [];
     $bricks_counts = [];
@@ -977,7 +977,7 @@ function novamira_summarize_backup_payload(array $payload): array
 /**
  * Hash content for optimistic write checks.
  */
-function novamira_hash_content(string $content): string
+function openmira_hash_content(string $content): string
 {
     return hash('sha256', $content);
 }

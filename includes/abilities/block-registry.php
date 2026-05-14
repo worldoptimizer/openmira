@@ -10,11 +10,11 @@ if (!defined('ABSPATH')) {
     exit();
 }
 
-wp_register_ability('novamira/list-block-types', [
-    'label' => __('List Block Types', domain: 'novamira'),
+wp_register_ability('openmira/list-block-types', [
+    'label' => __('List Block Types', domain: 'open-mira'),
     'description' => __(
         'Lists registered Gutenberg block types from WP_Block_Type_Registry, including core and third-party blocks. This exposes server-known block.json metadata, attributes, supports, parent/ancestor constraints, and script/style handles.',
-        domain: 'novamira',
+        domain: 'open-mira',
     ),
     'category' => 'wordpress-builders',
     'input_schema' => [
@@ -53,8 +53,8 @@ wp_register_ability('novamira/list-block-types', [
         ],
         'required' => ['blocks', 'count', 'total_registered', 'serialization_note'],
     ],
-    'execute_callback' => 'novamira_list_block_types',
-    'permission_callback' => 'novamira_permission_callback',
+    'execute_callback' => 'openmira_list_block_types',
+    'permission_callback' => 'openmira_permission_callback',
     'meta' => [
         'show_in_rest' => true,
         'mcp' => ['public' => true],
@@ -67,11 +67,11 @@ wp_register_ability('novamira/list-block-types', [
     ],
 ]);
 
-wp_register_ability('novamira/get-block-type', [
-    'label' => __('Get Block Type', domain: 'novamira'),
+wp_register_ability('openmira/get-block-type', [
+    'label' => __('Get Block Type', domain: 'open-mira'),
     'description' => __(
         'Returns detailed server-side metadata for a registered Gutenberg block type. Useful for discovering third-party block attributes, parent/ancestor constraints, dynamic render status, and asset handles.',
-        domain: 'novamira',
+        domain: 'open-mira',
     ),
     'category' => 'wordpress-builders',
     'input_schema' => [
@@ -94,8 +94,8 @@ wp_register_ability('novamira/get-block-type', [
         ],
         'required' => ['block', 'serialization_note'],
     ],
-    'execute_callback' => 'novamira_get_block_type',
-    'permission_callback' => 'novamira_permission_callback',
+    'execute_callback' => 'openmira_get_block_type',
+    'permission_callback' => 'openmira_permission_callback',
     'meta' => [
         'show_in_rest' => true,
         'mcp' => ['public' => true],
@@ -108,11 +108,11 @@ wp_register_ability('novamira/get-block-type', [
     ],
 ]);
 
-wp_register_ability('novamira/validate-gutenberg-content', [
-    'label' => __('Validate Gutenberg Content', domain: 'novamira'),
+wp_register_ability('openmira/validate-gutenberg-content', [
+    'label' => __('Validate Gutenberg Content', domain: 'open-mira'),
     'description' => __(
         'Validates Gutenberg post_content server-side by parsing blocks and checking registered block names, unknown attrs, and parent/ancestor/allowed child constraints. It cannot fully validate static save() HTML mismatches; Gutenberg editor JS is authoritative for that.',
-        domain: 'novamira',
+        domain: 'open-mira',
     ),
     'category' => 'wordpress-builders',
     'input_schema' => [
@@ -154,8 +154,8 @@ wp_register_ability('novamira/validate-gutenberg-content', [
             'serialization_note',
         ],
     ],
-    'execute_callback' => 'novamira_validate_gutenberg_content',
-    'permission_callback' => 'novamira_permission_callback',
+    'execute_callback' => 'openmira_validate_gutenberg_content',
+    'permission_callback' => 'openmira_permission_callback',
     'meta' => [
         'show_in_rest' => true,
         'mcp' => ['public' => true],
@@ -168,11 +168,11 @@ wp_register_ability('novamira/validate-gutenberg-content', [
     ],
 ]);
 
-wp_register_ability('novamira/create-gutenberg-serialization-job', [
-    'label' => __('Create Gutenberg Serialization Job', domain: 'novamira'),
+wp_register_ability('openmira/create-gutenberg-serialization-job', [
+    'label' => __('Create Gutenberg Serialization Job', domain: 'open-mira'),
     'description' => __(
         'Creates a browser-backed Gutenberg serialization job. Open the returned admin URL in an authenticated browser; WordPress editor JavaScript will serialize the block spec and save the exact markup for MCP to read.',
-        domain: 'novamira',
+        domain: 'open-mira',
     ),
     'category' => 'wordpress-builders',
     'input_schema' => [
@@ -198,8 +198,8 @@ wp_register_ability('novamira/create-gutenberg-serialization-job', [
         ],
         'required' => ['job', 'serializer_url', 'instructions', 'serialization_note'],
     ],
-    'execute_callback' => 'novamira_create_gutenberg_serialization_job',
-    'permission_callback' => 'novamira_permission_callback',
+    'execute_callback' => 'openmira_create_gutenberg_serialization_job',
+    'permission_callback' => 'openmira_permission_callback',
     'meta' => [
         'show_in_rest' => true,
         'mcp' => ['public' => true],
@@ -212,11 +212,11 @@ wp_register_ability('novamira/create-gutenberg-serialization-job', [
     ],
 ]);
 
-wp_register_ability('novamira/read-gutenberg-serialization-job', [
-    'label' => __('Read Gutenberg Serialization Job', domain: 'novamira'),
+wp_register_ability('openmira/read-gutenberg-serialization-job', [
+    'label' => __('Read Gutenberg Serialization Job', domain: 'open-mira'),
     'description' => __(
         'Reads a browser-backed Gutenberg serialization job created by Open Mira. Returns exact editor-generated markup after the admin serializer page has run.',
-        domain: 'novamira',
+        domain: 'open-mira',
     ),
     'category' => 'wordpress-builders',
     'input_schema' => [
@@ -243,8 +243,8 @@ wp_register_ability('novamira/read-gutenberg-serialization-job', [
         ],
         'required' => ['job', 'serializer_url', 'complete', 'serialization_note'],
     ],
-    'execute_callback' => 'novamira_read_gutenberg_serialization_job',
-    'permission_callback' => 'novamira_permission_callback',
+    'execute_callback' => 'openmira_read_gutenberg_serialization_job',
+    'permission_callback' => 'openmira_permission_callback',
     'meta' => [
         'show_in_rest' => true,
         'mcp' => ['public' => true],
@@ -257,11 +257,11 @@ wp_register_ability('novamira/read-gutenberg-serialization-job', [
     ],
 ]);
 
-wp_register_ability('novamira/create-gutenberg-block-profile-job', [
-    'label' => __('Create Gutenberg Block Profile Job', domain: 'novamira'),
+wp_register_ability('openmira/create-gutenberg-block-profile-job', [
+    'label' => __('Create Gutenberg Block Profile Job', domain: 'open-mira'),
     'description' => __(
         'Creates a browser-backed job that probes Gutenberg block types with editor JavaScript, serializes candidate specs, parses the result, and caches safe/unsafe generation profiles.',
-        domain: 'novamira',
+        domain: 'open-mira',
     ),
     'category' => 'wordpress-builders',
     'input_schema' => [
@@ -297,8 +297,8 @@ wp_register_ability('novamira/create-gutenberg-block-profile-job', [
         ],
         'required' => ['job', 'profiler_url', 'instructions', 'serialization_note'],
     ],
-    'execute_callback' => 'novamira_create_gutenberg_block_profile_job',
-    'permission_callback' => 'novamira_permission_callback',
+    'execute_callback' => 'openmira_create_gutenberg_block_profile_job',
+    'permission_callback' => 'openmira_permission_callback',
     'meta' => [
         'show_in_rest' => true,
         'mcp' => ['public' => true],
@@ -311,9 +311,9 @@ wp_register_ability('novamira/create-gutenberg-block-profile-job', [
     ],
 ]);
 
-wp_register_ability('novamira/read-gutenberg-block-profile-job', [
-    'label' => __('Read Gutenberg Block Profile Job', domain: 'novamira'),
-    'description' => __('Reads a completed browser-backed Gutenberg block profile job.', domain: 'novamira'),
+wp_register_ability('openmira/read-gutenberg-block-profile-job', [
+    'label' => __('Read Gutenberg Block Profile Job', domain: 'open-mira'),
+    'description' => __('Reads a completed browser-backed Gutenberg block profile job.', domain: 'open-mira'),
     'category' => 'wordpress-builders',
     'input_schema' => [
         'type' => 'object',
@@ -333,8 +333,8 @@ wp_register_ability('novamira/read-gutenberg-block-profile-job', [
         ],
         'required' => ['job', 'profiler_url', 'complete', 'serialization_note'],
     ],
-    'execute_callback' => 'novamira_read_gutenberg_block_profile_job',
-    'permission_callback' => 'novamira_permission_callback',
+    'execute_callback' => 'openmira_read_gutenberg_block_profile_job',
+    'permission_callback' => 'openmira_permission_callback',
     'meta' => [
         'show_in_rest' => true,
         'mcp' => ['public' => true],
@@ -347,11 +347,11 @@ wp_register_ability('novamira/read-gutenberg-block-profile-job', [
     ],
 ]);
 
-wp_register_ability('novamira/list-gutenberg-block-profiles', [
-    'label' => __('List Gutenberg Block Profiles', domain: 'novamira'),
+wp_register_ability('openmira/list-gutenberg-block-profiles', [
+    'label' => __('List Gutenberg Block Profiles', domain: 'open-mira'),
     'description' => __(
         'Lists cached Gutenberg block safety profiles created by browser-backed profile jobs.',
-        domain: 'novamira',
+        domain: 'open-mira',
     ),
     'category' => 'wordpress-builders',
     'input_schema' => [
@@ -377,8 +377,8 @@ wp_register_ability('novamira/list-gutenberg-block-profiles', [
         ],
         'required' => ['profiles', 'count', 'total_cached', 'serialization_note'],
     ],
-    'execute_callback' => 'novamira_list_gutenberg_block_profiles',
-    'permission_callback' => 'novamira_permission_callback',
+    'execute_callback' => 'openmira_list_gutenberg_block_profiles',
+    'permission_callback' => 'openmira_permission_callback',
     'meta' => [
         'show_in_rest' => true,
         'mcp' => ['public' => true],
@@ -397,20 +397,20 @@ wp_register_ability('novamira/list-gutenberg-block-profiles', [
  * @param array<string, mixed> $input
  * @return array<string, mixed>
  */
-function novamira_list_block_types(array $input = []): array
+function openmira_list_block_types(array $input = []): array
 {
     $registry = WP_Block_Type_Registry::get_instance();
     $all_blocks = $registry->get_all_registered();
     $search = strtolower(trim((string) ($input['search'] ?? '')));
     $namespace = sanitize_key((string) ($input['namespace'] ?? ''));
-    $include_schema = novamira_truthy_input($input['include_schema'] ?? false);
-    $include_core = !novamira_falsey_input($input['include_core'] ?? true);
-    $include_third_party = !novamira_falsey_input($input['include_third_party'] ?? true);
-    $limit = novamira_normalize_limit($input['limit'] ?? 200);
+    $include_schema = openmira_truthy_input($input['include_schema'] ?? false);
+    $include_core = !openmira_falsey_input($input['include_core'] ?? true);
+    $include_third_party = !openmira_falsey_input($input['include_third_party'] ?? true);
+    $limit = openmira_normalize_limit($input['limit'] ?? 200);
 
     $blocks = [];
     foreach ($all_blocks as $block_type) {
-        if (!novamira_block_type_matches_filters(
+        if (!openmira_block_type_matches_filters(
             $block_type,
             $search,
             $namespace,
@@ -420,7 +420,7 @@ function novamira_list_block_types(array $input = []): array
             continue;
         }
 
-        $blocks[] = novamira_summarize_block_type($block_type, $include_schema);
+        $blocks[] = openmira_summarize_block_type($block_type, $include_schema);
         if (count($blocks) >= $limit) {
             break;
         }
@@ -430,7 +430,7 @@ function novamira_list_block_types(array $input = []): array
         'blocks' => $blocks,
         'count' => count($blocks),
         'total_registered' => count($all_blocks),
-        'serialization_note' => novamira_block_serialization_note(),
+        'serialization_note' => openmira_block_serialization_note(),
     ];
 }
 
@@ -440,7 +440,7 @@ function novamira_list_block_types(array $input = []): array
  * @param array<string, mixed> $input
  * @return array<string, mixed>|WP_Error
  */
-function novamira_get_block_type(array $input): array|WP_Error
+function openmira_get_block_type(array $input): array|WP_Error
 {
     $name = (string) ($input['name'] ?? '');
     $block_type = WP_Block_Type_Registry::get_instance()->get_registered($name);
@@ -449,8 +449,8 @@ function novamira_get_block_type(array $input): array|WP_Error
     }
 
     return [
-        'block' => novamira_describe_block_type($block_type),
-        'serialization_note' => novamira_block_serialization_note(),
+        'block' => openmira_describe_block_type($block_type),
+        'serialization_note' => openmira_block_serialization_note(),
     ];
 }
 
@@ -460,11 +460,11 @@ function novamira_get_block_type(array $input): array|WP_Error
  * @param array<string, mixed> $input
  * @return array<string, mixed>|WP_Error
  */
-function novamira_validate_gutenberg_content(array $input): array|WP_Error
+function openmira_validate_gutenberg_content(array $input): array|WP_Error
 {
     $content = (string) ($input['content'] ?? '');
     if ($content === '' && array_key_exists('post_id', $input)) {
-        $post = novamira_get_post_or_error((int) $input['post_id']);
+        $post = openmira_get_post_or_error((int) $input['post_id']);
         if (is_wp_error($post)) {
             return $post;
         }
@@ -474,21 +474,21 @@ function novamira_validate_gutenberg_content(array $input): array|WP_Error
         return new WP_Error('missing_content', 'Provide content or post_id.');
     }
 
-    $parsed_blocks = novamira_normalize_parsed_blocks(parse_blocks($content));
+    $parsed_blocks = openmira_normalize_parsed_blocks(parse_blocks($content));
     $errors = [];
     $warnings = [];
-    novamira_validate_parsed_blocks($parsed_blocks, [], [], $errors, $warnings);
+    openmira_validate_parsed_blocks($parsed_blocks, [], [], $errors, $warnings);
 
     $response = [
         'valid_server_side' => $errors === [],
         'can_validate_editor_serialization' => false,
         'errors' => $errors,
         'warnings' => $warnings,
-        'block_count' => novamira_count_named_blocks($parsed_blocks),
-        'blocks' => novamira_summarize_blocks($parsed_blocks),
-        'serialization_note' => novamira_block_serialization_note(),
+        'block_count' => openmira_count_named_blocks($parsed_blocks),
+        'blocks' => openmira_summarize_blocks($parsed_blocks),
+        'serialization_note' => openmira_block_serialization_note(),
     ];
-    if (novamira_truthy_input($input['include_parsed_blocks'] ?? false)) {
+    if (openmira_truthy_input($input['include_parsed_blocks'] ?? false)) {
         $response['parsed_blocks'] = $parsed_blocks;
     }
 
@@ -501,26 +501,26 @@ function novamira_validate_gutenberg_content(array $input): array|WP_Error
  * @param array<string, mixed> $input
  * @return array<string, mixed>|WP_Error
  */
-function novamira_create_gutenberg_serialization_job(array $input): array|WP_Error
+function openmira_create_gutenberg_serialization_job(array $input): array|WP_Error
 {
     if (!is_array($input['spec'] ?? null)) {
         return new WP_Error('missing_block_spec', 'Provide a block spec object or an array of block spec objects.');
     }
 
     $spec = $input['spec'];
-    $job = novamira_create_block_serialization_job($spec);
+    $job = openmira_create_block_serialization_job($spec);
     if (is_wp_error($job)) {
         return $job;
     }
 
     return [
-        'job' => novamira_public_block_serialization_job($job, [
+        'job' => openmira_public_block_serialization_job($job, [
             'include_spec' => true,
             'include_markup' => false,
         ]),
         'serializer_url' => (string) $job['serializer_url'],
-        'instructions' => 'Open serializer_url in an authenticated WordPress admin browser. The page auto-runs wp.blocks.createBlock/wp.blocks.serialize, stores the result, then read it with novamira/read-gutenberg-serialization-job.',
-        'serialization_note' => novamira_block_serialization_note(),
+        'instructions' => 'Open serializer_url in an authenticated WordPress admin browser. The page auto-runs wp.blocks.createBlock/wp.blocks.serialize, stores the result, then read it with openmira/read-gutenberg-serialization-job.',
+        'serialization_note' => openmira_block_serialization_note(),
     ];
 }
 
@@ -530,29 +530,29 @@ function novamira_create_gutenberg_serialization_job(array $input): array|WP_Err
  * @param array<string, mixed> $input
  * @return array<string, mixed>|WP_Error
  */
-function novamira_read_gutenberg_serialization_job(array $input): array|WP_Error
+function openmira_read_gutenberg_serialization_job(array $input): array|WP_Error
 {
     $job_id = sanitize_key((string) ($input['job_id'] ?? ''));
     if ($job_id === '') {
         return new WP_Error('missing_job_id', 'Provide a serialization job_id.');
     }
 
-    $job = novamira_get_block_serialization_job($job_id);
+    $job = openmira_get_block_serialization_job($job_id);
     if ($job === null) {
         return new WP_Error('serialization_job_not_found', 'Serialization job not found or expired.');
     }
 
-    $include_spec = novamira_truthy_input($input['include_spec'] ?? false);
-    $include_markup = !novamira_falsey_input($input['include_markup'] ?? true);
+    $include_spec = openmira_truthy_input($input['include_spec'] ?? false);
+    $include_markup = !openmira_falsey_input($input['include_markup'] ?? true);
 
     return [
-        'job' => novamira_public_block_serialization_job($job, [
+        'job' => openmira_public_block_serialization_job($job, [
             'include_spec' => $include_spec,
             'include_markup' => $include_markup,
         ]),
-        'serializer_url' => novamira_get_block_serialization_job_url($job_id),
+        'serializer_url' => openmira_get_block_serialization_job_url($job_id),
         'complete' => ($job['status'] ?? '') === 'complete',
-        'serialization_note' => novamira_block_serialization_note(),
+        'serialization_note' => openmira_block_serialization_note(),
     ];
 }
 
@@ -562,23 +562,23 @@ function novamira_read_gutenberg_serialization_job(array $input): array|WP_Error
  * @param array<string, mixed> $input
  * @return array<string, mixed>|WP_Error
  */
-function novamira_create_gutenberg_block_profile_job(array $input = []): array|WP_Error
+function openmira_create_gutenberg_block_profile_job(array $input = []): array|WP_Error
 {
-    $block_names = novamira_resolve_block_profile_names($input);
+    $block_names = openmira_resolve_block_profile_names($input);
     if ($block_names === []) {
         return new WP_Error('no_blocks_to_profile', 'No registered block types matched the profile request.');
     }
 
-    $job = novamira_create_block_profile_job($block_names);
+    $job = openmira_create_block_profile_job($block_names);
     if (is_wp_error($job)) {
         return $job;
     }
 
     return [
-        'job' => novamira_public_block_tool_job($job),
+        'job' => openmira_public_block_tool_job($job),
         'profiler_url' => (string) $job['serializer_url'],
-        'instructions' => 'Open profiler_url in an authenticated WordPress admin browser. The page loads editor block scripts, probes each block, caches results, then read it with novamira/read-gutenberg-block-profile-job.',
-        'serialization_note' => novamira_block_serialization_note(),
+        'instructions' => 'Open profiler_url in an authenticated WordPress admin browser. The page loads editor block scripts, probes each block, caches results, then read it with openmira/read-gutenberg-block-profile-job.',
+        'serialization_note' => openmira_block_serialization_note(),
     ];
 }
 
@@ -588,23 +588,23 @@ function novamira_create_gutenberg_block_profile_job(array $input = []): array|W
  * @param array<string, mixed> $input
  * @return array<string, mixed>|WP_Error
  */
-function novamira_read_gutenberg_block_profile_job(array $input): array|WP_Error
+function openmira_read_gutenberg_block_profile_job(array $input): array|WP_Error
 {
     $job_id = sanitize_key((string) ($input['job_id'] ?? ''));
     if ($job_id === '') {
         return new WP_Error('missing_job_id', 'Provide a profile job_id.');
     }
 
-    $job = novamira_get_block_serialization_job($job_id);
+    $job = openmira_get_block_serialization_job($job_id);
     if ($job === null || ($job['kind'] ?? '') !== 'profile') {
         return new WP_Error('profile_job_not_found', 'Profile job not found or expired.');
     }
 
     return [
-        'job' => novamira_public_block_tool_job($job),
-        'profiler_url' => novamira_get_block_serialization_job_url($job_id),
+        'job' => openmira_public_block_tool_job($job),
+        'profiler_url' => openmira_get_block_serialization_job_url($job_id),
         'complete' => ($job['status'] ?? '') === 'complete',
-        'serialization_note' => novamira_block_serialization_note(),
+        'serialization_note' => openmira_block_serialization_note(),
     ];
 }
 
@@ -614,12 +614,12 @@ function novamira_read_gutenberg_block_profile_job(array $input): array|WP_Error
  * @param array<string, mixed> $input
  * @return array<string, mixed>
  */
-function novamira_list_gutenberg_block_profiles(array $input = []): array
+function openmira_list_gutenberg_block_profiles(array $input = []): array
 {
-    $profiles = novamira_get_gutenberg_block_profiles();
+    $profiles = openmira_get_gutenberg_block_profiles();
     $namespace = sanitize_key((string) ($input['namespace'] ?? ''));
-    $safe_only = novamira_truthy_input($input['safe_only'] ?? false);
-    $limit = novamira_normalize_limit($input['limit'] ?? 100);
+    $safe_only = openmira_truthy_input($input['safe_only'] ?? false);
+    $limit = openmira_normalize_limit($input['limit'] ?? 100);
 
     $filtered = [];
     foreach ($profiles as $profile) {
@@ -627,7 +627,7 @@ function novamira_list_gutenberg_block_profiles(array $input = []): array
         if ($namespace !== '' && !str_starts_with($name, $namespace . '/')) {
             continue;
         }
-        if ($safe_only && !novamira_truthy_input($profile['safe'] ?? false)) {
+        if ($safe_only && !openmira_truthy_input($profile['safe'] ?? false)) {
             continue;
         }
         $filtered[] = $profile;
@@ -640,7 +640,7 @@ function novamira_list_gutenberg_block_profiles(array $input = []): array
         'profiles' => $filtered,
         'count' => count($filtered),
         'total_cached' => count($profiles),
-        'serialization_note' => novamira_block_serialization_note(),
+        'serialization_note' => openmira_block_serialization_note(),
     ];
 }
 
@@ -650,13 +650,13 @@ function novamira_list_gutenberg_block_profiles(array $input = []): array
  * @param array<array-key, mixed> $job
  * @return array<string, mixed>
  */
-function novamira_public_block_serialization_job(array $job, array $options = []): array
+function openmira_public_block_serialization_job(array $job, array $options = []): array
 {
-    $public = novamira_public_block_tool_job($job);
+    $public = openmira_public_block_tool_job($job);
     unset($public['block_names'], $public['profiles']);
 
-    $include_spec = novamira_truthy_input($options['include_spec'] ?? false);
-    $include_markup = !novamira_falsey_input($options['include_markup'] ?? true);
+    $include_spec = openmira_truthy_input($options['include_spec'] ?? false);
+    $include_markup = !openmira_falsey_input($options['include_markup'] ?? true);
     if ($include_spec) {
         $public['spec'] = $job['spec'] ?? [];
     }
@@ -673,7 +673,7 @@ function novamira_public_block_serialization_job(array $job, array $options = []
  * @param array<array-key, mixed> $job
  * @return array<string, mixed>
  */
-function novamira_public_block_tool_job(array $job): array
+function openmira_public_block_tool_job(array $job): array
 {
     $public = [
         'job_id' => (string) ($job['job_id'] ?? ''),
@@ -687,7 +687,7 @@ function novamira_public_block_tool_job(array $job): array
         'completed_at' => (int) ($job['completed_at'] ?? 0) > 0 ? gmdate(DATE_ATOM, (int) $job['completed_at']) : '',
     ];
     if (($job['kind'] ?? '') === 'profile') {
-        novamira_add_public_block_profile_fields($public, $job);
+        openmira_add_public_block_profile_fields($public, $job);
     }
 
     return $public;
@@ -699,7 +699,7 @@ function novamira_public_block_tool_job(array $job): array
  * @param array<string, mixed>      $public
  * @param array<array-key, mixed>   $job
  */
-function novamira_add_public_block_profile_fields(array &$public, array $job): void
+function openmira_add_public_block_profile_fields(array &$public, array $job): void
 {
     $public['block_names'] = is_array($job['block_names'] ?? null) ? array_values($job['block_names']) : [];
     $public['profiles'] = is_array($job['profiles'] ?? null) ? array_values($job['profiles']) : [];
@@ -712,7 +712,7 @@ function novamira_add_public_block_profile_fields(array &$public, array $job): v
  * @param array<string, mixed> $input
  * @return list<string>
  */
-function novamira_resolve_block_profile_names(array $input): array
+function openmira_resolve_block_profile_names(array $input): array
 {
     if (is_array($input['names'] ?? null)) {
         $names = [];
@@ -730,13 +730,13 @@ function novamira_resolve_block_profile_names(array $input): array
     $registry = WP_Block_Type_Registry::get_instance();
     $search = strtolower(trim((string) ($input['search'] ?? '')));
     $namespace = sanitize_key((string) ($input['namespace'] ?? ''));
-    $include_core = !novamira_falsey_input($input['include_core'] ?? true);
-    $include_third_party = !novamira_falsey_input($input['include_third_party'] ?? true);
-    $limit = novamira_normalize_limit($input['limit'] ?? 25);
+    $include_core = !openmira_falsey_input($input['include_core'] ?? true);
+    $include_third_party = !openmira_falsey_input($input['include_third_party'] ?? true);
+    $limit = openmira_normalize_limit($input['limit'] ?? 25);
 
     $names = [];
     foreach ($registry->get_all_registered() as $block_type) {
-        if (!novamira_block_type_matches_filters(
+        if (!openmira_block_type_matches_filters(
             $block_type,
             $search,
             $namespace,
@@ -757,7 +757,7 @@ function novamira_resolve_block_profile_names(array $input): array
 /**
  * Return whether a block type passes list filters.
  */
-function novamira_block_type_matches_filters(
+function openmira_block_type_matches_filters(
     WP_Block_Type $block_type,
     string $search,
     string $namespace,
@@ -791,14 +791,14 @@ function novamira_block_type_matches_filters(
  *
  * @return array<string, mixed>
  */
-function novamira_summarize_block_type(WP_Block_Type $block_type, bool $include_schema): array
+function openmira_summarize_block_type(WP_Block_Type $block_type, bool $include_schema): array
 {
     $summary = [
         'name' => $block_type->name,
         'title' => $block_type->title,
         'category' => $block_type->category,
         'description' => $block_type->description,
-        'namespace' => novamira_block_namespace($block_type->name),
+        'namespace' => openmira_block_namespace($block_type->name),
         'api_version' => $block_type->api_version,
         'is_dynamic' => $block_type->is_dynamic(),
         'parent' => is_array($block_type->parent) ? $block_type->parent : [],
@@ -818,10 +818,10 @@ function novamira_summarize_block_type(WP_Block_Type $block_type, bool $include_
  *
  * @return array<string, mixed>
  */
-function novamira_describe_block_type(WP_Block_Type $block_type): array
+function openmira_describe_block_type(WP_Block_Type $block_type): array
 {
     return (
-        novamira_summarize_block_type($block_type, include_schema: true)
+        openmira_summarize_block_type($block_type, include_schema: true)
         + [
             'keywords' => $block_type->keywords,
             'styles' => $block_type->styles,
@@ -846,7 +846,7 @@ function novamira_describe_block_type(WP_Block_Type $block_type): array
  * @param list<array<string, mixed>>     $errors
  * @param list<array<string, mixed>>     $warnings
  */
-function novamira_validate_parsed_blocks(
+function openmira_validate_parsed_blocks(
     array $blocks,
     array $ancestor_names,
     array $path,
@@ -862,7 +862,7 @@ function novamira_validate_parsed_blocks(
         $inner_html = is_string($block['innerHTML'] ?? null) ? trim($block['innerHTML']) : '';
         if ($block_name === null) {
             if ($inner_html !== '') {
-                $warnings[] = novamira_block_validation_issue(
+                $warnings[] = openmira_block_validation_issue(
                     code: 'classic_html',
                     path: $block_path,
                     block_name: '',
@@ -872,7 +872,7 @@ function novamira_validate_parsed_blocks(
             continue;
         }
         if (!is_string($block_name)) {
-            $errors[] = novamira_block_validation_issue(
+            $errors[] = openmira_block_validation_issue(
                 code: 'invalid_block_name',
                 path: $block_path,
                 block_name: '',
@@ -883,7 +883,7 @@ function novamira_validate_parsed_blocks(
 
         $block_type = $registry->get_registered($block_name);
         if (!$block_type instanceof WP_Block_Type) {
-            $errors[] = novamira_block_validation_issue(
+            $errors[] = openmira_block_validation_issue(
                 code: 'unknown_block_type',
                 path: $block_path,
                 block_name: $block_name,
@@ -891,12 +891,12 @@ function novamira_validate_parsed_blocks(
             );
         }
         if ($block_type instanceof WP_Block_Type) {
-            novamira_validate_block_relationships($block_type, $ancestor_names, $block_path, $errors);
-            novamira_validate_block_attrs($block, $block_type, $block_path, $warnings);
+            openmira_validate_block_relationships($block_type, $ancestor_names, $block_path, $errors);
+            openmira_validate_block_attrs($block, $block_type, $block_path, $warnings);
         }
 
-        $inner_blocks = novamira_normalize_parsed_blocks($block['innerBlocks'] ?? []);
-        novamira_validate_parsed_blocks(
+        $inner_blocks = openmira_normalize_parsed_blocks($block['innerBlocks'] ?? []);
+        openmira_validate_parsed_blocks(
             $inner_blocks,
             [...$ancestor_names, $block_name],
             $block_path,
@@ -913,7 +913,7 @@ function novamira_validate_parsed_blocks(
  * @param list<string>               $path
  * @param list<array<string, mixed>> $errors
  */
-function novamira_validate_block_relationships(
+function openmira_validate_block_relationships(
     WP_Block_Type $block_type,
     array $ancestor_names,
     array $path,
@@ -925,7 +925,7 @@ function novamira_validate_block_relationships(
         && $block_type->parent !== []
         && !in_array($parent_name, $block_type->parent, strict: true)
     ) {
-        $errors[] = novamira_block_validation_issue(
+        $errors[] = openmira_block_validation_issue(
             code: 'invalid_parent',
             path: $path,
             block_name: $block_type->name,
@@ -938,7 +938,7 @@ function novamira_validate_block_relationships(
         && $block_type->ancestor !== []
         && array_intersect($ancestor_names, $block_type->ancestor) === []
     ) {
-        $errors[] = novamira_block_validation_issue(
+        $errors[] = openmira_block_validation_issue(
             code: 'invalid_ancestor',
             path: $path,
             block_name: $block_type->name,
@@ -954,7 +954,7 @@ function novamira_validate_block_relationships(
             && $parent_type->allowed_blocks !== []
             && !in_array($block_type->name, $parent_type->allowed_blocks, strict: true)
         ) {
-            $errors[] = novamira_block_validation_issue(
+            $errors[] = openmira_block_validation_issue(
                 code: 'disallowed_child',
                 path: $path,
                 block_name: $block_type->name,
@@ -972,7 +972,7 @@ function novamira_validate_block_relationships(
  * @param list<string>               $path
  * @param list<array<string, mixed>> $warnings
  */
-function novamira_validate_block_attrs(array $block, WP_Block_Type $block_type, array $path, array &$warnings): void
+function openmira_validate_block_attrs(array $block, WP_Block_Type $block_type, array $path, array &$warnings): void
 {
     $attrs = is_array($block['attrs'] ?? null) ? $block['attrs'] : [];
     if ($attrs === [] || !is_array($block_type->attributes)) {
@@ -982,7 +982,7 @@ function novamira_validate_block_attrs(array $block, WP_Block_Type $block_type, 
     $known_attrs = array_merge(array_keys($block_type->attributes), ['lock', 'metadata']);
     $unknown_attrs = array_values(array_diff(array_keys($attrs), $known_attrs));
     if ($unknown_attrs !== []) {
-        $warnings[] = novamira_block_validation_issue(
+        $warnings[] = openmira_block_validation_issue(
             code: 'unknown_attrs',
             path: $path,
             block_name: $block_type->name,
@@ -999,7 +999,7 @@ function novamira_validate_block_attrs(array $block, WP_Block_Type $block_type, 
  * @param array<string, mixed> $extra
  * @return array<string, mixed>
  */
-function novamira_block_validation_issue(
+function openmira_block_validation_issue(
     string $code,
     array $path,
     string $block_name,
@@ -1019,14 +1019,14 @@ function novamira_block_validation_issue(
  *
  * @param list<array<array-key, mixed>> $blocks
  */
-function novamira_count_named_blocks(array $blocks): int
+function openmira_count_named_blocks(array $blocks): int
 {
     $count = 0;
     foreach ($blocks as $block) {
         if (is_string($block['blockName'] ?? null)) {
             $count++;
         }
-        $count += novamira_count_named_blocks(novamira_normalize_parsed_blocks($block['innerBlocks'] ?? []));
+        $count += openmira_count_named_blocks(openmira_normalize_parsed_blocks($block['innerBlocks'] ?? []));
     }
 
     return $count;
@@ -1037,7 +1037,7 @@ function novamira_count_named_blocks(array $blocks): int
  *
  * @return list<array<array-key, mixed>>
  */
-function novamira_normalize_parsed_blocks(mixed $blocks): array
+function openmira_normalize_parsed_blocks(mixed $blocks): array
 {
     if (!is_array($blocks)) {
         return [];
@@ -1057,7 +1057,7 @@ function novamira_normalize_parsed_blocks(mixed $blocks): array
 /**
  * Return block namespace prefix.
  */
-function novamira_block_namespace(string $block_name): string
+function openmira_block_namespace(string $block_name): string
 {
     $parts = explode('/', $block_name, limit: 2);
     return $parts[0];
@@ -1066,7 +1066,7 @@ function novamira_block_namespace(string $block_name): string
 /**
  * Explain the server/editor validation boundary.
  */
-function novamira_block_serialization_note(): string
+function openmira_block_serialization_note(): string
 {
     return 'WordPress PHP exposes registered block metadata and can parse structural relationships, but static block saved HTML is produced by each block editor JavaScript save() implementation. For exact core or third-party markup, use editor-side wp.blocks.createBlock/wp.blocks.serialize or paste through the editor and validate there.';
 }

@@ -10,17 +10,17 @@ if (!defined('ABSPATH')) {
     exit();
 }
 
-const NOVAMIRA_MEMORY_OPTION = 'novamira_project_memory';
+const OPENMIRA_MEMORY_OPTION = 'openmira_project_memory';
 
 /**
  * Return all memory entries.
  *
  * @return array<string, array<array-key, mixed>>
  */
-function novamira_get_memory_entries(): array
+function openmira_get_memory_entries(): array
 {
     // @mago-expect analysis:mixed-assignment
-    $stored_entries = get_option(NOVAMIRA_MEMORY_OPTION, default_value: []);
+    $stored_entries = get_option(OPENMIRA_MEMORY_OPTION, default_value: []);
     if (!is_array($stored_entries)) {
         return [];
     }
@@ -42,15 +42,15 @@ function novamira_get_memory_entries(): array
  *
  * @param array<string, array<array-key, mixed>> $entries
  */
-function novamira_update_memory_entries(array $entries): void
+function openmira_update_memory_entries(array $entries): void
 {
-    update_option(NOVAMIRA_MEMORY_OPTION, $entries, autoload: false);
+    update_option(OPENMIRA_MEMORY_OPTION, $entries, autoload: false);
 }
 
 /**
  * Validate a memory key.
  */
-function novamira_validate_memory_key(string $key): bool|WP_Error
+function openmira_validate_memory_key(string $key): bool|WP_Error
 {
     if (preg_match('/^[a-z0-9][a-z0-9._-]{0,79}$/', $key) !== 1) {
         return new WP_Error(
@@ -68,12 +68,12 @@ function novamira_validate_memory_key(string $key): bool|WP_Error
  * @param array<string, mixed> $input
  * @return array<string, mixed>|WP_Error
  */
-function novamira_read_memory(array $input = []): array|WP_Error
+function openmira_read_memory(array $input = []): array|WP_Error
 {
-    $entries = novamira_get_memory_entries();
+    $entries = openmira_get_memory_entries();
     $key = (string) ($input['key'] ?? '');
     if ($key !== '') {
-        $valid = novamira_validate_memory_key($key);
+        $valid = openmira_validate_memory_key($key);
         if (is_wp_error($valid)) {
             return $valid;
         }
@@ -94,12 +94,12 @@ function novamira_read_memory(array $input = []): array|WP_Error
  * @param array<string, mixed> $input
  * @return array<string, mixed>|WP_Error
  */
-function novamira_write_memory(array $input): array|WP_Error
+function openmira_write_memory(array $input): array|WP_Error
 {
     $key = (string) ($input['key'] ?? '');
     $value = (string) ($input['value'] ?? '');
 
-    $valid = novamira_validate_memory_key($key);
+    $valid = openmira_validate_memory_key($key);
     if (is_wp_error($valid)) {
         return $valid;
     }
@@ -107,7 +107,7 @@ function novamira_write_memory(array $input): array|WP_Error
         return new WP_Error('memory_value_too_large', 'Memory value must not exceed 20000 bytes.');
     }
 
-    $entries = novamira_get_memory_entries();
+    $entries = openmira_get_memory_entries();
     $created = !array_key_exists($key, $entries);
     $entry = [
         'value' => $value,
@@ -116,7 +116,7 @@ function novamira_write_memory(array $input): array|WP_Error
     ];
     $entries[$key] = $entry;
     ksort($entries);
-    novamira_update_memory_entries($entries);
+    openmira_update_memory_entries($entries);
 
     return [
         'key' => $key,
@@ -131,19 +131,19 @@ function novamira_write_memory(array $input): array|WP_Error
  * @param array<string, mixed> $input
  * @return array<string, mixed>|WP_Error
  */
-function novamira_delete_memory(array $input): array|WP_Error
+function openmira_delete_memory(array $input): array|WP_Error
 {
     $key = (string) ($input['key'] ?? '');
-    $valid = novamira_validate_memory_key($key);
+    $valid = openmira_validate_memory_key($key);
     if (is_wp_error($valid)) {
         return $valid;
     }
 
-    $entries = novamira_get_memory_entries();
+    $entries = openmira_get_memory_entries();
     $deleted = array_key_exists($key, $entries);
     if ($deleted) {
         unset($entries[$key]);
-        novamira_update_memory_entries($entries);
+        openmira_update_memory_entries($entries);
     }
 
     return [

@@ -20,7 +20,7 @@ if (!defined('ABSPATH')) {
  * @param string      $crashed_file        Path to the .crashed marker file.
  * @param string|null $current_sandbox_file The sandbox file currently being loaded, or null if loading is complete.
  */
-function novamira_sandbox_crash_handler(string $crashed_file, ?string $current_sandbox_file): void
+function openmira_sandbox_crash_handler(string $crashed_file, ?string $current_sandbox_file): void
 {
     if ($current_sandbox_file === null) {
         return;
@@ -41,7 +41,7 @@ function novamira_sandbox_crash_handler(string $crashed_file, ?string $current_s
 }
 
 (static function () {
-    $sandbox_dir = NOVAMIRA_SANDBOX_DIR;
+    $sandbox_dir = OPENMIRA_SANDBOX_DIR;
 
     // Ensure sandbox directory exists.
     if (!is_dir($sandbox_dir)) {
@@ -50,7 +50,7 @@ function novamira_sandbox_crash_handler(string $crashed_file, ?string $current_s
 
     $loading_file = $sandbox_dir . '.loading';
     $crashed_file = $sandbox_dir . '.crashed';
-    $abilities_enabled = novamira_is_enabled();
+    $abilities_enabled = openmira_is_enabled();
 
     // When abilities are disabled, load sandbox files without crash-recovery overhead.
     if (!$abilities_enabled) {
@@ -72,7 +72,7 @@ function novamira_sandbox_crash_handler(string $crashed_file, ?string $current_s
     $is_safe_mode = file_exists($crashed_file);
 
     // Manual safe mode via URL parameter.
-    if (!$is_safe_mode && ($_GET['novamira_safe_mode'] ?? null) === '1') {
+    if (!$is_safe_mode && ($_GET['openmira_safe_mode'] ?? null) === '1') {
         $is_safe_mode = true;
     }
 
@@ -82,10 +82,10 @@ function novamira_sandbox_crash_handler(string $crashed_file, ?string $current_s
             wp_admin_notice(
                 sprintf(
                     '<strong>%s</strong> %s',
-                    esc_html__('Open Mira Sandbox: Safe mode is active.', domain: 'novamira'),
+                    esc_html__('Open Mira Sandbox: Safe mode is active.', domain: 'open-mira'),
                     esc_html__(
-                        'A sandbox plugin caused a fatal error. All sandbox plugins are disabled. Fix or delete the broken plugin, then delete wp-content/novamira-sandbox/.crashed to resume.',
-                        domain: 'novamira',
+                        'A sandbox plugin caused a fatal error. All sandbox plugins are disabled. Fix or delete the broken plugin, then delete wp-content/openmira-sandbox/.crashed to resume.',
+                        domain: 'open-mira',
                     ),
                 ),
                 [
@@ -114,7 +114,7 @@ function novamira_sandbox_crash_handler(string $crashed_file, ?string $current_s
     $current_sandbox_file = null;
 
     register_shutdown_function(static function () use ($crashed_file, &$current_sandbox_file) {
-        novamira_sandbox_crash_handler($crashed_file, $current_sandbox_file);
+        openmira_sandbox_crash_handler($crashed_file, $current_sandbox_file);
     });
 
     foreach ($files as $file) {

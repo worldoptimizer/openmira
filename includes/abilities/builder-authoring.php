@@ -10,11 +10,11 @@ if (!defined('ABSPATH')) {
     exit();
 }
 
-wp_register_ability('novamira/list-gutenberg-patterns', [
-    'label' => __('List Gutenberg Patterns', domain: 'novamira'),
+wp_register_ability('openmira/list-gutenberg-patterns', [
+    'label' => __('List Gutenberg Patterns', domain: 'open-mira'),
     'description' => __(
         'Lists Open Mira clean-room Gutenberg section patterns built from core blocks. Use these as safe content/design primitives before creating pages.',
-        domain: 'novamira',
+        domain: 'open-mira',
     ),
     'category' => 'wordpress-builders',
     'input_schema' => [
@@ -30,8 +30,8 @@ wp_register_ability('novamira/list-gutenberg-patterns', [
         ],
         'required' => ['patterns', 'count'],
     ],
-    'execute_callback' => 'novamira_list_gutenberg_patterns',
-    'permission_callback' => 'novamira_permission_callback',
+    'execute_callback' => 'openmira_list_gutenberg_patterns',
+    'permission_callback' => 'openmira_permission_callback',
     'meta' => [
         'show_in_rest' => true,
         'mcp' => ['public' => true],
@@ -44,11 +44,11 @@ wp_register_ability('novamira/list-gutenberg-patterns', [
     ],
 ]);
 
-wp_register_ability('novamira/render-gutenberg-pattern', [
-    'label' => __('Render Gutenberg Pattern', domain: 'novamira'),
+wp_register_ability('openmira/render-gutenberg-pattern', [
+    'label' => __('Render Gutenberg Pattern', domain: 'open-mira'),
     'description' => __(
         'Renders one Open Mira Gutenberg pattern to serialized core block markup with supplied copy, links, and design options. Does not write content.',
-        domain: 'novamira',
+        domain: 'open-mira',
     ),
     'category' => 'wordpress-builders',
     'input_schema' => [
@@ -80,8 +80,8 @@ wp_register_ability('novamira/render-gutenberg-pattern', [
         ],
         'required' => ['pattern', 'markup', 'blocks'],
     ],
-    'execute_callback' => 'novamira_render_gutenberg_pattern',
-    'permission_callback' => 'novamira_permission_callback',
+    'execute_callback' => 'openmira_render_gutenberg_pattern',
+    'permission_callback' => 'openmira_permission_callback',
     'meta' => [
         'show_in_rest' => true,
         'mcp' => ['public' => true],
@@ -94,11 +94,11 @@ wp_register_ability('novamira/render-gutenberg-pattern', [
     ],
 ]);
 
-wp_register_ability('novamira/create-gutenberg-page', [
-    'label' => __('Create Gutenberg Page', domain: 'novamira'),
+wp_register_ability('openmira/create-gutenberg-page', [
+    'label' => __('Create Gutenberg Page', domain: 'open-mira'),
     'description' => __(
         'Creates a page or post from Open Mira Gutenberg patterns and optional raw block markup. Uses core blocks, validates block markup, and can create a backup when updating an existing post.',
-        domain: 'novamira',
+        domain: 'open-mira',
     ),
     'category' => 'wordpress-builders',
     'input_schema' => [
@@ -151,8 +151,8 @@ wp_register_ability('novamira/create-gutenberg-page', [
         ],
         'required' => ['post', 'created', 'new_hash', 'block_count', 'blocks'],
     ],
-    'execute_callback' => 'novamira_create_gutenberg_page',
-    'permission_callback' => 'novamira_permission_callback',
+    'execute_callback' => 'openmira_create_gutenberg_page',
+    'permission_callback' => 'openmira_permission_callback',
     'meta' => [
         'show_in_rest' => true,
         'mcp' => ['public' => true],
@@ -170,10 +170,10 @@ wp_register_ability('novamira/create-gutenberg-page', [
  *
  * @return array<string, mixed>
  */
-function novamira_list_gutenberg_patterns(): array
+function openmira_list_gutenberg_patterns(): array
 {
     $patterns = [];
-    foreach (novamira_get_gutenberg_pattern_definitions() as $slug => $definition) {
+    foreach (openmira_get_gutenberg_pattern_definitions() as $slug => $definition) {
         $patterns[] = ['slug' => $slug] + $definition;
     }
 
@@ -189,12 +189,12 @@ function novamira_list_gutenberg_patterns(): array
  * @param array<string, mixed> $input
  * @return array<string, mixed>|WP_Error
  */
-function novamira_render_gutenberg_pattern(array $input): array|WP_Error
+function openmira_render_gutenberg_pattern(array $input): array|WP_Error
 {
     $pattern = sanitize_key((string) ($input['pattern'] ?? ''));
     $content = is_array($input['content'] ?? null) ? $input['content'] : [];
     $design = is_array($input['design'] ?? null) ? $input['design'] : [];
-    $markup = novamira_render_gutenberg_pattern_markup($pattern, $content, $design);
+    $markup = openmira_render_gutenberg_pattern_markup($pattern, $content, $design);
     if (is_wp_error($markup)) {
         return $markup;
     }
@@ -202,7 +202,7 @@ function novamira_render_gutenberg_pattern(array $input): array|WP_Error
     return [
         'pattern' => $pattern,
         'markup' => $markup,
-        'blocks' => novamira_summarize_blocks(parse_blocks($markup)),
+        'blocks' => openmira_summarize_blocks(parse_blocks($markup)),
     ];
 }
 
@@ -212,9 +212,9 @@ function novamira_render_gutenberg_pattern(array $input): array|WP_Error
  * @param array<string, mixed> $input
  * @return array<string, mixed>|WP_Error
  */
-function novamira_create_gutenberg_page(array $input): array|WP_Error
+function openmira_create_gutenberg_page(array $input): array|WP_Error
 {
-    $sections = novamira_build_gutenberg_page_sections($input['sections'] ?? []);
+    $sections = openmira_build_gutenberg_page_sections($input['sections'] ?? []);
     if (is_wp_error($sections)) {
         return $sections;
     }
@@ -226,10 +226,10 @@ function novamira_create_gutenberg_page(array $input): array|WP_Error
 
     $post_id = (int) ($input['post_id'] ?? 0);
     if ($post_id > 0) {
-        return novamira_update_gutenberg_page($post_id, $content, $input);
+        return openmira_update_gutenberg_page($post_id, $content, $input);
     }
 
-    return novamira_insert_gutenberg_page($content, $input);
+    return openmira_insert_gutenberg_page($content, $input);
 }
 
 /**
@@ -238,13 +238,13 @@ function novamira_create_gutenberg_page(array $input): array|WP_Error
  * @param array<string, mixed> $input
  * @return array<string, mixed>|WP_Error
  */
-function novamira_update_gutenberg_page(int $post_id, string $content, array $input): array|WP_Error
+function openmira_update_gutenberg_page(int $post_id, string $content, array $input): array|WP_Error
 {
-    $write_result = novamira_write_gutenberg_content([
+    $write_result = openmira_write_gutenberg_content([
         'post_id' => $post_id,
         'content' => $content,
         'expected_current_hash' => (string) ($input['expected_current_hash'] ?? ''),
-        'create_backup' => !novamira_falsey_input($input['create_backup'] ?? true),
+        'create_backup' => !openmira_falsey_input($input['create_backup'] ?? true),
         'backup_note' => 'Automatic backup before Open Mira page generation',
     ]);
     if (is_wp_error($write_result)) {
@@ -255,17 +255,17 @@ function novamira_update_gutenberg_page(int $post_id, string $content, array $in
         'ID' => $post_id,
         'post_title' => sanitize_text_field((string) ($input['title'] ?? '')),
         'post_name' => sanitize_title((string) ($input['slug'] ?? '')),
-        'post_status' => novamira_normalize_writable_post_status((string) ($input['status'] ?? 'draft')),
+        'post_status' => openmira_normalize_writable_post_status((string) ($input['status'] ?? 'draft')),
     ], wp_error: true);
     if (is_wp_error($updated)) {
         return $updated;
     }
 
-    $post = novamira_get_post_or_error($post_id);
+    $post = openmira_get_post_or_error($post_id);
     if (is_wp_error($post)) {
         return $post;
     }
-    $write_result['post'] = novamira_build_post_inventory_item($post);
+    $write_result['post'] = openmira_build_post_inventory_item($post);
     $write_result['created'] = false;
 
     return $write_result;
@@ -277,9 +277,9 @@ function novamira_update_gutenberg_page(int $post_id, string $content, array $in
  * @param array<string, mixed> $input
  * @return array<string, mixed>|WP_Error
  */
-function novamira_insert_gutenberg_page(string $content, array $input): array|WP_Error
+function openmira_insert_gutenberg_page(string $content, array $input): array|WP_Error
 {
-    $post_type = novamira_normalize_writable_post_type((string) ($input['post_type'] ?? 'page'));
+    $post_type = openmira_normalize_writable_post_type((string) ($input['post_type'] ?? 'page'));
     if (is_wp_error($post_type)) {
         return $post_type;
     }
@@ -288,25 +288,25 @@ function novamira_insert_gutenberg_page(string $content, array $input): array|WP
         'post_type' => $post_type,
         'post_title' => sanitize_text_field((string) ($input['title'] ?? '')),
         'post_name' => sanitize_title((string) ($input['slug'] ?? '')),
-        'post_status' => novamira_normalize_writable_post_status((string) ($input['status'] ?? 'draft')),
+        'post_status' => openmira_normalize_writable_post_status((string) ($input['status'] ?? 'draft')),
         'post_content' => wp_slash($content),
     ], wp_error: true);
     if (is_wp_error($new_post_id)) {
         return $new_post_id;
     }
 
-    $post = novamira_get_post_or_error((int) $new_post_id);
+    $post = openmira_get_post_or_error((int) $new_post_id);
     if (is_wp_error($post)) {
         return $post;
     }
     $parsed_blocks = parse_blocks($content);
 
     return [
-        'post' => novamira_build_post_inventory_item($post),
+        'post' => openmira_build_post_inventory_item($post),
         'created' => true,
-        'new_hash' => novamira_hash_content($content),
+        'new_hash' => openmira_hash_content($content),
         'block_count' => count($parsed_blocks),
-        'blocks' => novamira_summarize_blocks($parsed_blocks),
+        'blocks' => openmira_summarize_blocks($parsed_blocks),
     ];
 }
 
@@ -315,7 +315,7 @@ function novamira_insert_gutenberg_page(string $content, array $input): array|WP
  *
  * @return array<string, array<string, mixed>>
  */
-function novamira_get_gutenberg_pattern_definitions(): array
+function openmira_get_gutenberg_pattern_definitions(): array
 {
     return [
         'hero' => [
@@ -364,7 +364,7 @@ function novamira_get_gutenberg_pattern_definitions(): array
  *
  * @return list<string>|WP_Error
  */
-function novamira_build_gutenberg_page_sections(mixed $sections): array|WP_Error
+function openmira_build_gutenberg_page_sections(mixed $sections): array|WP_Error
 {
     if (!is_array($sections) || $sections === []) {
         return new WP_Error('missing_sections', 'At least one section is required.');
@@ -390,7 +390,7 @@ function novamira_build_gutenberg_page_sections(mixed $sections): array|WP_Error
         $pattern = sanitize_key((string) ($section['pattern'] ?? ''));
         $content = is_array($section['content'] ?? null) ? $section['content'] : [];
         $design = is_array($section['design'] ?? null) ? $section['design'] : [];
-        $rendered = novamira_render_gutenberg_pattern_markup($pattern, $content, $design);
+        $rendered = openmira_render_gutenberg_pattern_markup($pattern, $content, $design);
         if (is_wp_error($rendered)) {
             return $rendered;
         }
@@ -406,14 +406,14 @@ function novamira_build_gutenberg_page_sections(mixed $sections): array|WP_Error
  * @param array<array-key, mixed> $content
  * @param array<array-key, mixed> $design
  */
-function novamira_render_gutenberg_pattern_markup(string $pattern, array $content, array $design): string|WP_Error
+function openmira_render_gutenberg_pattern_markup(string $pattern, array $content, array $design): string|WP_Error
 {
     return match ($pattern) {
-        'hero' => novamira_render_hero_pattern($content, $design),
-        'feature-grid' => novamira_render_feature_grid_pattern($content, $design),
-        'cta' => novamira_render_cta_pattern($content, $design),
-        'faq' => novamira_render_faq_pattern($content, $design),
-        'testimonial' => novamira_render_testimonial_pattern($content, $design),
+        'hero' => openmira_render_hero_pattern($content, $design),
+        'feature-grid' => openmira_render_feature_grid_pattern($content, $design),
+        'cta' => openmira_render_cta_pattern($content, $design),
+        'faq' => openmira_render_faq_pattern($content, $design),
+        'testimonial' => openmira_render_testimonial_pattern($content, $design),
         default => new WP_Error('unknown_pattern', 'Unknown Gutenberg pattern.'),
     };
 }
@@ -424,13 +424,13 @@ function novamira_render_gutenberg_pattern_markup(string $pattern, array $conten
  * @param array<array-key, mixed> $content
  * @param array<array-key, mixed> $design
  */
-function novamira_render_hero_pattern(array $content, array $design): string
+function openmira_render_hero_pattern(array $content, array $design): string
 {
-    $markup = novamira_paragraph(novamira_text($content['eyebrow'] ?? 'Open Mira'), ['fontSize' => 'small']);
+    $markup = openmira_paragraph(openmira_text($content['eyebrow'] ?? 'Open Mira'), ['fontSize' => 'small']);
     $markup .=
         "\n"
-        . novamira_heading(
-            novamira_text($content['heading'] ?? 'Build better WordPress content faster'),
+        . openmira_heading(
+            openmira_text($content['heading'] ?? 'Build better WordPress content faster'),
             level: 1,
             attrs: [
                 'fontSize' => 'xx-large',
@@ -438,24 +438,24 @@ function novamira_render_hero_pattern(array $content, array $design): string
         );
     $markup .=
         "\n"
-        . novamira_paragraph(
-            novamira_text(
+        . openmira_paragraph(
+            openmira_text(
                 $content['body'] ?? 'A clean Gutenberg section generated from reusable Open Mira content primitives.',
             ),
             ['fontSize' => 'large'],
         );
     $markup .=
         "\n"
-        . novamira_button(
-            novamira_text($content['primary_label'] ?? 'Get started'),
-            novamira_url($content['primary_url'] ?? '#'),
+        . openmira_button(
+            openmira_text($content['primary_label'] ?? 'Get started'),
+            openmira_url($content['primary_url'] ?? '#'),
         );
     if (trim((string) ($content['secondary_label'] ?? '')) !== '') {
         $markup .=
             "\n"
-            . novamira_button(
-                novamira_text($content['secondary_label']),
-                novamira_url($content['secondary_url'] ?? '#'),
+            . openmira_button(
+                openmira_text($content['secondary_label']),
+                openmira_url($content['secondary_url'] ?? '#'),
                 ['className' => 'is-style-outline'],
             );
     }
@@ -469,18 +469,18 @@ function novamira_render_hero_pattern(array $content, array $design): string
  * @param array<array-key, mixed> $content
  * @param array<array-key, mixed> $design
  */
-function novamira_render_feature_grid_pattern(array $content, array $design): string
+function openmira_render_feature_grid_pattern(array $content, array $design): string
 {
-    $markup = novamira_heading(novamira_text($content['heading'] ?? 'What you can build'), level: 2);
+    $markup = openmira_heading(openmira_text($content['heading'] ?? 'What you can build'), level: 2);
     $markup .=
         "\n"
-        . novamira_paragraph(
-            novamira_text(
+        . openmira_paragraph(
+            openmira_text(
                 $content['body'] ?? 'Use reusable sections to draft consistent pages, then refine individual blocks.',
             ),
             ['fontSize' => 'medium'],
         );
-    $items = novamira_normalize_pattern_items($content['items'] ?? [], [
+    $items = openmira_normalize_pattern_items($content['items'] ?? [], [
         [
             'title' => 'Reusable sections',
             'body' => 'Compose pages from core Gutenberg blocks instead of opaque builder payloads.',
@@ -489,8 +489,8 @@ function novamira_render_feature_grid_pattern(array $content, array $design): st
         ['title' => 'Portable markup', 'body' => 'Keep pages editable in the native WordPress block editor.'],
     ]);
     foreach (array_slice($items, offset: 0, length: 6) as $item) {
-        $markup .= "\n" . novamira_heading(novamira_text($item['title'] ?? 'Feature'), level: 3);
-        $markup .= "\n" . novamira_paragraph(novamira_text($item['body'] ?? 'Describe the value clearly.'));
+        $markup .= "\n" . openmira_heading(openmira_text($item['title'] ?? 'Feature'), level: 3);
+        $markup .= "\n" . openmira_paragraph(openmira_text($item['body'] ?? 'Describe the value clearly.'));
     }
 
     return $markup;
@@ -502,22 +502,22 @@ function novamira_render_feature_grid_pattern(array $content, array $design): st
  * @param array<array-key, mixed> $content
  * @param array<array-key, mixed> $design
  */
-function novamira_render_cta_pattern(array $content, array $design): string
+function openmira_render_cta_pattern(array $content, array $design): string
 {
-    $markup = novamira_heading(novamira_text($content['heading'] ?? 'Ready to move faster?'), level: 2);
+    $markup = openmira_heading(openmira_text($content['heading'] ?? 'Ready to move faster?'), level: 2);
     $markup .=
         "\n"
-        . novamira_paragraph(
-            novamira_text(
+        . openmira_paragraph(
+            openmira_text(
                 $content['body'] ?? 'Turn the next important idea into a draft page without leaving WordPress.',
             ),
             ['fontSize' => 'medium'],
         );
     $markup .=
         "\n"
-        . novamira_button(
-            novamira_text($content['button_label'] ?? 'Start now'),
-            novamira_url($content['button_url'] ?? '#'),
+        . openmira_button(
+            openmira_text($content['button_label'] ?? 'Start now'),
+            openmira_url($content['button_url'] ?? '#'),
         );
 
     return $markup;
@@ -529,10 +529,10 @@ function novamira_render_cta_pattern(array $content, array $design): string
  * @param array<array-key, mixed> $content
  * @param array<array-key, mixed> $design
  */
-function novamira_render_faq_pattern(array $content, array $design): string
+function openmira_render_faq_pattern(array $content, array $design): string
 {
-    $markup = novamira_heading(novamira_text($content['heading'] ?? 'Frequently asked questions'), level: 2);
-    $items = novamira_normalize_pattern_items($content['items'] ?? [], [
+    $markup = openmira_heading(openmira_text($content['heading'] ?? 'Frequently asked questions'), level: 2);
+    $items = openmira_normalize_pattern_items($content['items'] ?? [], [
         [
             'title' => 'Can this content be edited in Gutenberg?',
             'body' => 'Yes. These patterns use WordPress core blocks.',
@@ -547,8 +547,8 @@ function novamira_render_faq_pattern(array $content, array $design): string
         ],
     ]);
     foreach (array_slice($items, offset: 0, length: 12) as $item) {
-        $markup .= "\n" . novamira_heading(novamira_text($item['title'] ?? 'Question'), level: 3);
-        $markup .= "\n" . novamira_paragraph(novamira_text($item['body'] ?? 'Answer.'));
+        $markup .= "\n" . openmira_heading(openmira_text($item['title'] ?? 'Question'), level: 3);
+        $markup .= "\n" . openmira_paragraph(openmira_text($item['body'] ?? 'Answer.'));
     }
 
     return $markup;
@@ -560,23 +560,23 @@ function novamira_render_faq_pattern(array $content, array $design): string
  * @param array<array-key, mixed> $content
  * @param array<array-key, mixed> $design
  */
-function novamira_render_testimonial_pattern(array $content, array $design): string
+function openmira_render_testimonial_pattern(array $content, array $design): string
 {
-    $citation = novamira_text($content['name'] ?? 'Customer Name');
-    $role = novamira_text($content['role'] ?? 'Role or company');
+    $citation = openmira_text($content['name'] ?? 'Customer Name');
+    $role = openmira_text($content['role'] ?? 'Role or company');
     if ($role !== '') {
         $citation .= ', ' . $role;
     }
     $quote =
         '<blockquote class="wp-block-quote"><p>'
-        . esc_html(novamira_text(
+        . esc_html(openmira_text(
             $content['quote'] ?? 'Open Mira helped us turn a rough idea into structured WordPress content.',
         ))
         . '</p><cite>'
         . esc_html($citation)
         . '</cite></blockquote>';
 
-    return novamira_block('quote', [], $quote);
+    return openmira_block('quote', [], $quote);
 }
 
 /**
@@ -584,7 +584,7 @@ function novamira_render_testimonial_pattern(array $content, array $design): str
  *
  * @param array<array-key, mixed> $attrs
  */
-function novamira_block(string $name, array $attrs = [], string $inner = ''): string
+function openmira_block(string $name, array $attrs = [], string $inner = ''): string
 {
     $encoded_attrs = wp_json_encode($attrs, JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE);
     $json = $attrs === [] || !is_string($encoded_attrs) ? '' : ' ' . $encoded_attrs;
@@ -600,7 +600,7 @@ function novamira_block(string $name, array $attrs = [], string $inner = ''): st
  *
  * @param array<array-key, mixed> $attrs
  */
-function novamira_heading(string $text, int $level = 2, array $attrs = []): string
+function openmira_heading(string $text, int $level = 2, array $attrs = []): string
 {
     $level = min(6, max(1, $level));
     if ($level !== 2) {
@@ -611,7 +611,7 @@ function novamira_heading(string $text, int $level = 2, array $attrs = []): stri
         $classes[] = 'has-' . sanitize_html_class($attrs['fontSize']) . '-font-size';
     }
 
-    return novamira_block(
+    return openmira_block(
         'heading',
         $attrs,
         '<h' . $level . ' class="' . esc_attr(implode(' ', $classes)) . '">' . esc_html($text) . '</h' . $level . '>',
@@ -623,7 +623,7 @@ function novamira_heading(string $text, int $level = 2, array $attrs = []): stri
  *
  * @param array<array-key, mixed> $attrs
  */
-function novamira_paragraph(string $text, array $attrs = []): string
+function openmira_paragraph(string $text, array $attrs = []): string
 {
     $classes = [];
     if (is_string($attrs['fontSize'] ?? null)) {
@@ -631,7 +631,7 @@ function novamira_paragraph(string $text, array $attrs = []): string
     }
     $class_attr = $classes === [] ? '' : ' class="' . esc_attr(implode(' ', $classes)) . '"';
 
-    return novamira_block('paragraph', $attrs, '<p' . $class_attr . '>' . esc_html($text) . '</p>');
+    return openmira_block('paragraph', $attrs, '<p' . $class_attr . '>' . esc_html($text) . '</p>');
 }
 
 /**
@@ -639,9 +639,9 @@ function novamira_paragraph(string $text, array $attrs = []): string
  *
  * @param array<array-key, mixed> $attrs
  */
-function novamira_button(string $label, string $url, array $attrs = []): string
+function openmira_button(string $label, string $url, array $attrs = []): string
 {
-    return novamira_block('paragraph', [], '<p><a href="' . esc_url($url) . '">' . esc_html($label) . '</a></p>');
+    return openmira_block('paragraph', [], '<p><a href="' . esc_url($url) . '">' . esc_html($label) . '</a></p>');
 }
 
 /**
@@ -650,7 +650,7 @@ function novamira_button(string $label, string $url, array $attrs = []): string
  * @param list<array<string, mixed>> $fallback
  * @return list<array<string, mixed>>
  */
-function novamira_normalize_pattern_items(mixed $items, array $fallback): array
+function openmira_normalize_pattern_items(mixed $items, array $fallback): array
 {
     if (!is_array($items) || $items === []) {
         return $fallback;
@@ -663,8 +663,8 @@ function novamira_normalize_pattern_items(mixed $items, array $fallback): array
             continue;
         }
         $normalized[] = [
-            'title' => novamira_text($item['title'] ?? ''),
-            'body' => novamira_text($item['body'] ?? ''),
+            'title' => openmira_text($item['title'] ?? ''),
+            'body' => openmira_text($item['body'] ?? ''),
         ];
     }
 
@@ -674,7 +674,7 @@ function novamira_normalize_pattern_items(mixed $items, array $fallback): array
 /**
  * Normalize plain text content.
  */
-function novamira_text(mixed $value): string
+function openmira_text(mixed $value): string
 {
     return trim(wp_strip_all_tags((string) $value));
 }
@@ -682,7 +682,7 @@ function novamira_text(mixed $value): string
 /**
  * Normalize URL content.
  */
-function novamira_url(mixed $value): string
+function openmira_url(mixed $value): string
 {
     $url = trim((string) $value);
     if ($url === '' || $url === '#') {
@@ -695,7 +695,7 @@ function novamira_url(mixed $value): string
 /**
  * Normalize group alignment.
  */
-function novamira_align(mixed $value): string
+function openmira_align(mixed $value): string
 {
     $align = sanitize_key((string) $value);
     return in_array($align, ['full', 'wide'], strict: true) ? $align : 'wide';
@@ -704,7 +704,7 @@ function novamira_align(mixed $value): string
 /**
  * Normalize post status for write operations.
  */
-function novamira_normalize_writable_post_status(string $status): string
+function openmira_normalize_writable_post_status(string $status): string
 {
     $status = sanitize_key($status);
     return in_array($status, ['draft', 'publish', 'pending', 'private'], strict: true) ? $status : 'draft';
@@ -713,7 +713,7 @@ function novamira_normalize_writable_post_status(string $status): string
 /**
  * Normalize post type for creation.
  */
-function novamira_normalize_writable_post_type(string $post_type): string|WP_Error
+function openmira_normalize_writable_post_type(string $post_type): string|WP_Error
 {
     $post_type = sanitize_key($post_type);
     if ($post_type === '') {
