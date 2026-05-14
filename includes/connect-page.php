@@ -78,7 +78,7 @@ function novamira_render_enable_toggle(): void
         </p>
         <p class="description" style="margin:0 0 14px;">
             <?php esc_html_e(
-                'Use Novamira with a capable AI model and set your client to ask for confirmation before every action. Read what the agent is about to do before approving.',
+                'Use Open Mira with a capable AI model and set your client to ask for confirmation before every action. Read what the agent is about to do before approving.',
                 domain: 'novamira',
             ); ?>
         </p>
@@ -237,7 +237,7 @@ function novamira_handle_create_password()
     $user_id = get_current_user_id();
     $raw_name = $_POST['novamira_password_name'] ?? '';
     $input_name = is_string($raw_name) ? trim($raw_name) : '';
-    $app_name = $input_name !== '' ? 'Novamira: ' . $input_name : 'Novamira';
+    $app_name = $input_name !== '' ? 'Open Mira: ' . $input_name : 'Open Mira';
 
     // Avoid duplicate names — append a counter if one already exists.
     $existing = WP_Application_Passwords::get_user_application_passwords($user_id);
@@ -289,7 +289,7 @@ function novamira_handle_revoke_password(): void
 }
 
 /**
- * Return all application passwords for the current user whose name begins with "Novamira".
+ * Return all application passwords for the current user whose name begins with "Open Mira" or legacy "Novamira".
  *
  * @return array<int, array<string, mixed>>
  */
@@ -297,7 +297,10 @@ function novamira_get_mcp_passwords(): array
 {
     $user_id = get_current_user_id();
     $all = WP_Application_Passwords::get_user_application_passwords($user_id);
-    return array_values(array_filter($all, static fn($item) => str_starts_with($item['name'], 'Novamira')));
+    return array_values(array_filter(
+        $all,
+        static fn($item) => str_starts_with($item['name'], 'Open Mira') || str_starts_with($item['name'], 'Novamira'),
+    ));
 }
 
 /**
@@ -434,7 +437,7 @@ function novamira_render_password_step(
             />
             <p class="description" style="margin-top:4px;">
                 <?php esc_html_e(
-                    'A label to identify this credential later. Leave blank to use "Novamira".',
+                    'A label to identify this credential later. Leave blank to use "Open Mira".',
                     domain: 'novamira',
                 ); ?>
             </p>
@@ -503,7 +506,7 @@ function novamira_render_password_step(
 /**
  * Render the "Manage existing application passwords" collapsible section at the bottom of the page.
  *
- * Only meaningful when at least one Novamira-tagged password exists. Hosts the list with revoke
+ * Only meaningful when at least one Open Mira or legacy Novamira-tagged password exists. Hosts the list with revoke
  * buttons. Used both when AI Abilities are enabled (revoke + create lives elsewhere) and when
  * disabled (revoke only).
  */
@@ -536,7 +539,7 @@ function novamira_render_manage_passwords_section(bool $allow_create_hint = true
             <?php if (!$allow_create_hint): ?>
                 <p class="description" style="margin:0 0 12px;">
                     <?php esc_html_e(
-                        'AI Abilities are disabled. These credentials remain valid for WordPress authentication, but the Novamira MCP endpoint will reject requests until AI Abilities are turned back on.',
+                        'AI Abilities are disabled. These credentials remain valid for WordPress authentication, but the Open Mira MCP endpoint will reject requests until AI Abilities are turned back on.',
                         domain: 'novamira',
                     ); ?>
                 </p>
@@ -598,7 +601,7 @@ function novamira_build_paste_to_agent_paragraph(
         '',
         'Don\'t ask me to confirm choices already specified above. After writing the config, restart or reload the MCP session (most clients require it), then verify by listing the server\'s tools. If it fails, show me the stderr from the npx process before proposing changes.',
         '',
-        'If you cannot modify the config of this AI client from here, tell me to expand "Need the JSON config for a specific client?" on the Novamira Configuration page and copy the snippet manually.',
+        'If you cannot modify the config of this AI client from here, tell me to expand "Need the JSON config for a specific client?" on the Open Mira Configuration page and copy the snippet manually.',
     ];
 
     return implode("\n", $lines);
@@ -1028,7 +1031,7 @@ function novamira_render_config_section(string $rest_url, string $username, stri
         <div id="novamira-name-suggestion" class="notice notice-warning inline" style="display:none; margin:8px 0 0;">
             <p style="margin:0;">
                 <?php esc_html_e(
-                    'Tip: keep "novamira" in the name so you (and your AI agent) can tell this MCP server apart from others.',
+                    'Tip: keep "open-mira" or "novamira" in the name so you (and your AI agent) can tell this MCP server apart from others.',
                     domain: 'novamira',
                 ); ?>
             </p>
@@ -1161,7 +1164,8 @@ function novamira_render_config_section(string $rest_url, string $username, stri
 
             var suggestion = document.getElementById('novamira-name-suggestion');
             var trimmed = value.trim();
-            var missingNovamira = trimmed.length > 0 && trimmed.toLowerCase().indexOf('novamira') === -1;
+            var lower = trimmed.toLowerCase();
+            var missingNovamira = trimmed.length > 0 && lower.indexOf('novamira') === -1 && lower.indexOf('open-mira') === -1 && lower.indexOf('open mira') === -1;
             suggestion.style.display = missingNovamira ? 'block' : 'none';
         }
 
@@ -1250,7 +1254,7 @@ function novamira_render_mcp_dependency_inline_notice(?WP_Error $dependency_erro
 
     ?>
     <div class="novamira-mcp-error-panel" role="alert">
-        <h2><?php esc_html_e('Novamira cannot expose MCP', domain: 'novamira'); ?></h2>
+        <h2><?php esc_html_e('Open Mira cannot expose MCP', domain: 'novamira'); ?></h2>
         <p><?php echo esc_html($dependency_error->get_error_message()); ?></p>
     </div>
     <?php

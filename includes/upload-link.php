@@ -102,7 +102,7 @@ function novamira_verify_upload_token(string $token): array|WP_Error
 function novamira_handle_signed_upload(WP_REST_Request $request)
 {
     if (!novamira_is_enabled()) {
-        return new WP_Error('novamira_disabled', 'Novamira abilities are disabled.', ['status' => 403]);
+        return new WP_Error('novamira_disabled', 'Open Mira abilities are disabled.', ['status' => 403]);
     }
 
     $token = novamira_get_upload_token_from_request($request);

@@ -9,7 +9,7 @@ declare(strict_types=1);
  * Collects every public MCP tool ability registered on the site, grouped by source.
  *
  * The source label is resolved per-ability via the `novamira_ability_source_label`
- * filter (default: "Novamira"), so add-ons can contribute rows under their own
+ * filter (default: "Open Mira"), so add-ons can contribute rows under their own
  * heading. Within a group, rows are sorted by category then name. Groups are
  * returned with the default source first, other sources sorted alphabetically.
  *
@@ -17,7 +17,7 @@ declare(strict_types=1);
  */
 function novamira_collect_public_abilities(): array
 {
-    $default_source = __('Novamira', domain: 'novamira');
+    $default_source = __('Open Mira', domain: 'novamira');
     $groups = [];
     foreach (wp_get_abilities() as $ability) {
         $name = $ability->get_name();

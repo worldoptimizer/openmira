@@ -6,10 +6,10 @@
 declare(strict_types=1);
 
 /**
- * Ability: Discover Abilities (Novamira replacement).
+ * Ability: Discover Abilities (Open Mira replacement).
  *
  * Replaces the MCP Adapter's bundled discover-abilities tool so the response
- * includes Novamira's environment/usage instructions alongside the list of
+ * includes Open Mira environment/usage instructions alongside the list of
  * abilities. These used to be sent via the MCP initialize handshake's
  * server_description, but some clients drop that; returning them here
  * guarantees the agent sees them on first tool discovery.
@@ -19,19 +19,18 @@ if (!defined('ABSPATH')) {
     exit();
 }
 
-$existing_ability = wp_get_ability('mcp-adapter/discover-abilities');
-if ($existing_ability !== null) {
+if (wp_has_ability('mcp-adapter/discover-abilities')) {
     wp_unregister_ability('mcp-adapter/discover-abilities');
 }
 
-if (wp_get_ability('mcp-adapter/discover-abilities') !== null) {
+if (wp_has_ability('mcp-adapter/discover-abilities')) {
     return;
 }
 
 wp_register_ability('mcp-adapter/discover-abilities', [
     'label' => __('Discover Abilities', domain: 'novamira'),
     'description' => __(
-        'Discover all available WordPress abilities in the system. Returns a list of all registered abilities with their basic information, plus Novamira environment instructions.',
+        'Discover all available WordPress abilities in the system. Returns a list of all registered abilities with their basic information, plus Open Mira environment instructions.',
         domain: 'novamira',
     ),
     'category' => 'mcp-adapter',
@@ -40,7 +39,7 @@ wp_register_ability('mcp-adapter/discover-abilities', [
         'properties' => [
             'novamira_instructions' => [
                 'type' => 'string',
-                'description' => 'Novamira environment and usage guidance for the agent.',
+                'description' => 'Open Mira environment and usage guidance for the agent.',
             ],
             'abilities' => [
                 'type' => 'array',

@@ -82,7 +82,7 @@ function novamira_sandbox_crash_handler(string $crashed_file, ?string $current_s
             wp_admin_notice(
                 sprintf(
                     '<strong>%s</strong> %s',
-                    esc_html__('Novamira Sandbox: Safe mode is active.', domain: 'novamira'),
+                    esc_html__('Open Mira Sandbox: Safe mode is active.', domain: 'novamira'),
                     esc_html__(
                         'A sandbox plugin caused a fatal error. All sandbox plugins are disabled. Fix or delete the broken plugin, then delete wp-content/novamira-sandbox/.crashed to resume.',
                         domain: 'novamira',

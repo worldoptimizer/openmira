@@ -1,6 +1,6 @@
 {
-	"name": "use-novamira/novamira",
-	"description": "Novamira plugin",
+	"name": "worldoptimizer/open-mira",
+	"description": "Open WordPress MCP server with builder context and persistent project memory",
 	"type": "wordpress-plugin",
 	"license": "AGPL-3.0-or-later",
 	"require": {

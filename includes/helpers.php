@@ -236,7 +236,7 @@ function novamira_looks_like_production(): bool
     }
 
     $segments = explode('.', $host);
-    $tld = (string) end($segments);
+    $tld = end($segments);
 
     /** @var array<int, string> $non_prod_tlds */
     $non_prod_tlds = apply_filters('novamira_non_production_tlds', [
@@ -584,7 +584,7 @@ function novamira_get_active_languages()
 function novamira_build_server_instructions()
 {
     $lines = [
-        'Novamira gives you unrestricted control over this WordPress installation.',
+        'Open Mira gives you unrestricted control over this WordPress installation.',
         '',
         '## Environment',
         '',
@@ -638,6 +638,15 @@ function novamira_build_server_instructions()
         '',
         'Use WordPress hooks (actions/filters), template hierarchy, and REST API',
         'conventions. Write code that integrates with WordPress, not code that ignores it.',
+        '',
+        'Use Open Mira builder and memory abilities when available:',
+        '- novamira/get-builder-context before changing Gutenberg, Bricks, ACF, or SCF structures',
+        '- novamira/read-memory at the start of substantial work',
+        '- novamira/write-memory after durable architecture or builder decisions',
+        '',
+        'Clean-room rule: never copy proprietary plugin source, assets, or branding from',
+        'reference folders. Use public APIs, documented hooks, observed data shapes, and',
+        'new implementation code.',
     ]);
 
     return implode("\n", $lines);
@@ -675,9 +684,9 @@ function novamira_render_admin_header(): void
     </style>
     <div class="novamira-admin-header-wrap">
         <div class="novamira-admin-header">
-            <img src="<?php echo
-                esc_url((string) NOVAMIRA_PLUGIN_URL . 'assets/novamira_logo.svg')
-            ; ?>" alt="Novamira" width="200" height="40">
+            <span style="color:#fff;font-size:28px;font-weight:700;letter-spacing:-.03em;line-height:40px;">
+                <?php esc_html_e('Open Mira', domain: 'novamira'); ?>
+            </span>
         </div>
     </div>
     <?php }
