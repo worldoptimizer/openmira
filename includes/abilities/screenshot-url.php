@@ -68,7 +68,7 @@ wp_register_ability('openmira/screenshot-url', [
         'show_in_rest' => true,
         'mcp' => ['public' => true],
         'annotations' => [
-            'instructions' => 'Create this before visual iteration. Open target_url with browser automation, upload PNG bytes through complete-screenshot-url-job, then read the job.',
+            'instructions' => 'Create this before visual iteration. If the user has the Screenshot Runner tab open, jobs auto-capture. Otherwise use runner_url or a browser bridge, then read the job.',
             'readonly' => false,
             'destructive' => false,
             'idempotent' => false,
@@ -202,10 +202,11 @@ function openmira_screenshot_url(array $input): array|WP_Error
     return [
         'job' => $job,
         'target_url' => $target_url,
+        'runner_queue_url' => openmira_get_screenshot_queue_url(),
         'runner_url' => openmira_get_screenshot_job_url((string) $job['job_id']),
         'complete_ability' => 'openmira/complete-screenshot-url-job',
         'read_ability' => 'openmira/read-screenshot-url-job',
-        'instructions' => 'Use a browser-capable client to open target_url at the requested viewport, capture PNG bytes, call complete-screenshot-url-job with image_base64, then read this job. Prefer image_url/resource_uri over inline image_base64.',
+        'instructions' => 'Tell the user to keep their Screenshot Runner tab open at runner_queue_url; jobs created while it is open auto-capture. If the tab is not open, use runner_url for this job or complete it through browser automation. Prefer image_url/resource_uri over inline image_base64.',
         'screenshot_note' => 'WordPress/PHP cannot capture pixels natively; this job closes the loop through an authenticated browser client.',
     ];
 }
@@ -237,6 +238,7 @@ function openmira_read_screenshot_url_job(array $input): array|WP_Error
     $response = [
         'job' => openmira_public_screenshot_job($job, include_path: false),
         'complete' => ($job['status'] ?? '') === 'complete',
+        'runner_queue_url' => openmira_get_screenshot_queue_url(),
         'runner_url' => openmira_get_screenshot_job_url($job_id),
         'resource_uri' => openmira_get_screenshot_job_resource_uri($job_id),
     ];
@@ -397,6 +399,7 @@ function openmira_create_screenshot_job(
         'viewport_width' => $viewport_width,
         'viewport_height' => $viewport_height,
         'full_page' => $full_page,
+        'created_by' => get_current_user_id(),
         'label' => (string) ($metadata['label'] ?? ''),
         'note' => (string) ($metadata['note'] ?? ''),
         'mime_type' => 'image/png',
@@ -447,6 +450,14 @@ function openmira_update_screenshot_job(string $job_id, array $updates): array|W
     openmira_save_screenshot_jobs($jobs);
 
     return $jobs[$job_id];
+}
+
+/**
+ * Return the persistent screenshot runner queue URL.
+ */
+function openmira_get_screenshot_queue_url(): string
+{
+    return admin_url('admin.php?page=openmira-screenshot-tools');
 }
 
 /**

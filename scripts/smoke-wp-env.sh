@@ -108,6 +108,7 @@ wp-env run cli wp eval-file wp-content/plugins/openmira/tests/smoke/search-code-
 wp-env run cli wp eval-file wp-content/plugins/openmira/tests/smoke/permission-controls.php
 wp-env run cli wp eval-file wp-content/plugins/openmira/tests/smoke/execute-php-runaway.php
 wp-env run cli wp eval-file wp-content/plugins/openmira/tests/smoke/audit-diff.php
+wp-env run cli wp eval-file wp-content/plugins/openmira/tests/smoke/screenshot-runner.php
 
 jq -n \
   --arg theme "$THEME_SLUG" \
