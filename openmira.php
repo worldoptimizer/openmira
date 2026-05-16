@@ -9,7 +9,7 @@ declare(strict_types=1);
  * Plugin Name: Open Mira
  * Plugin URI: https://github.com/worldoptimizer/openmira
  * Description: Open WordPress MCP server with filesystem, PHP execution, builder context, and persistent project memory. For development and staging environments only.
- * Version: 1.3.0
+ * Version: 1.4.0
  * Requires at least: 6.9
  * Requires PHP: 8.0
  * Author: Open Mira contributors
@@ -37,7 +37,7 @@ if (!defined('ABSPATH')) {
     exit();
 }
 
-define(constant_name: 'OPENMIRA_VERSION', value: '1.3.0');
+define(constant_name: 'OPENMIRA_VERSION', value: '1.4.0');
 define(constant_name: 'OPENMIRA_MAX_EXECUTION_TIME', value: 30);
 if (!defined('OPENMIRA_BLOCK_PRODUCTION')) {
     define(constant_name: 'OPENMIRA_BLOCK_PRODUCTION', value: false);
@@ -243,7 +243,6 @@ require_once __DIR__ . '/includes/diagnostics.php';
 require_once __DIR__ . '/includes/admin-page.php';
 require_once __DIR__ . '/includes/connect-page.php';
 require_once __DIR__ . '/includes/block-tools-page.php';
-require_once __DIR__ . '/includes/screenshot-page.php';
 require_once __DIR__ . '/includes/memory-store.php';
 require_once __DIR__ . '/includes/project-rules.php';
 require_once __DIR__ . '/includes/memory-page.php';
@@ -358,15 +357,6 @@ add_action('admin_menu', static function () {
 
     add_submenu_page(
         parent_slug: 'openmira-connect',
-        page_title: __('Screenshot Runner', domain: 'open-mira'),
-        menu_title: __('Screenshot Runner', domain: 'open-mira'),
-        capability: 'manage_options',
-        menu_slug: 'openmira-screenshot-tools',
-        callback: 'openmira_render_screenshot_page',
-    );
-
-    add_submenu_page(
-        parent_slug: 'openmira-connect',
         page_title: __('Memory', domain: 'open-mira'),
         menu_title: __('Memory', domain: 'open-mira'),
         capability: 'manage_options',
@@ -453,9 +443,6 @@ function openmira_register_legacy_mcp_server(mixed $adapter): void
     }
     if (function_exists('openmira_get_memory_mcp_resources')) {
         $resources = array_merge($resources, openmira_get_memory_mcp_resources());
-    }
-    if (function_exists('openmira_get_screenshot_mcp_resources')) {
-        $resources = array_merge($resources, openmira_get_screenshot_mcp_resources());
     }
 
     // The adapter accepts direct McpResource instances at runtime even though its PHPDoc

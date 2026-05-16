@@ -5,7 +5,7 @@ description: Technical overview of Open Mira's MCP and WordPress-aware design.
 
 # Architecture
 
-Open Mira is a WordPress plugin that exposes a WordPress-aware development surface over MCP. It builds on the WordPress Abilities API and the WordPress MCP Adapter, then adds Open Mira abilities for project context, safe file edits, screenshots, WordPress navigation, and agent memory.
+Open Mira is a WordPress plugin that exposes a WordPress-aware development surface over MCP. It builds on the WordPress Abilities API and the WordPress MCP Adapter, then adds Open Mira abilities for project context, safe file edits, external screenshot jobs, WordPress navigation, and agent memory.
 
 ## MCP and Abilities API
 
@@ -37,9 +37,9 @@ Example shape:
 
 The server handles path resolution, validation, stale-write checks, backups, audit diffs, and dry-run behavior.
 
-## Browser-assisted jobs
+## External screenshot jobs
 
-Some WordPress facts only exist in the browser: Gutenberg static block serialization and actual visual output. Open Mira uses browser-assisted jobs for those cases. The agent creates a job, a browser-capable client completes it, and Open Mira stores the result as a protected image or markup resource.
+Open Mira can create screenshot jobs for same-site URLs, but it does not deliver image content directly to MCP agents. The Playwright bridge at `scripts/openmira-complete-screenshot-job.sh` completes jobs and stores PNG/JPEG output under `wp-content/openmira-screenshots/` for human or CI inspection. Use your MCP client’s native browser or vision tooling for agent-visible screenshots.
 
 ## Safety layer
 

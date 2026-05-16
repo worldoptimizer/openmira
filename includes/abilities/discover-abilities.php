@@ -229,7 +229,6 @@ function openmira_discover_usage_hint(\WP_Ability $ability): string
         'openmira/scaffold-theme',
         'openmira/create-gutenberg-page',
         'openmira/screenshot-url',
-        'openmira/read-screenshot-url-job',
         'openmira/probe-url',
         'openmira/graduate-sandbox-plugin',
         'openmira/find-hook-callers',

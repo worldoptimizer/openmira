@@ -83,14 +83,14 @@ Run the Test 1 discovery pilot:
 2. Use Open Mira abilities rather than direct filesystem access where possible.
 3. Keep a friction log while working.
 4. Capture baseline metrics: tool-call count, rollbacks, lint/syntax failures, screenshot jobs, time to first render, and time to completion.
-5. Use the screenshot URL ability for visual verification. Prefer image_url/resource_uri. If your MCP client authenticates with an application password and cannot fetch the protected image URL, call read-screenshot-url-job with include_image=true.
+5. Use the screenshot URL ability for visual verification. Prefer image_url/legacy resource URI. If your MCP client authenticates with an application password and cannot fetch the protected image URL, call the legacy screenshot read path with the legacy inline-image option.
 6. Stop when the page renders coherently and validation is clean.
 7. Return the metrics table and friction log. Do not optimize the page after the first coherent result.
 ```
 
 ## Authentication Note
 
-`read-screenshot-url-job` returns `image_url` and `resource_uri` by default to keep tool results small. Cookie-authenticated browser clients can fetch `image_url`. CLI clients using WordPress application passwords may not have admin cookies for `admin-ajax.php`; those clients should request `include_image=true` only when they need inline bytes.
+the legacy screenshot read path returns `image_url` and the legacy resource URI by default to keep tool results small. Cookie-authenticated browser clients can fetch `image_url`. CLI clients using WordPress application passwords may not have admin cookies for `admin-ajax.php`; those clients should request `the legacy inline-image option` only when they need inline bytes.
 
 ## Automated Runner
 

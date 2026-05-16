@@ -3,7 +3,7 @@
 declare(strict_types=1);
 
 /**
- * Ability: Browser-assisted URL screenshots.
+ * Ability: External screenshot capture jobs.
  */
 
 if (!defined('ABSPATH')) {
@@ -13,7 +13,7 @@ if (!defined('ABSPATH')) {
 wp_register_ability('openmira/screenshot-url', [
     'label' => __('Screenshot URL', domain: 'open-mira'),
     'description' => __(
-        'Creates a browser-assisted screenshot job for a same-site URL and viewport.',
+        'Creates a same-site screenshot job for external Playwright capture. The resulting image is stored on disk for human or CI inspection; MCP agents do not receive image content directly.',
         domain: 'open-mira',
     ),
     'category' => 'wordpress-development',
@@ -46,7 +46,7 @@ wp_register_ability('openmira/screenshot-url', [
             ],
             'full_page' => [
                 'type' => 'boolean',
-                'description' => 'Capture the full page when supported.',
+                'description' => 'Capture the full page when supported by the external bridge.',
                 'default' => true,
             ],
             'label' => [
@@ -68,7 +68,7 @@ wp_register_ability('openmira/screenshot-url', [
         'show_in_rest' => true,
         'mcp' => ['public' => true],
         'annotations' => [
-            'instructions' => 'Create this before visual iteration. If the user has the Screenshot Runner tab open, jobs auto-capture. Otherwise use runner_url or a browser bridge, then read the job.',
+            'instructions' => 'Creates a screenshot capture job. Capture it externally with scripts/openmira-complete-screenshot-job.sh, which stores the PNG/JPEG under wp-content/openmira-screenshots/ for human or CI inspection. Agents cannot receive image content directly; use a vision-capable client native browser tool for agent-visible captures.',
             'readonly' => false,
             'destructive' => false,
             'idempotent' => false,
@@ -76,40 +76,26 @@ wp_register_ability('openmira/screenshot-url', [
     ],
 ]);
 
-wp_register_ability('openmira/read-screenshot-url-job', [
-    'label' => __('Read Screenshot URL Job', domain: 'open-mira'),
-    'description' => __(
-        'Reads a browser-assisted screenshot job and optionally returns stored image bytes.',
-        domain: 'open-mira',
-    ),
+wp_register_ability('openmira/get-screenshot-job-metadata', [
+    'label' => __('Get Screenshot Job Metadata', domain: 'open-mira'),
+    'description' => __('Internal bridge metadata read for screenshot jobs.', domain: 'open-mira'),
     'category' => 'wordpress-development',
     'input_schema' => [
         'type' => 'object',
         'properties' => [
             'job_id' => ['type' => 'string', 'description' => 'Screenshot job ID.', 'minLength' => 1],
-            'include_image' => [
-                'type' => 'boolean',
-                'description' => 'Return base64 image data only when the image is below inline_image_max_bytes. Prefer image_url/resource_uri or the bridge script screenshot_file path.',
-                'default' => false,
-            ],
-            'inline_image_max_bytes' => [
-                'type' => 'integer',
-                'description' => 'Maximum image byte size allowed for inline base64 when include_image=true. Values above Open Mira’s safety cap are clamped instead of schema-failing.',
-                'default' => 200_000,
-                'minimum' => 1024,
-            ],
         ],
         'required' => ['job_id'],
         'additionalProperties' => false,
     ],
     'output_schema' => ['type' => 'object'],
-    'execute_callback' => 'openmira_read_screenshot_url_job',
+    'execute_callback' => 'openmira_get_screenshot_job_metadata',
     'permission_callback' => 'openmira_permission_callback',
     'meta' => [
         'show_in_rest' => true,
-        'mcp' => ['public' => true],
+        'mcp' => ['public' => false],
         'annotations' => [
-            'instructions' => 'Poll this after browser completion. Prefer the returned resource_uri or image_url; request image_base64 only when a client cannot read MCP image resources.',
+            'instructions' => 'Internal Playwright bridge metadata read. Not exposed as a public MCP tool.',
             'readonly' => true,
             'destructive' => false,
             'idempotent' => true,
@@ -119,7 +105,7 @@ wp_register_ability('openmira/read-screenshot-url-job', [
 
 wp_register_ability('openmira/complete-screenshot-url-job', [
     'label' => __('Complete Screenshot URL Job', domain: 'open-mira'),
-    'description' => __('Stores PNG or JPEG bytes for a browser-assisted screenshot job.', domain: 'open-mira'),
+    'description' => __('Stores PNG or JPEG bytes for an external screenshot job.', domain: 'open-mira'),
     'category' => 'wordpress-development',
     'input_schema' => [
         'type' => 'object',
@@ -148,7 +134,7 @@ wp_register_ability('openmira/complete-screenshot-url-job', [
         'show_in_rest' => true,
         'mcp' => ['public' => false],
         'annotations' => [
-            'instructions' => 'Internal browser-bridge step. Prefer screenshot-url followed by read-screenshot-url-job.',
+            'instructions' => 'Internal Playwright bridge step. External scripts call this after screenshot-url creates a job.',
             'readonly' => false,
             'destructive' => false,
             'idempotent' => false,
@@ -157,14 +143,9 @@ wp_register_ability('openmira/complete-screenshot-url-job', [
 ]);
 
 add_action('wp_ajax_openmira_get_screenshot_image', callback: 'openmira_ajax_get_screenshot_image');
-add_filter(
-    'mcp_adapter_default_server_config',
-    callback: 'openmira_add_screenshot_resources_to_mcp_config',
-    priority: 20,
-);
 
 /**
- * Create a browser-assisted screenshot job.
+ * Create a screenshot job for external capture.
  *
  * @param array<string, mixed> $input
  * @return array<string, mixed>|WP_Error
@@ -177,16 +158,8 @@ function openmira_screenshot_url(array $input): array|WP_Error
     }
 
     $viewport = is_array($input['viewport'] ?? null) ? $input['viewport'] : [];
-    $viewport_width = openmira_clamp_int(
-        (int) ($input['viewport_width'] ?? $viewport['width'] ?? 1440),
-        min: 320,
-        max: 3840,
-    );
-    $viewport_height = openmira_clamp_int(
-        (int) ($input['viewport_height'] ?? $viewport['height'] ?? 1200),
-        min: 320,
-        max: 4320,
-    );
+    $viewport_width = max(320, min(3840, (int) ($input['viewport_width'] ?? $viewport['width'] ?? 1440)));
+    $viewport_height = max(320, min(4320, (int) ($input['viewport_height'] ?? $viewport['height'] ?? 1200)));
     // @mago-expect analysis:mixed-assignment
     $full_page_input = $input['full_page'] ?? true;
     $full_page = $full_page_input === true || $full_page_input === 'true' || $full_page_input === 1;
@@ -199,27 +172,25 @@ function openmira_screenshot_url(array $input): array|WP_Error
         'note' => $note,
     ]);
 
+    $job_id = (string) $job['job_id'];
     return [
         'job' => $job,
+        'job_id' => $job_id,
         'target_url' => $target_url,
-        'runner_queue_url' => openmira_get_screenshot_queue_url(),
-        'runner_url' => openmira_get_screenshot_job_url((string) $job['job_id']),
         'complete_ability' => 'openmira/complete-screenshot-url-job',
-        'read_ability' => 'openmira/read-screenshot-url-job',
-        'instructions' => 'Tell the user to keep their Screenshot Runner tab open at runner_queue_url; jobs created while it is open auto-capture. If the tab is not open, use runner_url for this job or complete it through browser automation. Prefer image_url/resource_uri over inline image_base64.',
-        'screenshot_note' => 'WordPress/PHP cannot capture pixels natively; this job closes the loop through an authenticated browser client.',
+        'bridge_script' => 'scripts/openmira-complete-screenshot-job.sh',
+        'storage_directory' => 'wp-content/openmira-screenshots/',
+        'instructions' => 'Capture this job externally with scripts/openmira-complete-screenshot-job.sh. The bridge reads this job_id, captures target_url with Playwright, and posts the image back through openmira/complete-screenshot-url-job. Open Mira stores the resulting PNG/JPEG on disk for human or CI inspection; MCP agents cannot receive image content directly.',
     ];
 }
 
 /**
- * Read a browser-assisted screenshot job.
+ * Read screenshot job metadata for the external bridge.
  *
  * @param array<string, mixed> $input
  * @return array<string, mixed>|WP_Error
  */
-// @mago-expect lint:cyclomatic-complexity
-// @mago-expect lint:halstead
-function openmira_read_screenshot_url_job(array $input): array|WP_Error
+function openmira_get_screenshot_job_metadata(array $input): array|WP_Error
 {
     $job_id = sanitize_key((string) ($input['job_id'] ?? ''));
     if ($job_id === '') {
@@ -231,55 +202,14 @@ function openmira_read_screenshot_url_job(array $input): array|WP_Error
         return new WP_Error('screenshot_job_not_found', 'Screenshot job not found.');
     }
 
-    // @mago-expect analysis:mixed-assignment
-    $include_image_input = $input['include_image'] ?? false;
-    $include_image = $include_image_input === true || $include_image_input === 'true' || $include_image_input === 1;
-    $inline_image_max_bytes = max(1024, min(1_048_576, (int) ($input['inline_image_max_bytes'] ?? 200_000)));
-    $response = [
-        'job' => openmira_public_screenshot_job($job, include_path: false),
+    return [
+        'job' => openmira_public_screenshot_job($job, include_path: true),
         'complete' => ($job['status'] ?? '') === 'complete',
-        'runner_queue_url' => openmira_get_screenshot_queue_url(),
-        'runner_url' => openmira_get_screenshot_job_url($job_id),
-        'resource_uri' => openmira_get_screenshot_job_resource_uri($job_id),
     ];
-
-    if (($job['status'] ?? '') === 'complete') {
-        $response['image_url'] = openmira_get_screenshot_image_url($job_id);
-        $response['image_base64_available_on_request'] = true;
-        $response['inline_image_max_bytes'] = $inline_image_max_bytes;
-        $response['resource_hint'] = 'Read resource_uri through MCP resources/read when the client supports image resources. Use image_url for cookie-auth browser clients. Use include_image only as a fallback.';
-        $response['inline_image_warning'] = 'Inline base64 is capped by inline_image_max_bytes to prevent context blowups. Prefer resource_uri, image_url, or the bridge screenshot_file.';
-    }
-
-    if ($include_image && ($job['status'] ?? '') === 'complete') {
-        $image_path = is_string($job['image_path'] ?? null) ? $job['image_path'] : '';
-        if ($image_path !== '' && is_file($image_path) && is_readable($image_path)) {
-            $bytes = file_get_contents($image_path);
-            if (is_string($bytes)) {
-                $byte_count = strlen($bytes);
-                if ($byte_count > $inline_image_max_bytes) {
-                    $response['inline_image_refused'] = true;
-                    $response['inline_image_refused_reason'] = sprintf(
-                        'Screenshot is %d bytes, above inline_image_max_bytes=%d. Use resource_uri, image_url, or the bridge screenshot_file instead.',
-                        $byte_count,
-                        $inline_image_max_bytes,
-                    );
-                    $response['byte_count'] = $byte_count;
-                    return $response;
-                }
-
-                $response['image_base64'] = base64_encode($bytes);
-                $response['mime_type'] = (string) ($job['mime_type'] ?? 'image/png');
-                $response['byte_count'] = $byte_count;
-            }
-        }
-    }
-
-    return $response;
 }
 
 /**
- * Complete a browser-assisted screenshot job.
+ * Complete an external screenshot job.
  *
  * @param array<string, mixed> $input
  * @return array<string, mixed>|WP_Error
@@ -310,7 +240,7 @@ function openmira_complete_screenshot_url_job(array $input): array|WP_Error
         }
 
         return [
-            'job' => openmira_public_screenshot_job($updated, include_path: false),
+            'job' => openmira_public_screenshot_job($updated, include_path: true),
             'complete' => false,
         ];
     }
@@ -368,10 +298,11 @@ function openmira_complete_screenshot_url_job(array $input): array|WP_Error
     ]);
 
     return [
-        'job' => openmira_public_screenshot_job($updated, include_path: false),
+        'job' => openmira_public_screenshot_job($updated, include_path: true),
         'complete' => true,
         'image_url' => openmira_get_screenshot_image_url($job_id),
-        'resource_uri' => openmira_get_screenshot_job_resource_uri($job_id),
+        'image_path' => $path,
+        'instructions' => 'Screenshot stored on disk. Use the local file path for human or CI inspection; MCP agents do not receive image content directly.',
     ];
 }
 
@@ -453,22 +384,6 @@ function openmira_update_screenshot_job(string $job_id, array $updates): array|W
 }
 
 /**
- * Return the persistent screenshot runner queue URL.
- */
-function openmira_get_screenshot_queue_url(): string
-{
-    return admin_url('admin.php?page=openmira-screenshot-tools');
-}
-
-/**
- * Return the screenshot runner URL.
- */
-function openmira_get_screenshot_job_url(string $job_id): string
-{
-    return admin_url('admin.php?page=openmira-screenshot-tools&job=' . rawurlencode($job_id));
-}
-
-/**
  * Return a protected URL for the captured image.
  */
 function openmira_get_screenshot_image_url(string $job_id): string
@@ -478,149 +393,6 @@ function openmira_get_screenshot_image_url(string $job_id): string
         'job_id' => rawurlencode($job_id),
         '_wpnonce' => wp_create_nonce('openmira_screenshot_image_' . $job_id),
     ], admin_url('admin-ajax.php'));
-}
-
-/**
- * Return the MCP Resource URI for a stored screenshot job image.
- */
-function openmira_get_screenshot_job_resource_uri(string $job_id): string
-{
-    return 'openmira://screenshot-url-jobs/' . rawurlencode($job_id) . '/image';
-}
-
-/**
- * Add completed screenshot images as concrete MCP resources on each server request.
- *
- * The MCP Adapter matches resources by exact URI, so dynamic job screenshots are registered
- * from persisted jobs during server construction.
- */
-function openmira_add_screenshot_resources_to_mcp_config(mixed $config): mixed
-{
-    if (!is_array($config)) {
-        return $config;
-    }
-
-    // @mago-expect analysis:mixed-assignment
-    $resources = $config['resources'] ?? [];
-    if (!is_array($resources)) {
-        $resources = [];
-    }
-
-    $config['resources'] = array_merge($resources, openmira_get_screenshot_mcp_resources());
-    return $config;
-}
-
-/**
- * Build MCP resources for completed screenshot jobs.
- *
- * @return list<object>
- */
-function openmira_get_screenshot_mcp_resources(): array
-{
-    if (!class_exists(\WP\MCP\Domain\Resources\McpResource::class)) {
-        return [];
-    }
-
-    $resources = [];
-    foreach (openmira_get_screenshot_jobs() as $job_id => $job) {
-        if (($job['status'] ?? '') !== 'complete') {
-            continue;
-        }
-
-        $image_path = is_string($job['image_path'] ?? null) ? $job['image_path'] : '';
-        if ($image_path === '' || !is_file($image_path) || !is_readable($image_path)) {
-            continue;
-        }
-
-        $mime_type = is_string($job['mime_type'] ?? null) ? $job['mime_type'] : 'image/png';
-        if (!in_array($mime_type, ['image/png', 'image/jpeg'], strict: true)) {
-            continue;
-        }
-
-        $resource = \WP\MCP\Domain\Resources\McpResource::fromArray([
-            'uri' => openmira_get_screenshot_job_resource_uri($job_id),
-            'name' => 'openmira-screenshot-' . $job_id,
-            'title' => openmira_screenshot_resource_title($job),
-            'description' => 'Captured Open Mira screenshot image. Prefer this resource over inline base64 in tool responses.',
-            'mimeType' => $mime_type,
-            'size' => (int) ($job['byte_count'] ?? filesize($image_path)),
-            'handler' => 'openmira_read_screenshot_image_resource',
-            'permission' => static fn(): bool => openmira_permission_bool('openmira/screenshot-url'),
-        ]);
-
-        if (!is_wp_error($resource)) {
-            $resources[] = $resource;
-        }
-    }
-
-    return $resources;
-}
-
-/**
- * Return a readable title for a screenshot resource.
- *
- * @param array<array-key, mixed> $job
- */
-function openmira_screenshot_resource_title(array $job): string
-{
-    $label = trim((string) ($job['label'] ?? ''));
-    if ($label !== '') {
-        return 'Open Mira Screenshot: ' . $label;
-    }
-
-    $target_url = trim((string) ($job['target_url'] ?? ''));
-    if ($target_url !== '') {
-        return 'Open Mira Screenshot: ' . $target_url;
-    }
-
-    return 'Open Mira Screenshot';
-}
-
-/**
- * Read a screenshot image resource.
- *
- * @param array<string, mixed> $arguments
- * @return array<int, array<string, string>>|WP_Error
- */
-// @mago-expect lint:cyclomatic-complexity
-function openmira_read_screenshot_image_resource(array $arguments): array|WP_Error
-{
-    $uri = is_string($arguments['uri'] ?? null) ? $arguments['uri'] : '';
-    $matches = [];
-    if (preg_match('#^openmira://screenshot-url-jobs/([^/]+)/image$#', $uri, $matches) !== 1) {
-        return new WP_Error('invalid_screenshot_resource_uri', 'Screenshot resource URI is invalid.');
-    }
-
-    $job_id = sanitize_key(rawurldecode($matches[1]));
-    if ($job_id === '') {
-        return new WP_Error('invalid_screenshot_job_id', 'Screenshot resource job ID is invalid.');
-    }
-
-    $job = openmira_get_screenshot_job($job_id);
-    if (!is_array($job) || ($job['status'] ?? '') !== 'complete') {
-        return new WP_Error('screenshot_job_not_complete', 'Screenshot job is not complete.');
-    }
-
-    $image_path = is_string($job['image_path'] ?? null) ? $job['image_path'] : '';
-    if ($image_path === '' || !is_file($image_path) || !is_readable($image_path)) {
-        return new WP_Error('screenshot_image_not_found', 'Screenshot image file was not found.');
-    }
-
-    $mime_type = is_string($job['mime_type'] ?? null) ? $job['mime_type'] : 'image/png';
-    if (!in_array($mime_type, ['image/png', 'image/jpeg'], strict: true)) {
-        return new WP_Error('unsupported_image_type', 'Only image/png and image/jpeg screenshots are supported.');
-    }
-
-    $bytes = file_get_contents($image_path);
-    if (!is_string($bytes)) {
-        return new WP_Error('screenshot_image_read_failed', 'Could not read screenshot image bytes.');
-    }
-
-    return [[
-        'uri' => openmira_get_screenshot_job_resource_uri($job_id),
-        'blob' => base64_encode($bytes),
-        'mimeType' => $mime_type,
-    ]];
 }
 
 /**
@@ -653,52 +425,43 @@ function openmira_get_screenshot_jobs(): array
  *
  * @param array<string, array<array-key, mixed>> $jobs
  */
-// @mago-expect lint:cyclomatic-complexity
 function openmira_save_screenshot_jobs(array $jobs): void
 {
-    $cutoff = time() - 86_400;
+    $now = time();
     foreach ($jobs as $job_id => $job) {
-        $created_at = (int) ($job['created_at'] ?? 0);
-        if ($created_at > 0 && $created_at >= $cutoff) {
-            continue;
+        $created_at = (int) ($job['created_at'] ?? $now);
+        if ($created_at < ($now - 86_400)) {
+            unset($jobs[$job_id]);
         }
-        $image_path = is_string($job['image_path'] ?? null) ? $job['image_path'] : '';
-        if ($image_path !== '' && is_file($image_path)) {
-            unlink($image_path);
-        }
-        unset($jobs[$job_id]);
     }
-    if (count($jobs) > 25) {
-        uasort(
-            $jobs,
-            static fn(array $a, array $b): int => (int) ($b['created_at'] ?? 0) <=> (int) ($a['created_at'] ?? 0),
-        );
-        $removed = array_slice($jobs, offset: 25, preserve_keys: true);
-        foreach ($removed as $job) {
-            $image_path = is_string($job['image_path'] ?? null) ? $job['image_path'] : '';
-            if ($image_path !== '' && is_file($image_path)) {
-                unlink($image_path);
-            }
-        }
-        $jobs = array_slice($jobs, offset: 0, length: 25, preserve_keys: true);
-    }
+
+    uasort(
+        $jobs,
+        static fn(array $a, array $b): int => (int) ($b['created_at'] ?? 0) <=> (int) ($a['created_at'] ?? 0),
+    );
+    $jobs = array_slice($jobs, offset: 0, length: 25, preserve_keys: true);
 
     update_option('openmira_screenshot_jobs', $jobs, autoload: false);
 }
 
 /**
- * Normalize a screenshot job for public output.
+ * Normalize a screenshot job for output.
  *
  * @param array<array-key, mixed> $job
- * @return array<array-key, mixed>
+ * @return array<string, mixed>
  */
 function openmira_public_screenshot_job(array $job, bool $include_path): array
 {
-    if (!$include_path) {
-        unset($job['image_path']);
+    $public = [];
+    // @mago-expect analysis:mixed-assignment
+    foreach ($job as $key => $value) {
+        if ($key === 'image_path' && !$include_path) {
+            continue;
+        }
+        $public[(string) $key] = is_scalar($value) ? $value : '';
     }
 
-    return $job;
+    return $public;
 }
 
 /**
@@ -707,48 +470,41 @@ function openmira_public_screenshot_job(array $job, bool $include_path): array
 function openmira_ajax_get_screenshot_image(): void
 {
     if (!current_user_can('manage_options')) {
-        status_header(403);
-        exit();
+        wp_die('Forbidden', title: '', args: ['response' => 403]);
     }
 
-    $job_param = $_GET['job_id'] ?? '';
-    $job_id = sanitize_key(is_string($job_param) ? $job_param : '');
+    $job_id_input = $_GET['job_id'] ?? '';
+    $job_id = sanitize_key(is_string($job_id_input) ? $job_id_input : '');
     if ($job_id === '') {
-        status_header(400);
-        exit();
+        wp_die('Missing job_id', title: '', args: ['response' => 400]);
     }
 
     check_ajax_referer('openmira_screenshot_image_' . $job_id);
 
     $job = openmira_get_screenshot_job($job_id);
     if (!is_array($job) || ($job['status'] ?? '') !== 'complete') {
-        status_header(404);
-        exit();
+        wp_die('Screenshot not found', title: '', args: ['response' => 404]);
     }
 
-    $image_path = is_string($job['image_path'] ?? null) ? $job['image_path'] : '';
-    if ($image_path === '' || !is_file($image_path) || !is_readable($image_path)) {
-        status_header(404);
-        exit();
+    $path = is_string($job['image_path'] ?? null) ? $job['image_path'] : '';
+    if ($path === '' || !is_file($path) || !is_readable($path)) {
+        wp_die('Screenshot file not found', title: '', args: ['response' => 404]);
     }
 
     $mime_type = is_string($job['mime_type'] ?? null) ? $job['mime_type'] : 'image/png';
     if (!in_array($mime_type, ['image/png', 'image/jpeg'], strict: true)) {
-        status_header(415);
-        exit();
+        wp_die('Unsupported image type', title: '', args: ['response' => 415]);
     }
 
     nocache_headers();
     header('Content-Type: ' . $mime_type);
-    header('Content-Length: ' . (string) filesize($image_path));
-    readfile($image_path);
+    header('Content-Length: ' . (string) filesize($path));
+    readfile($path);
     exit();
 }
 
 /**
  * Normalize a same-site screenshot URL.
- *
- * @return string|WP_Error
  */
 function openmira_normalize_screenshot_url(string $url): string|WP_Error
 {
@@ -757,65 +513,48 @@ function openmira_normalize_screenshot_url(string $url): string|WP_Error
         return new WP_Error('missing_url', 'Provide a URL to screenshot.');
     }
 
-    if (str_starts_with($url, '/') && !str_starts_with($url, '//')) {
-        $url = home_url($url);
-    }
-    $url = esc_url_raw($url);
-    if ($url === '') {
-        return new WP_Error('invalid_url', 'Screenshot URL is invalid.');
-    }
+    $absolute = wp_http_validate_url($url) ? $url : home_url($url[0] === '/' ? $url : '/' . $url);
+    // @mago-expect analysis:mixed-assignment
+    $site_host = wp_parse_url(home_url(), PHP_URL_HOST);
+    // @mago-expect analysis:mixed-assignment
+    $target_host = wp_parse_url($absolute, PHP_URL_HOST);
 
-    // @mago-expect analysis:mixed-assignment
-    $target_host = wp_parse_url($url, component: PHP_URL_HOST);
-    // @mago-expect analysis:mixed-assignment
-    $site_host = wp_parse_url(home_url('/'), component: PHP_URL_HOST);
-    if (!is_string($target_host) || !is_string($site_host) || strcasecmp($target_host, $site_host) !== 0) {
+    if (!is_string($site_host) || !is_string($target_host) || strtolower($site_host) !== strtolower($target_host)) {
         if (apply_filters('openmira_allow_external_screenshot_urls', false, $url) !== true) {
-            return new WP_Error('external_url_not_allowed', 'Screenshot URLs must target the current WordPress site.');
+            return new WP_Error('external_url_not_allowed', 'Screenshots are limited to same-site URLs.');
         }
     }
 
-    return $url;
+    return $absolute;
 }
 
 /**
- * Clamp an integer.
- */
-function openmira_clamp_int(int $value, int $min, int $max): int
-{
-    return max($min, min($max, $value));
-}
-
-/**
- * Strip optional data URL prefix from base64 image payloads.
+ * Remove data URL prefixes and whitespace from base64 image strings.
  */
 function openmira_normalize_base64_image(string $image_base64): string
 {
-    $image_base64 = trim($image_base64);
-    $comma = strpos($image_base64, ',');
-    if (str_starts_with($image_base64, 'data:image/') && $comma !== false) {
-        $image_base64 = substr($image_base64, $comma + 1);
+    if (str_starts_with($image_base64, 'data:image/')) {
+        $comma = strpos($image_base64, needle: ',');
+        $image_base64 = $comma === false ? '' : substr($image_base64, $comma + 1);
     }
 
-    return preg_replace('/\s+/', '', $image_base64) ?? '';
+    return preg_replace('/\s+/', replacement: '', subject: $image_base64) ?? '';
 }
 
 /**
- * Return whether image bytes match a MIME type.
+ * Return whether image bytes match the declared MIME type.
  */
 function openmira_image_bytes_match_mime(string $bytes, string $mime_type): bool
 {
-    if ($mime_type === 'image/png') {
-        return str_starts_with($bytes, "\x89PNG\r\n\x1a\n");
-    }
-
-    return $mime_type === 'image/jpeg' && str_starts_with($bytes, "\xff\xd8\xff");
+    return match ($mime_type) {
+        'image/png' => str_starts_with($bytes, "\x89PNG\r\n\x1A\n"),
+        'image/jpeg' => str_starts_with($bytes, "\xFF\xD8\xFF"),
+        default => false,
+    };
 }
 
 /**
  * Return a writable screenshot image path.
- *
- * @return string|WP_Error
  */
 function openmira_get_screenshot_image_path(string $job_id, string $mime_type): string|WP_Error
 {
@@ -825,5 +564,5 @@ function openmira_get_screenshot_image_path(string $job_id, string $mime_type): 
     }
 
     $extension = $mime_type === 'image/jpeg' ? 'jpg' : 'png';
-    return trailingslashit($directory) . sanitize_key($job_id) . '.' . $extension;
+    return trailingslashit($directory) . $job_id . '.' . $extension;
 }

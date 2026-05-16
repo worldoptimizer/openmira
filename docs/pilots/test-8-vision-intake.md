@@ -100,11 +100,11 @@ Metrics:
 
 Friction:
 
-- `read-screenshot-url-job` schema-rejected `inline_image_max_bytes: 2097152` because the schema capped the value at 1 MB. The callback already clamps internally, so this should be accepted and clamped instead of schema-failing.
+- the legacy screenshot read path schema-rejected `inline_image_max_bytes: 2097152` because the schema capped the value at 1 MB. The callback already clamps internally, so this should be accepted and clamped instead of schema-failing.
 - The `split` pattern was close but not flexible enough for the reference's left text + right image-card layout. The agent composed custom markup for that section.
 - The `feature-grid` pattern emitted empty heading/body blocks when blank values were passed intentionally. Pattern rendering should skip explicitly blank heading/body fields.
 
 Follow-up fixes:
 
-- `read-screenshot-url-job` no longer schema-caps `inline_image_max_bytes`; oversized requests reach the callback and are clamped by the existing safety cap.
+- the legacy screenshot read path no longer schema-caps `inline_image_max_bytes`; oversized requests reach the callback and are clamped by the existing safety cap.
 - `feature-grid` now skips explicitly blank heading/body values instead of emitting empty blocks.

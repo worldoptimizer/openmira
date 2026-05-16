@@ -85,7 +85,7 @@ The page rendered coherently on the first completed visual pass: hero, split bri
 1. `openmira/apply-patch` description did not clearly show the required `*** Begin Patch` / `*** End Patch` envelope, causing one failed call and one `get-ability-info` recovery call.
 2. `openmira/apply-patch` and `openmira/write-file` required `read-file` before changing files that had just been scaffolded and returned with hashes, causing extra round trips.
 3. `openmira/create-gutenberg-page` silently dropped the `template` property, forcing an `execute-php` workaround to set `_wp_page_template` and the front page.
-4. `openmira/read-screenshot-url-job` with `include_image: true` returned a ~1.2M-character base64 payload and exceeded the client context limit.
+4. the legacy inline screenshot read path returned a ~1.2M-character base64 payload and exceeded the client context limit.
 5. The agent used `apply-patch` only for the palette, then overwrote full `theme.json` for broader layout/style/template changes. This suggests the next grammar value is richer `theme.json` ergonomics before assuming `*** Add Pattern:` is the highest-value op.
 
 ### Fixes Applied Immediately
@@ -246,7 +246,7 @@ The page rendered coherently on the first visual pass with the required hero, sp
 ### Friction
 
 1. `openmira/write-file` rejected a deliberate full CSS overwrite until the agent read the file first. The safety policy is correct, but the error needs to strongly suggest `expected_current_hash` when the agent already has a scaffold/read hash.
-2. `openmira/read-screenshot-url-job` with `include_image: true` produced a ~1.3M-character base64 payload and overflowed context. The bridge/local-file fallback worked, but this confirms real MCP Resource wiring is the right fix.
+2. the legacy inline screenshot read path produced a ~1.3M-character base64 payload and overflowed context. The bridge/local-file fallback worked, but this confirms real MCP Resource wiring is the right fix.
 3. `openmira/apply-patch` succeeded, but returned a full diff for a large 12-path change. The agent mostly needed a summary, not the entire diff.
 4. `discover-abilities` still required follow-up `get-ability-info` calls for schemas.
 
@@ -259,7 +259,7 @@ The page rendered coherently on the first visual pass with the required hero, sp
 
 Bulk `theme.json` patching is now validated. Do not add `*** Add Pattern:` yet. The next highest-value work is:
 
-1. **Screenshot Resource implementation** for `openmira://screenshot-url-jobs/<job>/image`.
+1. **Screenshot Resource implementation** for the legacy screenshot resource URI.
 2. **Diff/token controls** across large write-style abilities.
 3. **Schema discovery compression** so agents do not spend setup calls on common ability schemas.
 4. **Section-builder / pattern rendering** only after measuring whether native editability is more important than the raw HTML route that currently wins on visual fidelity.
@@ -350,14 +350,14 @@ Pilot #12 closes the bulk-patch discoverability loop. The next evidence-backed w
 
 Shipped the two targeted fixes before broadening the architecture:
 
-- Completed screenshot jobs now register exact MCP image resources at `openmira://screenshot-url-jobs/<job>/image`; `resources/read` returns blob content with the stored image MIME type.
+- Completed screenshot jobs now register exact MCP screenshot-image delivery at the legacy screenshot resource URI; `resources/read` returns blob content with the stored image MIME type.
 - Project-map summary and memory snapshot are direct JSON MCP resources, avoiding the adapter's no-input ability-backed resource read path.
 - `render-gutenberg-pattern` now preserves feature-grid item `number`, `label`, and `accent_color` metadata.
 - Testimonial patterns now honor `background_color` and `text_color` by rendering a section group with styled quote content.
 
 Playground MCP smoke confirmed:
 
-- `resources/list` includes `openmira://project-map/summary`, `openmira://memory/snapshot`, and completed screenshot image resources.
+- `resources/list` includes `openmira://project-map/summary`, `openmira://memory/snapshot`, and completed screenshot-image delivery.
 - `resources/read` returns JSON text for project-map and memory resources.
 - `resources/read` returns image blob content for an existing completed screenshot job.
 - Server-side pattern smoke confirmed feature-grid metadata and testimonial background/text colors render into block markup.
@@ -378,8 +378,8 @@ Run through `scripts/run-pilot.sh` after Resource implementation and the targete
 - Time to first render: ~4 minutes wall time.
 - Time to completion: ~5 minutes wall time.
 - Screenshot jobs: 1 created, 1 completed.
-- `include_image: true`: not used.
-- `resources/read`: used for `openmira://screenshot-url-jobs/9842e4422ba24871beef78ef9e8012e3/image`.
+- the legacy inline-image option: not used.
+- `resources/read`: used for `the legacy screenshot resource URI`.
 - `openmira/apply-patch`: used once for bulk `theme.json` palette, typography, layout, and button styles.
 - `render-gutenberg-pattern`: used for hero, feature-grid, testimonial, and CTA sections.
 - Theme file count: 12.

@@ -50,4 +50,4 @@ Broad code scans are capped or rejected unless explicitly allowed. This prevents
 
 ## Practical rule
 
-Use Open Mira on staging, inspect diffs and screenshots, then deploy through your normal release process.
+Use Open Mira on staging, inspect diffs and externally captured screenshots, then deploy through your normal release process.

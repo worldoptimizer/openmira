@@ -59,7 +59,7 @@ PLAYWRIGHT_INSTALL_LOG="${OUTPUT_DIR}/playwright-install.log"
 
 curl -sS -G -u "${OPENMIRA_USERNAME}:${OPENMIRA_APP_PASSWORD}" \
   -H 'Cookie: playground_auto_login_already_happened=1' \
-  "${ABILITIES_URL}/openmira/read-screenshot-url-job/run" \
+  "${ABILITIES_URL}/openmira/get-screenshot-job-metadata/run" \
   --data-urlencode "input[job_id]=${JOB_ID}" > "$READ_JSON"
 
 if [[ "$(jq -r '.code // empty' "$READ_JSON")" != "" ]]; then
@@ -132,13 +132,11 @@ jq -n \
   --arg screenshot_file "$SCREENSHOT_FILE" \
   --arg complete_json "$COMPLETE_JSON" \
   --arg image_url "$(jq -r '.image_url // empty' "$COMPLETE_JSON")" \
-  --arg resource_uri "$(jq -r '.resource_uri // empty' "$COMPLETE_JSON")" \
   '{
     status: "ok",
     job_id: $job_id,
     target_url: $target_url,
     screenshot_file: $screenshot_file,
     complete_json: $complete_json,
-    image_url: $image_url,
-    resource_uri: $resource_uri
+    image_url: $image_url
   }'

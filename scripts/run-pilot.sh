@@ -397,7 +397,7 @@ Use the Open Mira MCP server named \`${MCP_SERVER_NAME}\`.
 Pilot brief:
 $(cat "$BRIEF_PATH")
 
-Browser screenshot bridge:
+External screenshot bridge:
 When you create an Open Mira screenshot job and receive a job_id, complete it by running this exact local helper with Bash:
 
 \`\`\`bash
@@ -413,8 +413,8 @@ Constraints:
 - Use Open Mira MCP abilities for WordPress reads/writes whenever possible.
 - Do not edit repository files directly except for invoking the screenshot bridge helper.
 - Keep metrics and a friction log as specified in the brief.
-- Screenshot loop capability is part of the test: create at least one screenshot job, complete it through the bridge, then use the result to decide whether iteration is needed.
-- Prefer image_url/resource_uri. If a protected URL cannot be fetched by your client, request include_image=true only for that job.
+- Screenshot loop capability is part of the test: create at least one screenshot job, complete it through the bridge, then use the helper's local screenshot_file path for human/CI inspection.
+- Do not request inline screenshot bytes. Open Mira does not deliver screenshot images directly to MCP agents.
 - Stop at the first coherent result; do not keep polishing.
 
 Return only:
