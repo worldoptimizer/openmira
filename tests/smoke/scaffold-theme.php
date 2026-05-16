@@ -53,7 +53,12 @@ if (get_stylesheet() !== 'openmira-wp-env-smoke') {
     exit(1);
 }
 
-$front_page = wp_remote_get(home_url('/'));
+$front_url = home_url('/');
+if (str_contains($front_url, 'localhost:8888')) {
+    $front_url = str_replace('localhost:8888', 'wordpress', $front_url);
+}
+
+$front_page = wp_remote_get($front_url);
 if (is_wp_error($front_page)) {
     fwrite(STDERR, $front_page->get_error_message() . "\n");
     exit(1);
