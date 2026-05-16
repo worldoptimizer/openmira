@@ -1,31 +1,88 @@
 # Open Mira
 
-Open Mira is an AGPL WordPress MCP server that gives AI agents controlled development/staging access to WordPress through PHP execution, filesystem operations, builder context, and persistent project memory.
+Open Mira is an AGPL WordPress MCP server for AI-assisted WordPress development. It gives capable AI agents a WordPress-aware IDE surface for staging and local sites: inspect the project, edit files safely, build themes and blocks, fix plugins, work with hooks, capture screenshots, and keep durable project memory.
 
-This fork removes upstream Pro upsells/private update coupling and adds clean-room abilities for:
+Open Mira is not a generic WordPress shell. It keeps the generic escape hatches available, but its value is the WordPress-specific layer around them: hash-guarded writes, backups, audit diffs, project maps, hook navigation, theme scaffolding, `theme.json` patch grammar, browser-assisted screenshots, and production safety controls.
 
-- Gutenberg/block-editor discovery and implementation guidance
-- Gutenberg block registry discovery for core and third-party blocks
-- Server-side Gutenberg content validation for registered block names, attributes, and parent/ancestor constraints
-- Browser-backed Gutenberg serialization jobs for exact editor-generated markup
-- Browser-backed Gutenberg block profiling and cache records for safe/unsafe generation decisions
-- Bricks Builder detection, template inventory, safe hook/API guidance
-- ACF/SCF-compatible field-modeling guidance
-- Persistent project memory across AI sessions
+## Install
 
-Note: WordPress PHP exposes registered block metadata, but exact static block saved HTML is produced by each block editor JavaScript `save()` implementation. Open Mira surfaces that boundary so agents can use server-side registry facts first and editor-side serialization when exact block markup is required.
+Install Open Mira from a built release ZIP, not GitHub's source-code ZIP.
 
-## Gutenberg serialization flow
+1. Download `openmira-<version>.zip` from the [GitHub Releases page](https://github.com/worldoptimizer/openmira/releases).
+2. In WordPress, go to **Plugins → Add New Plugin → Upload Plugin**.
+3. Upload the ZIP, activate Open Mira, then open **Open Mira → Configuration**.
 
-Agents can call `openmira/create-gutenberg-serialization-job` with an array of block specs, open the returned admin URL in an authenticated browser, then call `openmira/read-gutenberg-serialization-job` to retrieve exact `wp.blocks.serialize()` output. This avoids vendoring Gutenberg save logic while still supporting core and third-party blocks loaded by the running site.
+The release ZIP includes Composer dependencies under `vendor/`. A source checkout does not; if you clone the repo for development, run Composer before activating the plugin.
 
-## Gutenberg profiling flow
+## Setup
 
-Agents can call `openmira/create-gutenberg-block-profile-job` with block names or a namespace filter, open the returned admin URL, then call `openmira/read-gutenberg-block-profile-job` or `openmira/list-gutenberg-block-profiles`. Profiles record whether a block can be safely serialized from an example or empty spec, which attributes are sourced from saved markup, and whether custom attribute generation should use a dedicated adapter instead of blind JSON. Profiles also include generation-quality signals so agents can distinguish valid-but-empty primitives from blocks that are safe and visually useful without a recipe.
+1. Enable **AI Abilities** on a local or staging copy.
+2. Create or paste a WordPress Application Password.
+3. Copy the generated MCP client configuration from **Open Mira → Configuration** into your AI client.
+4. Keep your AI client in a confirmation/approval mode for write operations.
 
-## Project memory
+Open Mira exposes the canonical MCP endpoint at `/wp-json/mcp/openmira`. The previous `/wp-json/mcp/mcp-adapter-default-server` alias remains available for compatibility.
 
-Agents can call `openmira/read-memory`, `openmira/write-memory`, and `openmira/delete-memory` to persist durable project facts in WordPress options. Site administrators can review, edit, delete, clear, and export those entries from **Open Mira → Memory** in the WordPress admin.
+## Validated Capabilities
+
+The current surface has been validated through repeatable local pilots and wp-env smoke coverage:
+
+| Workflow | Status |
+| --- | --- |
+| Theme and landing-page development | Validated |
+| WordPress `theme.json` patch grammar | Validated |
+| Browser-assisted screenshot feedback loop | Validated |
+| Vision-based design intake from screenshots | Validated |
+| Plugin bug fixing in real third-party plugins | Validated |
+| Hook conflict navigation and repair | Validated |
+| Plugin creation in the Open Mira sandbox | Validated |
+| Sandbox plugin promotion and activation | Validated |
+| Persistent project memory | Validated |
+
+Open Mira intentionally does not claim a universal patch operation for every WordPress concept. The patch grammar is currently strongest where it earned its place: `theme.json` design-system updates.
+
+## Safety Model
+
+Open Mira is designed for development and staging environments.
+
+- **Production guard:** define `OPENMIRA_BLOCK_PRODUCTION` to block abilities on production-looking sites.
+- **Capability filters:** site owners can change the required capability per ability with `openmira_ability_capability`.
+- **Plan/Act gate:** destructive abilities can require an explicit temporary Act mode.
+- **Hash-guarded writes:** file edits can require a fresh read hash or expected current hash.
+- **Backups and audit log:** file-changing abilities keep rollback points and expandable full diffs.
+- **PHP execution guardrails:** `execute-php` has per-user rate limits and memory-delta protection.
+- **Search guardrails:** broad project scans are capped or rejected unless explicitly allowed.
+
+These controls reduce risk; they do not make live-site agent automation safe by default. Make changes on a staging copy, review them, then deploy normally.
+
+## Gutenberg and Browser-Assisted Workflows
+
+WordPress PHP exposes registered block metadata, but exact static block saved HTML is produced by each block editor JavaScript `save()` implementation. Open Mira surfaces that boundary instead of vendoring Gutenberg internals.
+
+Agents can use browser-backed jobs to serialize blocks, profile loaded block libraries, and capture screenshots through authenticated WordPress admin pages. Screenshot results are exposed as MCP resources to avoid sending large base64 images through normal tool output.
+
+## Project Memory
+
+Agents can call `openmira/read-memory`, `openmira/write-memory`, and `openmira/delete-memory` to persist durable project facts in WordPress options. Site administrators can review, edit, delete, clear, and export entries from **Open Mira → Memory**.
+
+## Development
+
+For local development:
+
+```bash
+composer install
+npm ci
+./vendor/bin/mago format && ./vendor/bin/mago analyze && ./vendor/bin/mago lint
+npm run smoke:wp-env:all
+```
+
+The wp-env smoke suite runs automatically in GitHub Actions on pushes and pull requests. Pilot briefs and results live in [`docs/pilots/`](docs/pilots/) for evaluators who want to inspect how the current capability claims were tested.
+
+To build an installable ZIP:
+
+```bash
+scripts/build-release.sh 1.3.0
+```
 
 ## Contributing
 

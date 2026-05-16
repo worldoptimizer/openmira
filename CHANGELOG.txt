@@ -1,3 +1,16 @@
+v1.3.0 - 2026/05/16
+* New: Open Mira now provides an IDE-class WordPress development surface for AI agents, covering theme/page work, plugin fixes, hook navigation, sandbox plugin creation, and visual screenshot-driven iteration.
+* New: WP-aware patch grammar for `theme.json` lets agents update design-system values with WordPress-specific selectors and bulk path merges instead of fragile full-file rewrites.
+* New: Browser-assisted screenshot jobs now return MCP resources, so vision-capable clients can inspect page output without flooding tool results with inline base64 images.
+* New: Project map, search, hook navigation, template resolution, linting, WP-CLI, URL probing, theme scaffolding, block scaffolding, and sandbox plugin promotion abilities are available for WordPress-aware development workflows.
+* New: Audit Log now stores compacted full diffs for file-changing abilities and shows expandable diffs alongside backup IDs and restore points.
+* New: Per-ability capability filters let site owners customize who may run each Open Mira ability.
+* New: Production hard-block support via `OPENMIRA_BLOCK_PRODUCTION` and filterable environment detection.
+* New: `execute-php` now has per-user rate limits and memory-delta protection to reduce runaway-agent risk.
+* Improvement: Search-code now rejects or caps overly broad scans unless explicitly allowed, preventing runaway project searches.
+* Improvement: CI now runs the wp-env smoke suite on push and pull request, covering the productization safety surface.
+* Minor fixes
+
 v1.2.0 - 2026/05/13
 * New: AI agents can now upload plugin, theme, media, and other large files more easily.
 * New: A "paste to your AI agent" block on the Configuration page lets you copy a short description and have your AI client set up the MCP server connection for you, instead of editing JSON config files by hand.
