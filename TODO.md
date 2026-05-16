@@ -45,10 +45,10 @@
 - **Done:** Test 8 ran the vision-intake benchmark. Result: 14 MCP calls, 1 schema failure, 0 rollbacks, 3 screenshot jobs, no reference-source reads, one improvement pass after viewing build output, final target page returned 200 OK, and the visual hierarchy matched the reference.
 - **Done:** Test 8 friction fixes landed: screenshot inline-size requests now clamp instead of schema-failing, and feature-grid rendering skips intentionally blank heading/body blocks.
 - **Done:** Productization hardening started with `search-code` broad-scan protection. Ambiguous roots now refuse by default, explicit broad scans are capped before content reads, and live Playground REST validation confirmed `search_scope_too_broad` / `too_many_candidate_files` recovery paths.
-- **Partial:** `npm run smoke:wp-env:all` is wired to a real REST-based wp-env smoke runner and GitHub Actions CI. The runner mounts the plugin at a deterministic `wp-content/plugins/openmira` path, starts wp-env, activates Open Mira, logs into WordPress, calls abilities over REST, asserts scaffolded theme files, then runs existing eval-file smokes. Local execution is blocked until Docker is installed; CI should exercise the dormant wp-env suite on push/PR.
+- **Done:** `npm run smoke:wp-env:all` is wired to a real REST-based wp-env smoke runner and GitHub Actions CI. The runner mounts the plugin at a deterministic `wp-content/plugins/openmira` path, starts wp-env, enables Open Mira abilities, logs into WordPress, calls abilities over REST, asserts scaffolded theme files, then runs existing eval-file smokes. First fork CI run is green; local execution remains blocked until Docker is installed.
 - **Done:** Phase A safety controls now include `OPENMIRA_BLOCK_PRODUCTION` and `openmira_ability_capability`. Ability permission callbacks capture the ability name, production blocking returns a structured `WP_Error`, resources use a bool-only permission wrapper, and smoke coverage verifies default allow, per-ability deny, and production block paths.
 - **Done:** `execute-php` runaway protection is implemented. Calls are rate-limited per user/window, responses include guard state and memory delta, large per-call memory growth is flagged as a structured guard error, and Playground REST smoke confirms the guard metadata path.
-- **Now:** Validate the first GitHub Actions wp-env run when pushed, then continue Productization Phase A with audit-log diff expansion.
+- **Now:** Continue Productization Phase A with audit-log diff expansion.
 
 ## Positioning
 
