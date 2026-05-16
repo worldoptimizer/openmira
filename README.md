@@ -7,9 +7,9 @@
   <img src="https://worldoptimizer.github.io/openmira/assets/brand/openmira-header-1400.jpg" alt="Open Mira header artwork" width="1400">
 </picture>
 
-Open Mira is an AGPL WordPress MCP server for AI-assisted WordPress development. It gives capable AI agents a WordPress-aware IDE surface for staging and local sites: inspect the project, edit files safely, build themes and blocks, fix plugins, work with hooks, capture screenshots, and keep durable project memory.
+Open Mira is an AGPL WordPress MCP server for AI-assisted WordPress development. It gives capable AI agents a WordPress-aware IDE surface for staging and local sites: inspect the project, edit files safely, build themes and blocks, fix plugins, work with hooks, run external screenshot captures, and keep durable project memory.
 
-Open Mira is not a generic WordPress shell. It keeps the generic escape hatches available, but its value is the WordPress-specific layer around them: hash-guarded writes, backups, audit diffs, project maps, hook navigation, theme scaffolding, `theme.json` patch grammar, browser-assisted screenshots, and production safety controls.
+Open Mira is not a generic WordPress shell. It keeps the generic escape hatches available, but its value is the WordPress-specific layer around them: hash-guarded writes, backups, audit diffs, project maps, hook navigation, theme scaffolding, `theme.json` patch grammar, external screenshot capture jobs, and production safety controls.
 
 ## Install
 
@@ -46,8 +46,7 @@ The current surface has been validated through repeatable local pilots and wp-en
 | --- | --- |
 | Theme and landing-page development | Validated |
 | WordPress `theme.json` patch grammar | Validated |
-| Browser-assisted screenshot feedback loop | Validated |
-| Vision-based design intake from screenshots | Validated |
+| External screenshot capture for human/CI inspection | Supported |
 | Plugin bug fixing in real third-party plugins | Validated |
 | Hook conflict navigation and repair | Validated |
 | Plugin creation in the Open Mira sandbox | Validated |
@@ -70,11 +69,11 @@ Open Mira is designed for development and staging environments.
 
 These controls reduce risk; they do not make live-site agent automation safe by default. Make changes on a staging copy, review them, then deploy normally.
 
-## Gutenberg and Browser-Assisted Workflows
+## Gutenberg and Screenshot Workflows
 
 WordPress PHP exposes registered block metadata, but exact static block saved HTML is produced by each block editor JavaScript `save()` implementation. Open Mira surfaces that boundary instead of vendoring Gutenberg internals.
 
-Agents can use browser-backed jobs to serialize blocks, profile loaded block libraries, and capture screenshots through authenticated WordPress admin pages. Screenshot results are exposed as MCP resources to avoid sending large base64 images through normal tool output.
+Screenshots are captured externally through the Playwright bridge at `scripts/openmira-complete-screenshot-job.sh`. Results are stored under `wp-content/openmira-screenshots/` for human or CI inspection. Use your MCP client’s native browser or vision tooling when an agent needs to see pixels directly.
 
 ## Project Memory
 
@@ -96,7 +95,7 @@ The wp-env smoke suite runs automatically in GitHub Actions on pushes and pull r
 To build an installable ZIP:
 
 ```bash
-scripts/build-release.sh 1.3.0
+scripts/build-release.sh 1.4.0
 ```
 
 ## Contributing

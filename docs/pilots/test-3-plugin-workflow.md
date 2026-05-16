@@ -154,11 +154,11 @@ Delta from Test 3A:
 New friction:
 
 - `search-code` returned useful but noisy broad results for `attribution`. Future refinements could add scoped modes such as `scope: plugin`, `kind: assignment|call`, or a value-flow helper for PHP-to-JS paths.
-- The agent explicitly requested `include_image: true` when reading the screenshot job, causing a 579 KB base64 response. This repeated the context-bloat class from earlier pilots.
+- The agent explicitly requested the legacy inline-image option when reading the screenshot job, causing a 579 KB base64 response. This repeated the context-bloat class from earlier pilots.
 
 Follow-up shipped from this evidence:
 
-- `read-screenshot-url-job` now caps inline base64 by `inline_image_max_bytes` and refuses large inline screenshots with a structured hint to use `resource_uri`, `image_url`, or the bridge `screenshot_file`.
+- the legacy screenshot read path now caps inline base64 by `inline_image_max_bytes` and refuses large inline screenshots with a structured hint to use the legacy resource URI, `image_url`, or the bridge `screenshot_file`.
 
 Next benchmark:
 

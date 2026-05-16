@@ -11,8 +11,7 @@ This table is the source of truth for what is actually shipped and validated. Op
 | --- | --- | --- |
 | Theme and landing-page development | Validated | Repeated external-client pilots built and refined Gutenberg/block-theme pages. |
 | WordPress `theme.json` patch grammar | Validated | Bulk path merges and WordPress-aware selectors reduced repeated file rewrites. |
-| Browser-assisted screenshot feedback loop | Validated | Agents created screenshot jobs, consumed image resources, and iterated visually. |
-| Vision-based design intake from screenshots | Validated | Agent rebuilt a page from a screenshot without reading source HTML. |
+| External screenshot capture for human/CI inspection | Supported | Screenshot jobs are captured through the Playwright bridge and stored on disk under `wp-content/openmira-screenshots/`. |
 | Plugin bug fixing in real third-party plugins | Validated | Agent diagnosed, patched, linted, and verified real plugin issues. |
 | Hook conflict navigation and repair | Validated | Agent used hook registrant discovery to locate callback priorities and fix conflicts. |
 | Plugin creation in the Open Mira sandbox | Validated | Agent created working sandbox plugins before promotion. |
@@ -29,5 +28,5 @@ Hook navigation is useful. A dedicated Add Hook Callback patch operation is not 
 - Safe file work: read/write/edit/delete, hash guards, backups, audit diffs.
 - WordPress navigation: hook callers, hook registrants, template resolution, code search.
 - Theme work: scaffold theme, scaffold block, `theme.json` patch grammar.
-- Verification: lint file, WP-CLI allowlist, probe URL, screenshot URL resources.
+- Verification: lint file, WP-CLI allowlist, probe URL, external screenshot jobs.
 - Sandbox: execute PHP, sandbox plugins, graduate sandbox plugin.

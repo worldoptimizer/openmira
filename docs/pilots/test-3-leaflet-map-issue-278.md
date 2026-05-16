@@ -131,5 +131,5 @@ Search-code signal:
 
 Screenshot signal:
 
-- The agent requested `include_image: true` and hit a large base64 response. This confirms inline screenshot bloat still happens when the client does not use Resources or the bridge file path.
-- Follow-up shipped in `read-screenshot-url-job`: inline base64 is now capped by `inline_image_max_bytes` and large screenshots return a structured refusal plus resource/image alternatives.
+- The agent requested the legacy inline-image option and hit a large base64 response. This confirms inline screenshot bloat still happens when the client does not use Resources or the bridge file path.
+- Follow-up shipped in the legacy screenshot read path: inline base64 is now capped by `inline_image_max_bytes` and large screenshots return a structured refusal plus resource/image alternatives.
