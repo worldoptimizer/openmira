@@ -32,8 +32,9 @@ h2 { font-size: clamp(26px, 4vw, 38px); line-height: 1.08; letter-spacing: -.04e
 h3 { font-size: 22px; margin: 28px 0 10px; }
 p, li { color: var(--muted); }
 .lead { font-size: clamp(20px, 3vw, 28px); line-height: 1.35; color: var(--text); margin: 0 0 24px; }
-.hero-card, .card, .callout { background: linear-gradient(180deg, rgba(255,255,255,.06), rgba(255,255,255,.025)); border: 1px solid var(--line); border-radius: 24px; padding: 24px; box-shadow: 0 24px 80px rgba(0,0,0,.32); }
-.hero-card picture, .hero-card img { display: block; width: 100%; height: auto; border-radius: 20px; }
+.card, .callout { background: linear-gradient(180deg, rgba(255,255,255,.06), rgba(255,255,255,.025)); border: 1px solid var(--line); border-radius: 24px; padding: 24px; box-shadow: 0 24px 80px rgba(0,0,0,.32); }
+.hero-art picture, .hero-art img { display: block; width: 100%; height: auto; }
+.hero-art { filter: drop-shadow(0 28px 80px rgba(0,0,0,.42)); }
 .actions { display: flex; flex-wrap: wrap; gap: 12px; margin-top: 28px; }
 .button { display: inline-flex; align-items: center; justify-content: center; min-height: 44px; padding: 0 18px; border-radius: 999px; border: 1px solid var(--line); color: var(--text); background: var(--panel-2); font-weight: 700; }
 .button.primary { background: var(--accent); color: #171100; border-color: var(--accent); }

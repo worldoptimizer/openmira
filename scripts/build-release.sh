@@ -5,7 +5,8 @@ ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 VERSION="${1:-}"
 SLUG="openmira"
 PLUGIN_DIR="${ROOT_DIR}/dist/${SLUG}"
-ZIP_PATH="${ROOT_DIR}/dist/${SLUG}-${VERSION}.zip"
+VERSIONED_ZIP_PATH="${ROOT_DIR}/dist/${SLUG}-${VERSION}.zip"
+EVERGREEN_ZIP_PATH="${ROOT_DIR}/dist/${SLUG}.zip"
 
 if [[ -z "${VERSION}" ]]; then
   echo "usage: scripts/build-release.sh <version>" >&2
@@ -63,7 +64,9 @@ find "${PLUGIN_DIR}" -type d -empty -delete
 
 (
   cd "${ROOT_DIR}/dist"
-  zip -qr "${ZIP_PATH}" "${SLUG}" -x '*.DS_Store'
+  zip -qr "${VERSIONED_ZIP_PATH}" "${SLUG}" -x '*.DS_Store'
+  cp "${VERSIONED_ZIP_PATH}" "${EVERGREEN_ZIP_PATH}"
 )
 
-echo "Built ${ZIP_PATH}"
+echo "Built ${VERSIONED_ZIP_PATH}"
+echo "Built ${EVERGREEN_ZIP_PATH}"

@@ -13,12 +13,12 @@ Install from the built release ZIP. Do not use GitHub's source-code ZIP; source 
 
 ## 1. Download the release ZIP
 
-Open the [latest release](https://github.com/worldoptimizer/openmira/releases/latest) and download the attached `openmira-<version>.zip` file. For the current release, download [`openmira-1.3.0.zip`](https://github.com/worldoptimizer/openmira/releases/latest/download/openmira-1.3.0.zip).
+Download the evergreen release ZIP: [`openmira.zip`](https://github.com/worldoptimizer/openmira/releases/latest/download/openmira.zip). This URL always points at the latest published release asset.
 
 ## 2. Upload to WordPress
 
 1. In WordPress admin, go to **Plugins → Add New Plugin → Upload Plugin**.
-2. Choose the `openmira-<version>.zip` file.
+2. Choose the `openmira.zip` file.
 3. Click **Install Now**.
 4. Activate **Open Mira**.
 

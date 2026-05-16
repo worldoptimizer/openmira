@@ -23,19 +23,17 @@ The project map gives agents a bounded overview of the WordPress install: active
 
 ## Patch grammar
 
-Open Mira includes a V4A-style patch grammar with WordPress semantics. The first validated operation is `*** Update theme.json`, including bulk path merges and selectors for design-system values.
+Open Mira includes a V4A-style patch grammar with WordPress semantics. The first validated operation is Update theme.json, including bulk path merges and selectors for design-system values.
 
 Example shape:
 
-```text
-*** Begin Patch
-*** Update theme.json (paths, mode: merge):
+<pre><code>&#42;&#42;&#42; Begin Patch
+&#42;&#42;&#42; Update theme.json (paths, mode: merge):
 {
   "settings.color.palette": [...],
   "styles.elements.button": {...}
 }
-*** End Patch
-```
+&#42;&#42;&#42; End Patch</code></pre>
 
 The server handles path resolution, validation, stale-write checks, backups, audit diffs, and dry-run behavior.
 
