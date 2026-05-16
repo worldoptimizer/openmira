@@ -1,5 +1,12 @@
 # Open Mira
 
+[![Docs](https://img.shields.io/badge/docs-GitHub%20Pages-ffc21a?logo=github)](https://worldoptimizer.github.io/openmira/) [![Latest release](https://img.shields.io/github/v/release/worldoptimizer/openmira?label=release)](https://github.com/worldoptimizer/openmira/releases/latest)
+
+<picture>
+  <source srcset="https://worldoptimizer.github.io/openmira/assets/brand/openmira-logo-600.webp" type="image/webp">
+  <img src="https://worldoptimizer.github.io/openmira/assets/brand/openmira-logo-600.png" alt="Open Mira logo" width="420">
+</picture>
+
 Open Mira is an AGPL WordPress MCP server for AI-assisted WordPress development. It gives capable AI agents a WordPress-aware IDE surface for staging and local sites: inspect the project, edit files safely, build themes and blocks, fix plugins, work with hooks, capture screenshots, and keep durable project memory.
 
 Open Mira is not a generic WordPress shell. It keeps the generic escape hatches available, but its value is the WordPress-specific layer around them: hash-guarded writes, backups, audit diffs, project maps, hook navigation, theme scaffolding, `theme.json` patch grammar, browser-assisted screenshots, and production safety controls.
@@ -8,11 +15,19 @@ Open Mira is not a generic WordPress shell. It keeps the generic escape hatches 
 
 Install Open Mira from a built release ZIP, not GitHub's source-code ZIP.
 
-1. Download `openmira-<version>.zip` from the [GitHub Releases page](https://github.com/worldoptimizer/openmira/releases).
+1. Download `openmira-<version>.zip` from the [latest GitHub Release](https://github.com/worldoptimizer/openmira/releases/latest).
 2. In WordPress, go to **Plugins → Add New Plugin → Upload Plugin**.
 3. Upload the ZIP, activate Open Mira, then open **Open Mira → Configuration**.
 
 The release ZIP includes Composer dependencies under `vendor/`. A source checkout does not; if you clone the repo for development, run Composer before activating the plugin.
+
+## Documentation
+
+- [Docs site](https://worldoptimizer.github.io/openmira/)
+- [Install guide](https://worldoptimizer.github.io/openmira/install/)
+- [Capabilities](https://worldoptimizer.github.io/openmira/capabilities/)
+- [Safety model](https://worldoptimizer.github.io/openmira/safety/)
+- [Architecture](https://worldoptimizer.github.io/openmira/architecture/)
 
 ## Setup
 
@@ -60,6 +75,15 @@ These controls reduce risk; they do not make live-site agent automation safe by 
 WordPress PHP exposes registered block metadata, but exact static block saved HTML is produced by each block editor JavaScript `save()` implementation. Open Mira surfaces that boundary instead of vendoring Gutenberg internals.
 
 Agents can use browser-backed jobs to serialize blocks, profile loaded block libraries, and capture screenshots through authenticated WordPress admin pages. Screenshot results are exposed as MCP resources to avoid sending large base64 images through normal tool output.
+
+## About
+
+<picture>
+  <source srcset="https://worldoptimizer.github.io/openmira/assets/brand/openmira-mascot-300.webp" type="image/webp">
+  <img src="https://worldoptimizer.github.io/openmira/assets/brand/openmira-mascot-300.png" alt="Open Mira mascot" width="240" align="right">
+</picture>
+
+Open Mira is built around WordPress-aware primitives rather than a generic shell-only model. The mascot and dark artwork are intentionally used on dark backgrounds because the source images ship with black backgrounds.
 
 ## Project Memory
 

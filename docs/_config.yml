@@ -1,0 +1,17 @@
+title: Open Mira
+description: WordPress-aware MCP development toolkit for AI agents.
+url: "https://worldoptimizer.github.io"
+baseurl: "/openmira"
+permalink: pretty
+exclude:
+  - pilots/
+  - mcp-wordpress-remote.md
+  - wordpress-abilities-api.md
+  - wordpress-mcp-adapter.md
+  - wordpress-mcp-overview.md
+
+defaults:
+  - scope:
+      path: ""
+    values:
+      layout: default
