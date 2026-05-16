@@ -150,6 +150,7 @@ function openmira_check_php_sandbox(string $resolved): bool|WP_Error
  */
 function openmira_ensure_parent_dir(string $parent_dir): array|WP_Error
 {
+    clearstatcache(clear_realpath_cache: true, filename: $parent_dir);
     if (is_dir($parent_dir)) {
         return [];
     }
@@ -164,6 +165,16 @@ function openmira_ensure_parent_dir(string $parent_dir): array|WP_Error
     $directories_created = array_reverse($dirs_to_create);
 
     if (!mkdir(directory: $parent_dir, permissions: 0755, recursive: true)) {
+        clearstatcache(clear_realpath_cache: true, filename: $parent_dir);
+        if (is_dir($parent_dir)) {
+            return [];
+        }
+
+        return new WP_Error('mkdir_failed', sprintf('Failed to create directory: %s', $parent_dir));
+    }
+
+    clearstatcache(clear_realpath_cache: true, filename: $parent_dir);
+    if (!is_dir($parent_dir)) {
         return new WP_Error('mkdir_failed', sprintf('Failed to create directory: %s', $parent_dir));
     }
 
@@ -529,13 +540,84 @@ function openmira_get_datetime_format($fallback = 'Y-m-d H:i:s')
 }
 
 /**
- * Permission callback: requires manage_options capability.
+ * Permission callback for Open Mira abilities.
  *
- * @return bool
+ * @return bool|WP_Error
  */
-function openmira_permission_callback()
+function openmira_permission_callback(?string $ability_name = null): bool|WP_Error
 {
-    return current_user_can('manage_options');
+    $block_production = openmira_filter_bool(apply_filters(
+        'openmira_block_production',
+        openmira_constant_enabled('OPENMIRA_BLOCK_PRODUCTION'),
+        $ability_name,
+    ));
+    $looks_like_production = openmira_filter_bool(apply_filters(
+        'openmira_is_production_site',
+        openmira_looks_like_production(),
+        $ability_name,
+    ));
+
+    if ($block_production && $looks_like_production) {
+        return new WP_Error(
+            'openmira_production_blocked',
+            __(
+                'Open Mira abilities are blocked on this production-looking site. Disable OPENMIRA_BLOCK_PRODUCTION only on a staging or development copy.',
+                domain: 'open-mira',
+            ),
+            [
+                'ability' => $ability_name,
+                'environment_type' => function_exists('wp_get_environment_type') ? wp_get_environment_type() : '',
+            ],
+        );
+    }
+
+    $capability = (string) apply_filters(
+        hook_name: 'openmira_ability_capability',
+        value: 'manage_options',
+        ability_name: $ability_name,
+    );
+
+    if ($capability === '') {
+        $capability = 'manage_options';
+    }
+
+    return current_user_can($capability);
+}
+
+/**
+ * Permission helper for resource callbacks that only accept booleans.
+ */
+function openmira_permission_bool(?string $ability_name = null): bool
+{
+    return openmira_permission_callback($ability_name) === true;
+}
+
+/**
+ * Check whether a boolean-like constant is explicitly enabled.
+ */
+function openmira_constant_enabled(string $constant_name): bool
+{
+    return defined($constant_name) && constant($constant_name) === true;
+}
+
+/**
+ * Normalize filter values where integrations may return strict bools or strings.
+ */
+function openmira_filter_bool(mixed $value): bool
+{
+    if (is_bool($value)) {
+        return $value;
+    }
+
+    if (is_int($value)) {
+        return $value === 1;
+    }
+
+    if (!is_string($value)) {
+        return false;
+    }
+
+    return in_array(needle: strtolower($value), haystack: ['1', 'true', 'yes', 'on'], strict: true);
 }
 
 /**

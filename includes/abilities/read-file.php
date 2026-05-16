@@ -56,6 +56,11 @@ wp_register_ability('openmira/read-file', [
                 'description' => 'Whether the content was truncated due to limit.',
             ],
             'mime_type' => ['type' => 'string', 'description' => 'Detected MIME type.'],
+            'content_hash' => ['type' => 'string', 'description' => 'SHA-256 hash of the full file content.'],
+            'read_tracked' => [
+                'type' => 'boolean',
+                'description' => 'Whether this read was stored for stale-write protection.',
+            ],
         ],
     ],
     'execute_callback' => 'openmira_read_file',
@@ -78,6 +83,7 @@ wp_register_ability('openmira/read-file', [
  * @param array $input Input with 'path', optional 'offset' and 'limit'.
  * @return array|WP_Error
  */
+// @mago-expect lint:cyclomatic-complexity
 function openmira_read_file($input)
 {
     $resolved = openmira_resolve_path(path: (string) $input['path'], must_exist: true);
@@ -94,6 +100,7 @@ function openmira_read_file($input)
     }
 
     $size = (int) filesize($resolved);
+    $content_hash = hash_file(algo: 'sha256', filename: $resolved);
     $offset = (int) ($input['offset'] ?? 0);
     $limit = (int) ($input['limit'] ?? 1_048_576);
 
@@ -128,6 +135,8 @@ function openmira_read_file($input)
         $content = base64_encode($content);
     }
 
+    openmira_mark_file_read($resolved);
+
     return [
         'path' => $resolved,
         'content' => $content,
@@ -136,6 +145,8 @@ function openmira_read_file($input)
         'bytes_read' => $bytes_read,
         'truncated' => $truncated,
         'mime_type' => $mime_type,
+        'content_hash' => is_string($content_hash) ? $content_hash : '',
+        'read_tracked' => true,
     ];
 }
 

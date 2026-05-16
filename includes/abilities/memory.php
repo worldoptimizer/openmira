@@ -52,6 +52,40 @@ wp_register_ability('openmira/read-memory', [
     ],
 ]);
 
+wp_register_ability('openmira/memory-snapshot-resource', [
+    'label' => __('Memory Snapshot', domain: 'open-mira'),
+    'description' => __(
+        'MCP resource containing the current Open Mira project memory snapshot as compact JSON.',
+        domain: 'open-mira',
+    ),
+    'category' => 'memory',
+    'input_schema' => [
+        'type' => 'object',
+        'properties' => [],
+        'additionalProperties' => false,
+    ],
+    'output_schema' => ['type' => 'object'],
+    'execute_callback' => 'openmira_read_memory_resource',
+    'permission_callback' => 'openmira_permission_callback',
+    'meta' => [
+        'show_in_rest' => true,
+        'mcp' => [
+            'public' => false,
+            'type' => 'resource',
+            'uri' => 'openmira://memory/snapshot',
+            'mimeType' => 'application/json',
+        ],
+        'annotations' => [
+            'instructions' => 'Read-only memory snapshot resource. Use read-memory for targeted key reads or write-memory for durable updates.',
+            'readonly' => true,
+            'destructive' => false,
+            'idempotent' => true,
+        ],
+    ],
+]);
+
+add_filter('mcp_adapter_default_server_config', callback: 'openmira_add_memory_resources_to_mcp_config', priority: 20);
+
 wp_register_ability('openmira/write-memory', [
     'label' => __('Write Memory', domain: 'open-mira'),
     'description' => __(
@@ -98,6 +132,80 @@ wp_register_ability('openmira/write-memory', [
         ],
     ],
 ]);
+
+/**
+ * Return the project memory snapshot as MCP resource content.
+ *
+ * @return list<array<string, string>>
+ */
+function openmira_read_memory_resource(): array
+{
+    $memory = openmira_read_memory();
+    if (is_wp_error($memory)) {
+        $memory = [
+            'entries' => [],
+            'count' => 0,
+        ];
+    }
+
+    $json = wp_json_encode($memory, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES);
+    if (!is_string($json)) {
+        $json = '{}';
+    }
+
+    return [[
+        'uri' => 'openmira://memory/snapshot',
+        'text' => $json,
+        'mimeType' => 'application/json',
+    ]];
+}
+
+/**
+ * Add memory snapshot as a direct MCP resource.
+ */
+function openmira_add_memory_resources_to_mcp_config(mixed $config): mixed
+{
+    if (!is_array($config)) {
+        return $config;
+    }
+
+    // @mago-expect analysis:mixed-assignment
+    $resources = $config['resources'] ?? [];
+    if (!is_array($resources)) {
+        $resources = [];
+    }
+
+    $config['resources'] = array_merge($resources, openmira_get_memory_mcp_resources());
+    return $config;
+}
+
+/**
+ * Build direct MCP resources for memory context.
+ *
+ * @return list<object>
+ */
+function openmira_get_memory_mcp_resources(): array
+{
+    if (!class_exists(\WP\MCP\Domain\Resources\McpResource::class)) {
+        return [];
+    }
+
+    $resource = \WP\MCP\Domain\Resources\McpResource::fromArray([
+        'uri' => 'openmira://memory/snapshot',
+        'name' => 'openmira-memory-snapshot',
+        'title' => 'Memory Snapshot',
+        'description' => 'Current Open Mira project memory snapshot as compact JSON.',
+        'mimeType' => 'application/json',
+        'handler' => static fn(): array => openmira_read_memory_resource(),
+        'permission' => static fn(): bool => openmira_permission_bool('openmira/read-memory'),
+    ]);
+
+    if (is_wp_error($resource)) {
+        return [];
+    }
+
+    return [$resource];
+}
 
 wp_register_ability('openmira/delete-memory', [
     'label' => __('Delete Memory', domain: 'open-mira'),

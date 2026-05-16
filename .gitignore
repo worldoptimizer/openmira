@@ -1,5 +1,6 @@
 .mcp.json
 /vendor
+/node_modules
 *.swp
 .DS_Store
 

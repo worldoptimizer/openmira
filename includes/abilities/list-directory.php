@@ -75,6 +75,9 @@ wp_register_ability('openmira/list-directory', [
                         'size' => ['type' => 'integer', 'description' => 'Size in bytes (files only).'],
                         'permissions' => ['type' => 'string', 'description' => 'Octal permission string.'],
                         'modified' => ['type' => 'string', 'description' => 'Last modified time (ISO 8601).'],
+                        'readable' => ['type' => 'boolean', 'description' => 'Whether PHP can read the entry.'],
+                        'writable' => ['type' => 'boolean', 'description' => 'Whether PHP can write to the entry.'],
+                        'exists' => ['type' => 'boolean', 'description' => 'Whether PHP can stat the entry.'],
                     ],
                 ],
             ],
@@ -237,12 +240,14 @@ function openmira_build_entry($info, $pattern, $include_hidden)
     }
 
     $pathname = $info->getPathname();
+    clearstatcache(clear_realpath_cache: true, filename: $pathname);
     $is_dir = $info->isDir();
     // Broken symlinks and unreadable entries fail stat-dependent calls (getSize,
     // getPerms, getMTime) — in PHP 8+ those throw RuntimeException. Check once
     // via file_exists(), which follows symlinks and returns false for dangling
     // ones, then gate the stat calls so we still list the entry.
-    $stat_ok = $is_dir || file_exists($pathname);
+    $exists = file_exists($pathname) || $is_dir || is_link($pathname);
+    $stat_ok = $is_dir || $exists;
 
     return [
         'name' => $name,
@@ -251,5 +256,8 @@ function openmira_build_entry($info, $pattern, $include_hidden)
         'size' => $stat_ok && !$is_dir ? $info->getSize() : 0,
         'permissions' => $stat_ok ? substr(sprintf('%o', $info->getPerms()), -4) : '0000',
         'modified' => $stat_ok ? gmdate('c', (int) $info->getMTime()) : '',
+        'readable' => is_readable($pathname),
+        'writable' => is_writable($pathname),
+        'exists' => $exists,
     ];
 }

@@ -372,6 +372,11 @@ function openmira_list_builder_backups(array $input): array|WP_Error
 // @mago-expect lint:halstead
 function openmira_restore_builder_backup(array $input): array|WP_Error
 {
+    $mode_error = openmira_require_act_mode('openmira/restore-builder-backup');
+    if (is_wp_error($mode_error)) {
+        return $mode_error;
+    }
+
     $post = openmira_get_post_or_error((int) ($input['post_id'] ?? 0));
     if (is_wp_error($post)) {
         return $post;
@@ -457,6 +462,11 @@ function openmira_restore_builder_backup(array $input): array|WP_Error
  */
 function openmira_patch_gutenberg_blocks(array $input): array|WP_Error
 {
+    $mode_error = openmira_require_act_mode('openmira/patch-gutenberg-blocks');
+    if (is_wp_error($mode_error)) {
+        return $mode_error;
+    }
+
     $post = openmira_get_post_or_error((int) ($input['post_id'] ?? 0));
     if (is_wp_error($post)) {
         return $post;
@@ -512,6 +522,11 @@ function openmira_patch_gutenberg_blocks(array $input): array|WP_Error
 // @mago-expect lint:cyclomatic-complexity
 function openmira_write_gutenberg_content(array $input): array|WP_Error
 {
+    $mode_error = openmira_require_act_mode('openmira/write-gutenberg-content');
+    if (is_wp_error($mode_error)) {
+        return $mode_error;
+    }
+
     $post = openmira_get_post_or_error((int) ($input['post_id'] ?? 0));
     if (is_wp_error($post)) {
         return $post;

@@ -51,6 +51,11 @@ wp_register_ability('openmira/edit-file', [
             'path' => ['type' => 'string', 'description' => 'Absolute path to the edited file.'],
             'replacements' => ['type' => 'integer', 'description' => 'Number of replacements made.'],
             'size' => ['type' => 'integer', 'description' => 'Final file size in bytes.'],
+            'previous_hash' => ['type' => 'string', 'description' => 'SHA-256 hash before the edit.'],
+            'content_hash' => ['type' => 'string', 'description' => 'SHA-256 hash after the edit.'],
+            'diff' => ['type' => 'string', 'description' => 'Unified diff preview of the edit.'],
+            'backup' => ['type' => 'object', 'description' => 'Backup metadata for the pre-edit file.'],
+            'audit' => ['type' => 'object', 'description' => 'Audit event metadata.'],
         ],
     ],
     'execute_callback' => 'openmira_edit_file',
@@ -106,8 +111,16 @@ function openmira_edit_replace_first(string $content, string $old_string, string
  * @param array $input Input with 'path', 'old_string', 'new_string', optional 'replace_all'.
  * @return array|WP_Error
  */
+// @mago-expect lint:cyclomatic-complexity
+// @mago-expect lint:halstead
 function openmira_edit_file($input)
 {
+    $mode_error = openmira_require_act_mode('openmira/edit-file');
+    if (is_wp_error($mode_error)) {
+        return $mode_error;
+    }
+
+    $started_at = microtime(as_float: true);
     $resolved = openmira_resolve_path(path: (string) $input['path'], must_exist: true);
     if (is_wp_error($resolved)) {
         return $resolved;
@@ -119,6 +132,11 @@ function openmira_edit_file($input)
 
     if (!is_readable($resolved) || !is_writable($resolved)) {
         return new WP_Error('not_writable', sprintf('File is not readable/writable: %s', $resolved));
+    }
+
+    $fresh_read = openmira_require_fresh_file_read(resolved: $resolved, ability: 'openmira/edit-file');
+    if (is_wp_error($fresh_read)) {
+        return $fresh_read;
     }
 
     $old_string = (string) $input['old_string'];
@@ -133,6 +151,7 @@ function openmira_edit_file($input)
     if ($content === false) {
         return new WP_Error('read_failed', sprintf('Could not read file: %s', $resolved));
     }
+    $previous_hash = openmira_file_hash_content($content);
 
     $count = substr_count($content, $old_string);
 
@@ -154,14 +173,56 @@ function openmira_edit_file($input)
         ? str_replace($old_string, $new_string, $content)
         : openmira_edit_replace_first($content, $old_string, $new_string);
 
+    $backup = openmira_create_file_backup($resolved, operation: 'edit-file');
     $bytes_written = file_put_contents($resolved, $new_content, LOCK_EX);
     if ($bytes_written === false) {
+        openmira_record_audit_event([
+            'ability' => 'openmira/edit-file',
+            'operation' => $replace_all ? 'replace_all' : 'replace_first',
+            'target_path' => openmira_display_path($resolved),
+            'status' => 'error',
+            'duration_ms' => (int) round((microtime(as_float: true) - $started_at) * 1000),
+            'error' => 'write_failed',
+            'backup_id' => is_array($backup) ? (string) ($backup['id'] ?? '') : '',
+        ]);
         return new WP_Error('write_failed', sprintf('Failed to write file: %s', $resolved));
     }
 
-    return [
+    $syntax_check = openmira_validate_php_write_or_rollback(
+        resolved: $resolved,
+        old_content: $content,
+        backup: $backup,
+        ability: 'openmira/edit-file',
+        operation: $replace_all ? 'replace_all' : 'replace_first',
+        started_at: $started_at,
+    );
+    if (is_wp_error($syntax_check)) {
+        return $syntax_check;
+    }
+
+    $diff = openmira_build_unified_diff($content, $new_content, $resolved);
+    $audit = openmira_record_audit_event([
+        'ability' => 'openmira/edit-file',
+        'operation' => $replace_all ? 'replace_all' : 'replace_first',
+        'target_path' => openmira_display_path($resolved),
+        'status' => 'success',
+        'duration_ms' => (int) round((microtime(as_float: true) - $started_at) * 1000),
+        'diff_summary' => openmira_diff_summary($diff),
+        'backup_id' => is_array($backup) ? (string) ($backup['id'] ?? '') : '',
+    ]);
+
+    $result = [
         'path' => $resolved,
         'replacements' => $count,
         'size' => $bytes_written,
+        'previous_hash' => $previous_hash,
+        'content_hash' => openmira_file_hash_content($new_content),
+        'diff' => $diff,
+        'audit' => $audit,
     ];
+    if (is_array($backup)) {
+        $result['backup'] = $backup;
+    }
+
+    return $result;
 }

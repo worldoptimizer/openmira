@@ -47,6 +47,10 @@ wp_register_ability('openmira/delete-file', [
             ],
             'deleted' => ['type' => 'boolean', 'description' => 'Whether anything was actually deleted.'],
             'items_deleted' => ['type' => 'integer', 'description' => 'Number of files/directories deleted.'],
+            'previous_hash' => ['type' => 'string', 'description' => 'SHA-256 hash before deletion, for files.'],
+            'diff' => ['type' => 'string', 'description' => 'Unified diff preview for deleted file content.'],
+            'backup' => ['type' => 'object', 'description' => 'Backup metadata for the deleted file.'],
+            'audit' => ['type' => 'object', 'description' => 'Audit event metadata.'],
         ],
     ],
     'execute_callback' => 'openmira_delete_file',
@@ -73,8 +77,16 @@ wp_register_ability('openmira/delete-file', [
  * @param array $input Input with 'path', optional 'recursive'.
  * @return array|WP_Error
  */
+// @mago-expect lint:cyclomatic-complexity
+// @mago-expect lint:halstead
 function openmira_delete_file($input)
 {
+    $mode_error = openmira_require_act_mode('openmira/delete-file');
+    if (is_wp_error($mode_error)) {
+        return $mode_error;
+    }
+
+    $started_at = microtime(as_float: true);
     $resolved = openmira_resolve_path((string) $input['path'], must_exist: false);
     if (is_wp_error($resolved)) {
         return $resolved;
@@ -107,20 +119,71 @@ function openmira_delete_file($input)
 
     // Delete a file or symlink.
     if (is_file($resolved) || is_link($resolved)) {
+        if (is_file($resolved)) {
+            $fresh_read = openmira_require_fresh_file_read(resolved: $resolved, ability: 'openmira/delete-file');
+            if (is_wp_error($fresh_read)) {
+                return $fresh_read;
+            }
+        }
+        $old_content = is_file($resolved) && is_readable($resolved) ? file_get_contents($resolved) : null;
+        if ($old_content === false) {
+            return new WP_Error('read_failed', sprintf('Could not read file before delete: %s', $resolved));
+        }
+        $backup = openmira_create_file_backup($resolved, operation: 'delete-file');
         if (!unlink($resolved)) {
+            openmira_record_audit_event([
+                'ability' => 'openmira/delete-file',
+                'operation' => 'delete_file',
+                'target_path' => openmira_display_path($resolved),
+                'status' => 'error',
+                'duration_ms' => (int) round((microtime(as_float: true) - $started_at) * 1000),
+                'error' => 'delete_failed',
+                'backup_id' => is_array($backup) ? (string) ($backup['id'] ?? '') : '',
+            ]);
             return new WP_Error('delete_failed', sprintf('Failed to delete file: %s', $resolved));
         }
-        return [
+        $diff = openmira_build_unified_diff(old_content: $old_content, new_content: null, path: $resolved);
+        $audit = openmira_record_audit_event([
+            'ability' => 'openmira/delete-file',
+            'operation' => 'delete_file',
+            'target_path' => openmira_display_path($resolved),
+            'status' => 'success',
+            'duration_ms' => (int) round((microtime(as_float: true) - $started_at) * 1000),
+            'diff_summary' => openmira_diff_summary($diff),
+            'backup_id' => is_array($backup) ? (string) ($backup['id'] ?? '') : '',
+        ]);
+        $result = [
             'path' => $resolved,
             'type' => 'file',
             'deleted' => true,
             'items_deleted' => 1,
+            'previous_hash' => is_string($old_content) ? openmira_file_hash_content($old_content) : '',
+            'diff' => $diff,
+            'audit' => $audit,
         ];
+        if (is_array($backup)) {
+            $result['backup'] = $backup;
+        }
+
+        return $result;
     }
 
     // Delete a directory.
     if (is_dir($resolved)) {
-        return openmira_delete_directory($resolved, $recursive);
+        $result = openmira_delete_directory($resolved, $recursive);
+        if (is_wp_error($result)) {
+            return $result;
+        }
+        $result['audit'] = openmira_record_audit_event([
+            'ability' => 'openmira/delete-file',
+            'operation' => $recursive ? 'delete_directory_recursive' : 'delete_directory',
+            'target_path' => openmira_display_path($resolved),
+            'status' => 'success',
+            'duration_ms' => (int) round((microtime(as_float: true) - $started_at) * 1000),
+            'diff_summary' => '',
+        ]);
+
+        return $result;
     }
 
     return new WP_Error('unknown_type', sprintf('Path is not a file or directory: %s', $resolved));

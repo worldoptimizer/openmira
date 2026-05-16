@@ -39,6 +39,9 @@ if (!defined('ABSPATH')) {
 
 define(constant_name: 'OPENMIRA_VERSION', value: '1.2.0');
 define(constant_name: 'OPENMIRA_MAX_EXECUTION_TIME', value: 30);
+if (!defined('OPENMIRA_BLOCK_PRODUCTION')) {
+    define(constant_name: 'OPENMIRA_BLOCK_PRODUCTION', value: false);
+}
 define('OPENMIRA_PLUGIN_URL', plugin_dir_url(__FILE__));
 define('OPENMIRA_SANDBOX_DIR', WP_CONTENT_DIR . '/openmira-sandbox/');
 define(constant_name: 'OPENMIRA_VENDOR_AUTOLOAD', value: __DIR__ . '/vendor/autoload_packages.php');
@@ -235,11 +238,16 @@ add_action('network_admin_notices', callback: 'openmira_render_mcp_dependency_no
 add_action('rest_api_init', callback: 'openmira_register_missing_mcp_endpoint', priority: 999);
 
 require_once __DIR__ . '/includes/helpers.php';
+require_once __DIR__ . '/includes/file-safety.php';
+require_once __DIR__ . '/includes/diagnostics.php';
 require_once __DIR__ . '/includes/admin-page.php';
 require_once __DIR__ . '/includes/connect-page.php';
 require_once __DIR__ . '/includes/block-tools-page.php';
+require_once __DIR__ . '/includes/screenshot-page.php';
 require_once __DIR__ . '/includes/memory-store.php';
+require_once __DIR__ . '/includes/project-rules.php';
 require_once __DIR__ . '/includes/memory-page.php';
+require_once __DIR__ . '/includes/audit-page.php';
 require_once __DIR__ . '/includes/upload-link.php';
 
 // Dependency check: Abilities API must be active.
@@ -290,6 +298,9 @@ add_action('admin_init', static function () {
     }
     if ($page === 'openmira-memory') {
         openmira_handle_memory_admin_actions();
+    }
+    if ($page === 'openmira-audit') {
+        openmira_handle_audit_admin_actions();
     }
 });
 
@@ -347,11 +358,29 @@ add_action('admin_menu', static function () {
 
     add_submenu_page(
         parent_slug: 'openmira-connect',
+        page_title: __('Screenshot Runner', domain: 'open-mira'),
+        menu_title: __('Screenshot Runner', domain: 'open-mira'),
+        capability: 'manage_options',
+        menu_slug: 'openmira-screenshot-tools',
+        callback: 'openmira_render_screenshot_page',
+    );
+
+    add_submenu_page(
+        parent_slug: 'openmira-connect',
         page_title: __('Memory', domain: 'open-mira'),
         menu_title: __('Memory', domain: 'open-mira'),
         capability: 'manage_options',
         menu_slug: 'openmira-memory',
         callback: 'openmira_render_memory_page',
+    );
+
+    add_submenu_page(
+        parent_slug: 'openmira-connect',
+        page_title: __('Audit Log', domain: 'open-mira'),
+        menu_title: __('Audit Log', domain: 'open-mira'),
+        capability: 'manage_options',
+        menu_slug: 'openmira-audit',
+        callback: 'openmira_render_audit_page',
     );
 });
 
@@ -418,6 +447,20 @@ function openmira_register_legacy_mcp_server(mixed $adapter): void
         return;
     }
 
+    $resources = openmira_discover_public_abilities('resource');
+    if (function_exists('openmira_get_project_map_mcp_resources')) {
+        $resources = array_merge($resources, openmira_get_project_map_mcp_resources());
+    }
+    if (function_exists('openmira_get_memory_mcp_resources')) {
+        $resources = array_merge($resources, openmira_get_memory_mcp_resources());
+    }
+    if (function_exists('openmira_get_screenshot_mcp_resources')) {
+        $resources = array_merge($resources, openmira_get_screenshot_mcp_resources());
+    }
+
+    // The adapter accepts direct McpResource instances at runtime even though its PHPDoc
+    // still narrows this argument to ability-name strings.
+    // @mago-expect analysis:possibly-invalid-argument
     $adapter->create_server(
         'mcp-adapter-default-server',
         'mcp',
@@ -433,7 +476,7 @@ function openmira_register_legacy_mcp_server(mixed $adapter): void
             'mcp-adapter/get-ability-info',
             'mcp-adapter/execute-ability',
         ],
-        openmira_discover_public_abilities('resource'),
+        $resources,
         openmira_discover_public_abilities('prompt'),
     );
 }
@@ -624,6 +667,14 @@ if ($is_enabled) {
             ),
         ]);
 
+        wp_register_ability_category('wordpress-development', [
+            'label' => __('WordPress Development', domain: 'open-mira'),
+            'description' => __(
+                'IDE-style WordPress project maps, code navigation, and scaffolding.',
+                domain: 'open-mira',
+            ),
+        ]);
+
         wp_register_ability_category('memory', [
             'label' => __('Memory', domain: 'open-mira'),
             'description' => __('Persistent project facts shared across AI sessions.', domain: 'open-mira'),
@@ -637,6 +688,13 @@ if ($is_enabled) {
         }
     });
 
+    add_filter(
+        'wp_register_ability_args',
+        callback: 'openmira_prepare_ability_schema_for_agents',
+        priority: 10,
+        accepted_args: 2,
+    );
+
     // Register abilities.
     add_action('wp_abilities_api_init', static function () {
         $dir = __DIR__ . '/includes/abilities/';
@@ -645,11 +703,27 @@ if ($is_enabled) {
         require_once $dir . 'write-file.php';
         require_once $dir . 'edit-file.php';
         require_once $dir . 'delete-file.php';
+        require_once $dir . 'file-backups.php';
+        require_once $dir . 'safety-mode.php';
         require_once $dir . 'create-upload-link.php';
         require_once $dir . 'disable-file.php';
         require_once $dir . 'enable-file.php';
         require_once $dir . 'list-directory.php';
+        require_once $dir . 'search-code.php';
         require_once $dir . 'builder-context.php';
+        require_once $dir . 'project-map.php';
+        require_once $dir . 'project-rules.php';
+        require_once $dir . 'navigation.php';
+        require_once $dir . 'lint-file.php';
+        require_once $dir . 'run-wpcli.php';
+        require_once $dir . 'front-page.php';
+        require_once $dir . 'apply-patch.php';
+        require_once $dir . 'screenshot-url.php';
+        require_once $dir . 'probe-url.php';
+        require_once $dir . 'graduate-sandbox-plugin.php';
+        require_once $dir . 'scaffold-theme.php';
+        require_once $dir . 'theme-actions.php';
+        require_once $dir . 'scaffold-block.php';
         require_once $dir . 'builder-inventory.php';
         require_once $dir . 'block-registry.php';
         require_once $dir . 'builder-authoring.php';
@@ -663,6 +737,148 @@ if ($is_enabled) {
         }
         require_once $dir . 'discover-abilities.php';
     });
+}
+
+/**
+ * Make Open Mira ability schemas more tolerant for agent clients.
+ *
+ * WordPress still enforces required fields and value types, but Open Mira does not
+ * hard-fail on unknown extra properties. The execute wrapper reports dropped keys
+ * and close-name suggestions so clients can correct future calls without burning
+ * retry turns.
+ *
+ * @param array<string, mixed> $args
+ * @return array<string, mixed>
+ */
+function openmira_prepare_ability_schema_for_agents(array $args, string $ability_name): array
+{
+    if (!str_starts_with($ability_name, 'openmira/')) {
+        return $args;
+    }
+
+    $args = openmira_prepare_ability_permission_callback(args: $args, ability_name: $ability_name);
+
+    if (is_array($args['input_schema'] ?? null) && ($args['input_schema']['type'] ?? '') === 'object') {
+        $args['input_schema']['additionalProperties'] = true;
+    }
+
+    // @mago-expect analysis:mixed-assignment
+    $callback = $args['execute_callback'] ?? null;
+    if (!is_callable($callback)) {
+        return $args;
+    }
+
+    $allowed = openmira_ability_schema_property_names($args);
+
+    $args['execute_callback'] = static function (array $input = []) use ($callback, $allowed, $ability_name): mixed {
+        $unknown = openmira_unknown_ability_input_properties(input: $input, allowed: $allowed);
+        // @mago-expect analysis:mixed-assignment
+        $result = call_user_func($callback, $input);
+        if ($unknown === [] || !is_array($result)) {
+            return $result;
+        }
+
+        $result['_openmira_input_notice'] = [
+            'ability' => $ability_name,
+            'dropped_properties' => $unknown,
+            'allowed_properties' => $allowed,
+            'suggestions' => openmira_suggest_property_names($unknown, $allowed),
+        ];
+
+        return $result;
+    };
+
+    return $args;
+}
+
+/**
+ * Capture the ability name in the permission callback so filters can target abilities.
+ *
+ * @param array<string, mixed> $args
+ * @return array<string, mixed>
+ */
+function openmira_prepare_ability_permission_callback(array $args, string $ability_name): array
+{
+    if (($args['permission_callback'] ?? null) !== 'openmira_permission_callback') {
+        return $args;
+    }
+
+    $args['permission_callback'] = static fn(): bool|WP_Error => openmira_permission_callback($ability_name);
+
+    return $args;
+}
+
+/**
+ * Return declared input property names for an ability schema.
+ *
+ * @param array<string, mixed> $args
+ * @return list<string>
+ */
+function openmira_ability_schema_property_names(array $args): array
+{
+    if (!is_array($args['input_schema']['properties'] ?? null)) {
+        return [];
+    }
+
+    $allowed = [];
+    foreach (array_keys($args['input_schema']['properties']) as $property_name) {
+        if (!is_string($property_name)) {
+            continue;
+        }
+
+        $allowed[] = $property_name;
+    }
+
+    return $allowed;
+}
+
+/**
+ * Return unknown input property names supplied by a client.
+ *
+ * @param array<array-key, mixed> $input
+ * @param list<string> $allowed
+ * @return list<string>
+ */
+function openmira_unknown_ability_input_properties(array $input, array $allowed): array
+{
+    $unknown = [];
+    foreach (array_diff(array_keys($input), $allowed) as $property_name) {
+        if (is_int($property_name)) {
+            continue;
+        }
+
+        $unknown[] = $property_name;
+    }
+
+    return $unknown;
+}
+
+/**
+ * Suggest close property names for unknown ability input keys.
+ *
+ * @param list<string> $unknown
+ * @param list<string> $allowed
+ * @return array<string, string>
+ */
+function openmira_suggest_property_names(array $unknown, array $allowed): array
+{
+    $suggestions = [];
+    foreach ($unknown as $property) {
+        $best = '';
+        $best_distance = 4;
+        foreach ($allowed as $candidate) {
+            $distance = levenshtein($property, $candidate);
+            if ($distance < $best_distance) {
+                $best_distance = $distance;
+                $best = $candidate;
+            }
+        }
+        if ($best !== '') {
+            $suggestions[$property] = $best;
+        }
+    }
+
+    return $suggestions;
 }
 
 // Ensure sandbox directory exists.
