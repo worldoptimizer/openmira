@@ -1,5 +1,5 @@
 ---
-title: Open Mira
+title: Open Mira — WordPress-aware IDE for AI agents
 description: WordPress-aware MCP development toolkit for AI agents.
 ---
 
@@ -13,7 +13,7 @@ description: WordPress-aware MCP development toolkit for AI agents.
       <a class="button" href="https://github.com/worldoptimizer/openmira#readme">README</a>
     </div>
   </div>
-  <div class="hero-card">
+  <div class="hero-art">
     <picture>
       <source srcset="{{ '/assets/brand/openmira-mascot-900.webp' | relative_url }}" type="image/webp">
       <img src="{{ '/assets/brand/openmira-mascot-900.png' | relative_url }}" alt="Open Mira mascot" width="900" height="900">

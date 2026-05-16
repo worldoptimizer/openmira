@@ -15,7 +15,7 @@ Open Mira is not a generic WordPress shell. It keeps the generic escape hatches 
 
 Install Open Mira from a built release ZIP, not GitHub's source-code ZIP.
 
-1. Download `openmira-<version>.zip` from the [latest GitHub Release](https://github.com/worldoptimizer/openmira/releases/latest).
+1. Download [`openmira.zip`](https://github.com/worldoptimizer/openmira/releases/latest/download/openmira.zip) from the latest GitHub Release.
 2. In WordPress, go to **Plugins → Add New Plugin → Upload Plugin**.
 3. Upload the ZIP, activate Open Mira, then open **Open Mira → Configuration**.
 
@@ -80,10 +80,10 @@ Agents can use browser-backed jobs to serialize blocks, profile loaded block lib
 
 <picture>
   <source srcset="https://worldoptimizer.github.io/openmira/assets/brand/openmira-mascot-300.webp" type="image/webp">
-  <img src="https://worldoptimizer.github.io/openmira/assets/brand/openmira-mascot-300.png" alt="Open Mira mascot" width="240" align="right">
+  <img src="https://worldoptimizer.github.io/openmira/assets/brand/openmira-mascot-300.png" alt="Open Mira mascot" width="240">
 </picture>
 
-Open Mira is built around WordPress-aware primitives rather than a generic shell-only model. The mascot and dark artwork are intentionally used on dark backgrounds because the source images ship with black backgrounds.
+Open Mira is built around WordPress-aware primitives rather than a generic shell-only model.
 
 ## Project Memory
 

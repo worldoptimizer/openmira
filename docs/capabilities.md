@@ -21,7 +21,7 @@ This table is the source of truth for what is actually shipped and validated. Op
 
 ## Explicit non-claim
 
-Hook navigation is useful. A dedicated `*** Add Hook Callback:` patch operation is not currently justified for v1. In plugin pilots, normal `edit-file` was sufficient once Open Mira identified the relevant callback line.
+Hook navigation is useful. A dedicated Add Hook Callback patch operation is not currently justified for v1. In plugin pilots, normal `edit-file` was sufficient once Open Mira identified the relevant callback line.
 
 ## Useful ability groups
 
