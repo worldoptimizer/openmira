@@ -1,0 +1,10 @@
+{
+  "core": null,
+  "mappings": {
+    "wp-content/plugins/openmira": "."
+  },
+  "config": {
+    "WP_DEBUG": true,
+    "WP_DEBUG_LOG": true
+  }
+}

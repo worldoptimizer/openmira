@@ -1,6 +1,6 @@
 #!/bin/bash -e
 
-SLUG="novamira"
+SLUG="open-mira"
 BASEDIR=$(dirname $(dirname $(realpath "$0")))
 BUILD_BASE=$(mktemp -d /tmp/ooo-build-XXXXXX)
 BUILD_DIR="$BUILD_BASE/$SLUG"

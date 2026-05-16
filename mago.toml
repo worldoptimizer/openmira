@@ -1,8 +1,8 @@
 php-version = "8.0"
 
 [source]
-paths = ["includes", "novamira.php"]
-includes = ["vendor/php-stubs/wordpress-stubs", "vendor/wordpress/mcp-adapter/includes", "stubs"]
+paths = ["includes", "openmira.php"]
+includes = ["vendor/php-stubs/wordpress-stubs", "vendor/wordpress/mcp-adapter/includes", "vendor/nikic/php-parser/lib", "stubs"]
 excludes = [".git/**"]
 
 [formatter]

@@ -13,11 +13,11 @@ if (!defined('ABSPATH')) {
     exit();
 }
 
-wp_register_ability('novamira/create-upload-link', [
-    'label' => __('Create Upload Link', domain: 'novamira'),
+wp_register_ability('openmira/create-upload-link', [
+    'label' => __('Create Upload Link', domain: 'open-mira'),
     'description' => __(
         'Creates a temporary, self-authenticated URL that external tools can use to upload one file into the WordPress filesystem. Useful when the agent has a local ZIP, plugin, theme, or media file and wants to upload it with curl or another external tool. The URL accepts raw PUT/POST bodies and multipart/form-data with a field named "file".',
-        domain: 'novamira',
+        domain: 'open-mira',
     ),
     'category' => 'filesystem',
     'input_schema' => [
@@ -71,8 +71,8 @@ wp_register_ability('novamira/create-upload-link', [
             ],
         ],
     ],
-    'execute_callback' => 'novamira_create_upload_link',
-    'permission_callback' => 'novamira_permission_callback',
+    'execute_callback' => 'openmira_create_upload_link',
+    'permission_callback' => 'openmira_permission_callback',
     'meta' => [
         'show_in_rest' => true,
         'mcp' => ['public' => true],
@@ -81,7 +81,7 @@ wp_register_ability('novamira/create-upload-link', [
                 'Use this when a file is too large or inconvenient to send through the MCP JSON transport.',
                 'Recommended curl form: curl -X PUT --data-binary @/path/to/local-file "$upload_url"',
                 'Multipart form is also accepted: curl -F file=@/path/to/local-file "$upload_url"',
-                'PHP files (*.php) can ONLY be uploaded to wp-content/novamira-sandbox/.',
+                'PHP files (*.php) can ONLY be uploaded to wp-content/openmira-sandbox/.',
             ]),
             'readonly' => false,
             'destructive' => false,
@@ -96,15 +96,15 @@ wp_register_ability('novamira/create-upload-link', [
  * @param array $input Input with destination path and optional limits.
  * @return array|WP_Error
  */
-function novamira_create_upload_link($input)
+function openmira_create_upload_link($input)
 {
-    $resolved = novamira_resolve_path(path: (string) $input['path'], must_exist: false);
+    $resolved = openmira_resolve_path(path: (string) $input['path'], must_exist: false);
     if (is_wp_error($resolved)) {
         return $resolved;
     }
 
     if (strtolower(pathinfo($resolved, PATHINFO_EXTENSION)) === 'php') {
-        $sandbox_error = novamira_check_php_sandbox($resolved);
+        $sandbox_error = openmira_check_php_sandbox($resolved);
         if (is_wp_error($sandbox_error)) {
             return $sandbox_error;
         }
@@ -123,12 +123,12 @@ function novamira_create_upload_link($input)
         'overwrite' => $overwrite,
         'create_directories' => $create_directories,
     ];
-    $token = novamira_sign_upload_payload($payload);
+    $token = openmira_sign_upload_payload($payload);
     if (is_wp_error($token)) {
         return $token;
     }
 
-    $upload_url = add_query_arg('token', rawurlencode($token), rest_url('novamira/v1/upload'));
+    $upload_url = add_query_arg('token', rawurlencode($token), rest_url('openmira/v1/upload'));
 
     return [
         'upload_url' => $upload_url,

@@ -6,7 +6,7 @@ v1.2.0 - 2026/05/13
 * New: Local HTTPS development sites with self-signed certificates are detected automatically, and the generated client configs include the small flag Node.js needs to accept the certificate.
 * New: When the site is on a local hostname over HTTP, the Application Passwords notice now explains the exact line to add to wp-config.php to enable them.
 * Tweak: Redesigned the Configuration page into three numbered cards (Enable AI Abilities, Application Password, Connect Your AI Client) so the setup reads top to bottom.
-* Tweak: The MCP endpoint is now /wp-json/mcp/novamira. The previous /wp-json/mcp/mcp-adapter-default-server keeps working for AI clients that are already connected, no action needed.
+* Tweak: The MCP endpoint is now /wp-json/mcp/openmira. The previous /wp-json/mcp/mcp-adapter-default-server keeps working for AI clients that are already connected, no action needed.
 * Tweak: Per-client JSON snippets are collapsed by default behind a "Need the JSON config for a specific client?" link, since most setups now use the paste-to-agent block.
 * Tweak: AI agents working with data-modeling plugins (ACF, JetEngine, Pods, ACPT, Meta Box, Toolset, CPT UI, WooCommerce, etc.) are now told to use the plugin's own UI or API instead of registering post types, taxonomies, or fields directly in PHP, avoiding broken slugs and labels later.
 * Fix: PHP notices about duplicate ability registration on every wp-cron tick no longer appear in the error log.
@@ -14,7 +14,7 @@ v1.2.0 - 2026/05/13
 
 v1.1.2 - 2026/04/23
 * New: Configuration instructions for the OpenAI Codex CLI MCP client.
-* Fix: The Novamira ON admin bar indicator now only appears for administrators who can manage Novamira settings.
+* Fix: The Open Mira ON admin bar indicator now only appears for administrators who can manage Open Mira settings.
 * Minor Fixes
 
 v1.1.1 - 2026/04/22

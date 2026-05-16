@@ -13,19 +13,19 @@ if (!defined('ABSPATH')) {
     exit();
 }
 
-add_action('rest_api_init', callback: 'novamira_register_upload_route');
+add_action('rest_api_init', callback: 'openmira_register_upload_route');
 
 /**
  * Register the REST endpoint used by signed upload URLs.
  */
-function novamira_register_upload_route(): void
+function openmira_register_upload_route(): void
 {
-    $route_namespace = 'novamira/v1';
+    $route_namespace = 'openmira/v1';
     $route = '/upload';
 
     register_rest_route($route_namespace, $route, [
         'methods' => ['POST', 'PUT'],
-        'callback' => 'novamira_handle_signed_upload',
+        'callback' => 'openmira_handle_signed_upload',
         'permission_callback' => '__return_true',
     ]);
 }
@@ -36,17 +36,17 @@ function novamira_register_upload_route(): void
  * @param array<string, mixed> $payload Upload token payload.
  * @return string|WP_Error
  */
-function novamira_sign_upload_payload(array $payload): string|WP_Error
+function openmira_sign_upload_payload(array $payload): string|WP_Error
 {
     $json = wp_json_encode($payload, JSON_UNESCAPED_SLASHES);
     if (!is_string($json)) {
         return new WP_Error('upload_token_encode_failed', 'Could not encode upload token payload.');
     }
 
-    $body = novamira_base64url_encode($json);
-    $signature = hash_hmac('sha256', $body, novamira_upload_token_secret(), binary: true);
+    $body = openmira_base64url_encode($json);
+    $signature = hash_hmac('sha256', $body, openmira_upload_token_secret(), binary: true);
 
-    return $body . '.' . novamira_base64url_encode($signature);
+    return $body . '.' . openmira_base64url_encode($signature);
 }
 
 /**
@@ -54,7 +54,7 @@ function novamira_sign_upload_payload(array $payload): string|WP_Error
  *
  * @return array<string, mixed>|WP_Error
  */
-function novamira_verify_upload_token(string $token): array|WP_Error
+function openmira_verify_upload_token(string $token): array|WP_Error
 {
     $parts = explode('.', $token, limit: 2);
     if (count($parts) !== 2) {
@@ -62,12 +62,12 @@ function novamira_verify_upload_token(string $token): array|WP_Error
     }
 
     [$body, $signature] = $parts;
-    $expected = novamira_base64url_encode(hash_hmac('sha256', $body, novamira_upload_token_secret(), binary: true));
+    $expected = openmira_base64url_encode(hash_hmac('sha256', $body, openmira_upload_token_secret(), binary: true));
     if (!hash_equals($expected, $signature)) {
         return new WP_Error('invalid_upload_token', 'Invalid upload token signature.', ['status' => 401]);
     }
 
-    $json = novamira_base64url_decode($body);
+    $json = openmira_base64url_decode($body);
     if ($json === false) {
         return new WP_Error('invalid_upload_token', 'Invalid upload token payload.', ['status' => 401]);
     }
@@ -99,40 +99,40 @@ function novamira_verify_upload_token(string $token): array|WP_Error
  *
  * @return array|WP_Error
  */
-function novamira_handle_signed_upload(WP_REST_Request $request)
+function openmira_handle_signed_upload(WP_REST_Request $request)
 {
-    if (!novamira_is_enabled()) {
-        return new WP_Error('novamira_disabled', 'Novamira abilities are disabled.', ['status' => 403]);
+    if (!openmira_is_enabled()) {
+        return new WP_Error('openmira_disabled', 'Open Mira abilities are disabled.', ['status' => 403]);
     }
 
-    $token = novamira_get_upload_token_from_request($request);
+    $token = openmira_get_upload_token_from_request($request);
     if ($token === '') {
         return new WP_Error('missing_upload_token', 'Missing upload token.', ['status' => 401]);
     }
 
-    $payload = novamira_verify_upload_token($token);
+    $payload = openmira_verify_upload_token($token);
     if (is_wp_error($payload)) {
         return $payload;
     }
 
-    $destination = novamira_prepare_upload_destination($payload);
+    $destination = openmira_prepare_upload_destination($payload);
     if (is_wp_error($destination)) {
         return $destination;
     }
 
-    $source = novamira_open_upload_source($request);
+    $source = openmira_open_upload_source($request);
     if (is_wp_error($source)) {
         return $source;
     }
 
     $stream = $source['stream'];
     $result = $destination['overwrite']
-        ? novamira_overwrite_upload_stream(
+        ? openmira_overwrite_upload_stream(
             source: $stream,
             resolved: $destination['path'],
             max_bytes: $destination['max_bytes'],
         )
-        : novamira_create_upload_stream(
+        : openmira_create_upload_stream(
             source: $stream,
             resolved: $destination['path'],
             max_bytes: $destination['max_bytes'],
@@ -162,19 +162,19 @@ function novamira_handle_signed_upload(WP_REST_Request $request)
  * @param array<string, mixed> $payload Verified upload token payload.
  * @return array{path: string, max_bytes: int, overwrite: bool, directories_created: array}|WP_Error
  */
-function novamira_prepare_upload_destination(array $payload): array|WP_Error
+function openmira_prepare_upload_destination(array $payload): array|WP_Error
 {
     if (!is_string($payload['path']) || $payload['path'] === '') {
         return new WP_Error('invalid_upload_token', 'Upload token does not contain a valid path.', ['status' => 401]);
     }
 
-    $resolved = novamira_resolve_path(path: $payload['path'], must_exist: false);
+    $resolved = openmira_resolve_path(path: $payload['path'], must_exist: false);
     if (is_wp_error($resolved)) {
         return $resolved;
     }
 
     if (strtolower(pathinfo($resolved, PATHINFO_EXTENSION)) === 'php') {
-        $sandbox_error = novamira_check_php_sandbox($resolved);
+        $sandbox_error = openmira_check_php_sandbox($resolved);
         if (is_wp_error($sandbox_error)) {
             return $sandbox_error;
         }
@@ -186,7 +186,7 @@ function novamira_prepare_upload_destination(array $payload): array|WP_Error
         if ($payload['create_directories'] !== true) {
             return new WP_Error('directory_not_found', sprintf('Parent directory does not exist: %s', $parent_dir));
         }
-        $directories_created = novamira_ensure_parent_dir($parent_dir);
+        $directories_created = openmira_ensure_parent_dir($parent_dir);
         if (is_wp_error($directories_created)) {
             return $directories_created;
         }
@@ -207,14 +207,14 @@ function novamira_prepare_upload_destination(array $payload): array|WP_Error
 /**
  * Return the upload token from query args or headers.
  */
-function novamira_get_upload_token_from_request(WP_REST_Request $request): string
+function openmira_get_upload_token_from_request(WP_REST_Request $request): string
 {
     $query_params = $request->get_query_params();
     if (array_key_exists('token', $query_params) && is_string($query_params['token'])) {
         return rawurldecode($query_params['token']);
     }
 
-    $header_token = $request->get_header('x-novamira-upload-token');
+    $header_token = $request->get_header('x-openmira-upload-token');
     if (is_string($header_token)) {
         return $header_token;
     }
@@ -227,11 +227,11 @@ function novamira_get_upload_token_from_request(WP_REST_Request $request): strin
  *
  * @return array{stream: resource, source: string, filename: string}|WP_Error
  */
-function novamira_open_upload_source(WP_REST_Request $request): array|WP_Error
+function openmira_open_upload_source(WP_REST_Request $request): array|WP_Error
 {
-    $file = novamira_get_multipart_upload_file($request);
+    $file = openmira_get_multipart_upload_file($request);
     if ($file !== null) {
-        return novamira_open_multipart_upload_source($file);
+        return openmira_open_multipart_upload_source($file);
     }
 
     $stream = fopen('php://input', mode: 'rb');
@@ -251,7 +251,7 @@ function novamira_open_upload_source(WP_REST_Request $request): array|WP_Error
  *
  * @return array<array-key, mixed>|null
  */
-function novamira_get_multipart_upload_file(WP_REST_Request $request): ?array
+function openmira_get_multipart_upload_file(WP_REST_Request $request): ?array
 {
     /** @var array<string, array<array-key, mixed>> $files */
     $files = $request->get_file_params();
@@ -270,11 +270,11 @@ function novamira_get_multipart_upload_file(WP_REST_Request $request): ?array
  * @param array<array-key, mixed> $file File entry from WP_REST_Request::get_file_params().
  * @return array{stream: resource, source: string, filename: string}|WP_Error
  */
-function novamira_open_multipart_upload_source(array $file): array|WP_Error
+function openmira_open_multipart_upload_source(array $file): array|WP_Error
 {
     $error = (int) ($file['error'] ?? UPLOAD_ERR_NO_FILE);
     if ($error !== UPLOAD_ERR_OK) {
-        return new WP_Error('upload_failed', novamira_upload_error_message($error));
+        return new WP_Error('upload_failed', openmira_upload_error_message($error));
     }
 
     $tmp_name = '';
@@ -308,7 +308,7 @@ function novamira_open_multipart_upload_source(array $file): array|WP_Error
  * @param resource $source
  * @return array{bytes_written: int, created: bool}|WP_Error
  */
-function novamira_create_upload_stream($source, string $resolved, int $max_bytes): array|WP_Error
+function openmira_create_upload_stream($source, string $resolved, int $max_bytes): array|WP_Error
 {
     $target = fopen($resolved, mode: 'xb');
     if ($target === false) {
@@ -318,7 +318,7 @@ function novamira_create_upload_stream($source, string $resolved, int $max_bytes
         return new WP_Error('upload_write_failed', sprintf('Could not open destination for writing: %s', $resolved));
     }
 
-    $bytes_written = novamira_copy_limited_stream(source: $source, target: $target, max_bytes: $max_bytes);
+    $bytes_written = openmira_copy_limited_stream(source: $source, target: $target, max_bytes: $max_bytes);
     fclose($target);
 
     if (is_wp_error($bytes_written)) {
@@ -340,10 +340,10 @@ function novamira_create_upload_stream($source, string $resolved, int $max_bytes
  * @param resource $source
  * @return array{bytes_written: int, created: bool}|WP_Error
  */
-function novamira_overwrite_upload_stream($source, string $resolved, int $max_bytes): array|WP_Error
+function openmira_overwrite_upload_stream($source, string $resolved, int $max_bytes): array|WP_Error
 {
     $created = !file_exists($resolved);
-    $temporary_path = tempnam(dirname($resolved), prefix: '.novamira-upload-');
+    $temporary_path = tempnam(dirname($resolved), prefix: '.openmira-upload-');
     if ($temporary_path === false) {
         return new WP_Error('upload_temp_failed', sprintf(
             'Could not create temporary upload file in: %s',
@@ -357,7 +357,7 @@ function novamira_overwrite_upload_stream($source, string $resolved, int $max_by
         return new WP_Error('upload_write_failed', sprintf('Could not open destination for writing: %s', $resolved));
     }
 
-    $bytes_written = novamira_copy_limited_stream(source: $source, target: $target, max_bytes: $max_bytes);
+    $bytes_written = openmira_copy_limited_stream(source: $source, target: $target, max_bytes: $max_bytes);
     fclose($target);
 
     if (is_wp_error($bytes_written)) {
@@ -385,7 +385,7 @@ function novamira_overwrite_upload_stream($source, string $resolved, int $max_by
  * @param resource $target
  * @return int|WP_Error
  */
-function novamira_copy_limited_stream($source, $target, int $max_bytes): int|WP_Error
+function openmira_copy_limited_stream($source, $target, int $max_bytes): int|WP_Error
 {
     $bytes_written = 0;
     while (!feof($source)) {
@@ -416,7 +416,7 @@ function novamira_copy_limited_stream($source, $target, int $max_bytes): int|WP_
 /**
  * Return a human-readable upload error message.
  */
-function novamira_upload_error_message(int $error): string
+function openmira_upload_error_message(int $error): string
 {
     return match ($error) {
         UPLOAD_ERR_INI_SIZE, UPLOAD_ERR_FORM_SIZE => 'Uploaded file exceeds the configured PHP upload size limit.',
@@ -432,15 +432,15 @@ function novamira_upload_error_message(int $error): string
 /**
  * Return the signing secret for upload URLs.
  */
-function novamira_upload_token_secret(): string
+function openmira_upload_token_secret(): string
 {
-    return wp_salt('auth') . '|' . wp_salt('secure_auth') . '|novamira-upload-link';
+    return wp_salt('auth') . '|' . wp_salt('secure_auth') . '|openmira-upload-link';
 }
 
 /**
  * Encode bytes with base64url.
  */
-function novamira_base64url_encode(string $value): string
+function openmira_base64url_encode(string $value): string
 {
     return rtrim(strtr(base64_encode($value), from: '+/', to: '-_'), characters: '=');
 }
@@ -448,7 +448,7 @@ function novamira_base64url_encode(string $value): string
 /**
  * Decode base64url bytes.
  */
-function novamira_base64url_decode(string $value): string|false
+function openmira_base64url_decode(string $value): string|false
 {
     $padding = strlen($value) % 4;
     if ($padding !== 0) {

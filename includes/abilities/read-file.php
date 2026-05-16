@@ -13,11 +13,11 @@ if (!defined('ABSPATH')) {
     exit();
 }
 
-wp_register_ability('novamira/read-file', [
-    'label' => __('Read File', domain: 'novamira'),
+wp_register_ability('openmira/read-file', [
+    'label' => __('Read File', domain: 'open-mira'),
     'description' => __(
         'Reads the contents of a file from the server filesystem. Supports text and binary files. Binary files and files with invalid UTF-8 are returned as base64-encoded. Supports partial reads via offset and limit parameters.',
-        domain: 'novamira',
+        domain: 'open-mira',
     ),
     'category' => 'filesystem',
     'input_schema' => [
@@ -56,15 +56,20 @@ wp_register_ability('novamira/read-file', [
                 'description' => 'Whether the content was truncated due to limit.',
             ],
             'mime_type' => ['type' => 'string', 'description' => 'Detected MIME type.'],
+            'content_hash' => ['type' => 'string', 'description' => 'SHA-256 hash of the full file content.'],
+            'read_tracked' => [
+                'type' => 'boolean',
+                'description' => 'Whether this read was stored for stale-write protection.',
+            ],
         ],
     ],
-    'execute_callback' => 'novamira_read_file',
-    'permission_callback' => 'novamira_permission_callback',
+    'execute_callback' => 'openmira_read_file',
+    'permission_callback' => 'openmira_permission_callback',
     'meta' => [
         'show_in_rest' => true,
         'mcp' => ['public' => true],
         'annotations' => [
-            'instructions' => 'TIP: AI-written PHP plugins live in wp-content/novamira-sandbox/. Check wp-content/novamira-sandbox/.crashed to see if safe mode is active.',
+            'instructions' => 'TIP: AI-written PHP plugins live in wp-content/openmira-sandbox/. Check wp-content/openmira-sandbox/.crashed to see if safe mode is active.',
             'readonly' => true,
             'destructive' => false,
             'idempotent' => true,
@@ -78,9 +83,10 @@ wp_register_ability('novamira/read-file', [
  * @param array $input Input with 'path', optional 'offset' and 'limit'.
  * @return array|WP_Error
  */
-function novamira_read_file($input)
+// @mago-expect lint:cyclomatic-complexity
+function openmira_read_file($input)
 {
-    $resolved = novamira_resolve_path(path: (string) $input['path'], must_exist: true);
+    $resolved = openmira_resolve_path(path: (string) $input['path'], must_exist: true);
     if (is_wp_error($resolved)) {
         return $resolved;
     }
@@ -94,6 +100,7 @@ function novamira_read_file($input)
     }
 
     $size = (int) filesize($resolved);
+    $content_hash = hash_file(algo: 'sha256', filename: $resolved);
     $offset = (int) ($input['offset'] ?? 0);
     $limit = (int) ($input['limit'] ?? 1_048_576);
 
@@ -122,11 +129,13 @@ function novamira_read_file($input)
     $truncated = $limit !== -1 && ($offset + $bytes_read) < $size;
 
     // Determine encoding: use base64 for binary content or invalid UTF-8.
-    $is_text = novamira_is_text_mime_type($mime_type) && mb_check_encoding(value: $content, encoding: 'UTF-8');
+    $is_text = openmira_is_text_mime_type($mime_type) && mb_check_encoding(value: $content, encoding: 'UTF-8');
 
     if (!$is_text) {
         $content = base64_encode($content);
     }
+
+    openmira_mark_file_read($resolved);
 
     return [
         'path' => $resolved,
@@ -136,6 +145,8 @@ function novamira_read_file($input)
         'bytes_read' => $bytes_read,
         'truncated' => $truncated,
         'mime_type' => $mime_type,
+        'content_hash' => is_string($content_hash) ? $content_hash : '',
+        'read_tracked' => true,
     ];
 }
 
@@ -145,7 +156,7 @@ function novamira_read_file($input)
  * @param string $mime_type The MIME type to check.
  * @return bool
  */
-function novamira_is_text_mime_type($mime_type)
+function openmira_is_text_mime_type($mime_type)
 {
     // MIME types and subtypes that are treated as text.
     $text_prefixes = ['text/', 'application/json', 'application/xml', 'application/javascript'];

@@ -1,6 +1,14 @@
 .mcp.json
 /vendor
+/node_modules
 *.swp
+.DS_Store
+
+# Local research/reference material; never commit bundled third-party products.
+# The misspelled variant is kept because it already exists in this worktree.
+/#reference/
+/#refenrence/
+/#runtime/
 
 # IDE
 .idea
