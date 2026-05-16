@@ -1,7 +1,5 @@
 <?php
 
-declare(strict_types=1);
-
 if (!defined('ABSPATH')) {
     fwrite(STDERR, "Run this file with wp eval-file inside WordPress.\n");
     exit(1);
