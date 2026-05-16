@@ -95,7 +95,7 @@ The wp-env smoke suite runs automatically in GitHub Actions on pushes and pull r
 To build an installable ZIP:
 
 ```bash
-scripts/build-release.sh 1.4.0
+scripts/build-release.sh 1.3.0
 ```
 
 ## Contributing

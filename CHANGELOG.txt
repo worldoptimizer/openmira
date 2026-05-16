@@ -1,11 +1,7 @@
-v1.4.0 - 2026/05/16
-* Breaking: Removed the persistent screenshot admin UI, browser queue, runner REST routes, MCP screenshot-image delivery, and inline base64 screenshot delivery. Dogfood testing showed these paths could not reliably deliver agent-visible image content to Claude Code CLI and added too much surface area for a human/CI-only result.
-* Changed: `openmira/screenshot-url` now creates a minimal external capture job for `scripts/openmira-complete-screenshot-job.sh`. Captured PNG/JPEG files are stored under `wp-content/openmira-screenshots/` for human or CI inspection. Use your MCP client’s native browser/vision tooling for agent-visible screenshots.
-
 v1.3.0 - 2026/05/16
 * New: Open Mira now provides an IDE-class WordPress development surface for AI agents, covering theme/page work, plugin fixes, hook navigation, sandbox plugin creation, and visual screenshot-driven iteration.
 * New: WP-aware patch grammar for `theme.json` lets agents update design-system values with WordPress-specific selectors and bulk path merges instead of fragile full-file rewrites.
-* New: Browser-assisted screenshot jobs now return MCP resources, so vision-capable clients can inspect page output without flooding tool results with inline base64 images.
+* Changed: `openmira/screenshot-url` creates minimal external Playwright capture jobs. Captured images are stored under `wp-content/openmira-screenshots/` for human or CI inspection; agent-visible screenshots should use the MCP client’s native browser/vision tooling.
 * New: Project map, search, hook navigation, template resolution, linting, WP-CLI, URL probing, theme scaffolding, block scaffolding, and sandbox plugin promotion abilities are available for WordPress-aware development workflows.
 * New: Audit Log now stores compacted full diffs for file-changing abilities and shows expandable diffs alongside backup IDs and restore points.
 * New: Per-ability capability filters let site owners customize who may run each Open Mira ability.
