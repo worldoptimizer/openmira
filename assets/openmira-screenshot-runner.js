@@ -116,6 +116,38 @@
   };
 
   const wait = (ms) => new Promise((resolve) => window.setTimeout(resolve, ms));
+  const transparentImagePlaceholder = 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO+/p9sAAAAASUVORK5CYII=';
+  const isCaptureTimeout = (error) => String(error?.message || error).startsWith('Capture timed out after');
+  const formatTimeout = (timeoutMs) => (timeoutMs >= 1000 ? `${Math.round(timeoutMs / 1000)}s` : `${timeoutMs}ms`);
+
+  const withTimeout = async (promise, timeoutMs) => Promise.race([
+    promise,
+    new Promise((_, reject) => {
+      window.setTimeout(() => {
+        reject(new Error(`Capture timed out after ${formatTimeout(timeoutMs)} — likely external resource (font/image/stylesheet) without CORS or slow CDN`));
+      }, timeoutMs);
+    }),
+  ]);
+
+  const captureNodeToPng = async (primaryTarget, fallbackTarget, options) => {
+    const timeoutMs = Math.max(100, Number(config.captureTimeoutMs || 30000));
+    const baseOptions = {
+      ...options,
+      cacheBust: true,
+      imagePlaceholder: transparentImagePlaceholder,
+      fetchRequestInit: { credentials: 'omit' },
+    };
+
+    try {
+      return await withTimeout(htmlToImage.toPng(primaryTarget, baseOptions), timeoutMs);
+    } catch (error) {
+      if (!isCaptureTimeout(error)) {
+        throw error;
+      }
+      console.warn('Open Mira screenshot capture timed out; retrying once with skipFonts=true against document.body.', error);
+      return withTimeout(htmlToImage.toPng(fallbackTarget, { ...baseOptions, skipFonts: true }), timeoutMs);
+    }
+  };
 
   const waitForFrameLoad = () => new Promise((resolve, reject) => {
     const timeout = window.setTimeout(() => reject(new Error('Timed out waiting for target iframe to load.')), 25000);
@@ -179,7 +211,7 @@
       ? doc.defaultView.getComputedStyle(body).backgroundColor || '#ffffff'
       : '#ffffff';
 
-    const dataUrl = await htmlToImage.toPng(root, {
+    const dataUrl = await captureNodeToPng(root, body || root, {
       width,
       height,
       canvasWidth: width,
@@ -257,7 +289,9 @@
 
     try {
       await fetchJobs();
-      setStatus('Watching for screenshot jobs…');
+      if (!running) {
+        setStatus('Watching for screenshot jobs…');
+      }
       await processNextJob();
     } catch (error) {
       setStatus(`Queue refresh failed: ${error.message}`);
