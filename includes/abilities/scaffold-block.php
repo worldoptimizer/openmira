@@ -201,6 +201,7 @@ function openmira_scaffold_block(array $input): array|WP_Error
         'status' => 'success',
         'duration_ms' => (int) round((microtime(as_float: true) - $started_at) * 1000),
         'diff_summary' => sprintf('%s, %d files', $block_name, count($written)),
+        'diff' => openmira_join_file_diffs_for_audit($written),
     ]);
 
     return [

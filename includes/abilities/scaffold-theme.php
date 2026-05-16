@@ -214,6 +214,7 @@ function openmira_scaffold_theme(array $input): array|WP_Error
             count($written),
             is_array($cleanup_backup) ? '; existing directory moved to backup' : '',
         ),
+        'diff' => openmira_join_file_diffs_for_audit($written),
     ]);
 
     $result = [

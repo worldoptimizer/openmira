@@ -208,6 +208,7 @@ function openmira_edit_file($input)
         'status' => 'success',
         'duration_ms' => (int) round((microtime(as_float: true) - $started_at) * 1000),
         'diff_summary' => openmira_diff_summary($diff),
+        'diff' => $diff,
         'backup_id' => is_array($backup) ? (string) ($backup['id'] ?? '') : '',
     ]);
 

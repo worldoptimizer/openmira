@@ -182,13 +182,56 @@ function openmira_render_audit_table(array $events): void
                     <td><code><?php echo esc_html((string) ($event['ability'] ?? '')); ?></code></td>
                     <td><code><?php echo esc_html((string) ($event['target_path'] ?? '')); ?></code></td>
                     <td><?php echo esc_html((string) ($event['status'] ?? '')); ?></td>
-                    <td><?php echo esc_html((string) ($event['diff_summary'] ?? '')); ?></td>
+                    <td><?php openmira_render_audit_diff_cell($event); ?></td>
                     <td><code><?php echo esc_html((string) ($event['backup_id'] ?? '')); ?></code></td>
                 </tr>
             <?php } ?>
         </tbody>
     </table>
     <?php }
+
+/**
+ * Render a compact diff summary with expandable full diff.
+ *
+ * @param array<array-key, mixed> $event
+ */
+function openmira_render_audit_diff_cell(array $event): void
+{
+    $summary = openmira_audit_event_diff_summary($event);
+    $diff = openmira_audit_event_diff($event);
+    if ($diff === '') {
+        echo esc_html($summary);
+        return;
+    }
+    ?>
+    <details class="openmira-audit-diff">
+        <summary><?php echo esc_html($summary !== '' ? $summary : __('Show diff', domain: 'open-mira')); ?></summary>
+        <pre style="max-height:360px; overflow:auto; white-space:pre-wrap; background:#f6f7f7; border:1px solid #dcdcde; padding:8px; margin:8px 0 0; font-size:12px;"><?php echo
+            esc_html($diff)
+        ; ?></pre>
+    </details>
+    <?php
+}
+
+/**
+ * Return the stored full diff for an audit event.
+ *
+ * @param array<array-key, mixed> $event
+ */
+function openmira_audit_event_diff(array $event): string
+{
+    return array_key_exists('diff', $event) && is_string($event['diff']) ? $event['diff'] : '';
+}
+
+/**
+ * Return a readable diff summary for an audit event.
+ *
+ * @param array<array-key, mixed> $event
+ */
+function openmira_audit_event_diff_summary(array $event): string
+{
+    return array_key_exists('diff_summary', $event) && is_string($event['diff_summary']) ? $event['diff_summary'] : '';
+}
 
 /**
  * Render backup table.
