@@ -97,7 +97,7 @@
       const title = job.label || job.note || job.target_url || job.job_id;
       const viewport = `${job.viewport_width || 0}×${job.viewport_height || 0}${job.full_page ? ' full page' : ''}`;
       const image = job.image_url
-        ? `<img class="openmira-runner-thumb" src="${escapeText(job.image_url)}" alt="Screenshot ${escapeText(job.job_id)}">`
+        ? `<a class="openmira-runner-thumb-link" href="${escapeText(job.image_url)}" target="_blank" rel="noreferrer" title="Open full-size capture in new tab"><img class="openmira-runner-thumb" src="${escapeText(job.image_url)}" alt="Screenshot ${escapeText(job.job_id)}"></a>`
         : '';
       const error = job.error ? `<div class="openmira-runner-job-meta">Error: ${escapeText(job.error)}</div>` : '';
       return `
@@ -191,7 +191,12 @@
     frame.src = job.target_url;
     await loaded;
 
-    const doc = frame.contentDocument;
+    let doc = frame.contentDocument;
+    if (!doc || !doc.documentElement) {
+      await wait(500);
+      doc = frame.contentDocument;
+    }
+
     if (!doc || !doc.documentElement) {
       throw new Error('Could not access target iframe document. The target may block same-origin framing.');
     }
