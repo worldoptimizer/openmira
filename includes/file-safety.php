@@ -23,6 +23,8 @@ const OPENMIRA_AUDIT_LOG_OPTION = 'openmira_audit_log';
 
 const OPENMIRA_AUDIT_LOG_MAX = 200;
 
+const OPENMIRA_AUDIT_DIFF_MAX_BYTES = 60_000;
+
 const OPENMIRA_READ_TRACKING_TTL = 12 * HOUR_IN_SECONDS;
 
 const OPENMIRA_PLAN_ACT_REQUIRED_OPTION = 'openmira_plan_act_required';
@@ -534,8 +536,10 @@ function openmira_record_audit_event(array $event): array
         'duration_ms' => 0,
         'error' => '',
         'diff_summary' => '',
+        'diff' => '',
         'backup_id' => '',
     ], $event);
+    $entry['diff'] = openmira_compact_audit_diff($entry['diff']);
 
     $log = openmira_get_audit_log();
     array_unshift($log, $entry);
@@ -553,6 +557,42 @@ function openmira_record_audit_event(array $event): array
 function openmira_get_audit_log(): array
 {
     return openmira_normalize_list(get_option(OPENMIRA_AUDIT_LOG_OPTION, default_value: []));
+}
+
+/**
+ * Bound stored audit diffs so the audit option remains inspectable.
+ */
+function openmira_compact_audit_diff($diff): string
+{
+    if (!is_string($diff) || $diff === '') {
+        return '';
+    }
+
+    if (strlen($diff) <= OPENMIRA_AUDIT_DIFF_MAX_BYTES) {
+        return $diff;
+    }
+
+    return substr($diff, offset: 0, length: OPENMIRA_AUDIT_DIFF_MAX_BYTES) . "\n@@ audit diff truncated @@\n";
+}
+
+/**
+ * Join multiple file diffs into one bounded audit diff.
+ *
+ * @param list<array<array-key, mixed>> $files
+ */
+function openmira_join_file_diffs_for_audit(array $files): string
+{
+    $chunks = [];
+    foreach ($files as $file) {
+        if (!array_key_exists('diff', $file) || !is_string($file['diff']) || $file['diff'] === '') {
+            continue;
+        }
+        $diff = $file['diff'];
+        $path = array_key_exists('path', $file) && is_string($file['path']) ? $file['path'] : '';
+        $chunks[] = $path !== '' ? "# {$path}\n{$diff}" : $diff;
+    }
+
+    return openmira_compact_audit_diff(implode("\n", $chunks));
 }
 
 /**

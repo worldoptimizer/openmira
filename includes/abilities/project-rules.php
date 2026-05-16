@@ -152,6 +152,7 @@ function openmira_write_project_rules_ability(array $input): array|WP_Error
         'status' => 'success',
         'duration_ms' => 0,
         'diff_summary' => openmira_diff_summary($diff),
+        'diff' => $diff,
         'backup_id' => is_array($backup) ? (string) ($backup['id'] ?? '') : '',
     ]);
 

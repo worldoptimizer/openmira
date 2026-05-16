@@ -48,7 +48,8 @@
 - **Done:** `npm run smoke:wp-env:all` is wired to a real REST-based wp-env smoke runner and GitHub Actions CI. The runner mounts the plugin at a deterministic `wp-content/plugins/openmira` path, starts wp-env, enables Open Mira abilities, logs into WordPress, calls abilities over REST, asserts scaffolded theme files, then runs existing eval-file smokes. First fork CI run is green; local execution remains blocked until Docker is installed.
 - **Done:** Phase A safety controls now include `OPENMIRA_BLOCK_PRODUCTION` and `openmira_ability_capability`. Ability permission callbacks capture the ability name, production blocking returns a structured `WP_Error`, resources use a bool-only permission wrapper, and smoke coverage verifies default allow, per-ability deny, and production block paths.
 - **Done:** `execute-php` runaway protection is implemented. Calls are rate-limited per user/window, responses include guard state and memory delta, large per-call memory growth is flagged as a structured guard error, and Playground REST smoke confirms the guard metadata path.
-- **Now:** Continue Productization Phase A with audit-log diff expansion.
+- **Done:** Audit log diff expansion landed. File-changing abilities now store bounded full diffs on audit events, scaffold operations aggregate per-file diffs, the Audit Log table renders expandable diffs, and wp-env smoke coverage verifies storage, rendering, and truncation.
+- **Now:** Productization Phase A safety floor is in place; next tranche should be release packaging and README/onboarding cleanup.
 
 ## Positioning
 

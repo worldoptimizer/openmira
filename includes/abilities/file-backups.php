@@ -241,6 +241,7 @@ function openmira_restore_file_backup_ability(array $input): array|WP_Error
         'status' => 'success',
         'duration_ms' => (int) round((microtime(as_float: true) - $started_at) * 1000),
         'diff_summary' => openmira_diff_summary($diff),
+        'diff' => $diff,
         'backup_id' => $backup_id,
     ]);
 
