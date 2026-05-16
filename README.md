@@ -3,8 +3,8 @@
 [![Docs](https://img.shields.io/badge/docs-GitHub%20Pages-ffc21a?logo=github)](https://worldoptimizer.github.io/openmira/) [![Latest release](https://img.shields.io/github/v/release/worldoptimizer/openmira?label=release)](https://github.com/worldoptimizer/openmira/releases/latest)
 
 <picture>
-  <source srcset="https://worldoptimizer.github.io/openmira/assets/brand/openmira-logo-600.webp" type="image/webp">
-  <img src="https://worldoptimizer.github.io/openmira/assets/brand/openmira-logo-600.png" alt="Open Mira logo" width="420">
+  <source srcset="https://worldoptimizer.github.io/openmira/assets/brand/openmira-header-1400.webp" type="image/webp">
+  <img src="https://worldoptimizer.github.io/openmira/assets/brand/openmira-header-1400.jpg" alt="Open Mira header artwork" width="1400">
 </picture>
 
 Open Mira is an AGPL WordPress MCP server for AI-assisted WordPress development. It gives capable AI agents a WordPress-aware IDE surface for staging and local sites: inspect the project, edit files safely, build themes and blocks, fix plugins, work with hooks, capture screenshots, and keep durable project memory.
@@ -75,15 +75,6 @@ These controls reduce risk; they do not make live-site agent automation safe by 
 WordPress PHP exposes registered block metadata, but exact static block saved HTML is produced by each block editor JavaScript `save()` implementation. Open Mira surfaces that boundary instead of vendoring Gutenberg internals.
 
 Agents can use browser-backed jobs to serialize blocks, profile loaded block libraries, and capture screenshots through authenticated WordPress admin pages. Screenshot results are exposed as MCP resources to avoid sending large base64 images through normal tool output.
-
-## About
-
-<picture>
-  <source srcset="https://worldoptimizer.github.io/openmira/assets/brand/openmira-mascot-300.webp" type="image/webp">
-  <img src="https://worldoptimizer.github.io/openmira/assets/brand/openmira-mascot-300.png" alt="Open Mira mascot" width="240">
-</picture>
-
-Open Mira is built around WordPress-aware primitives rather than a generic shell-only model.
 
 ## Project Memory
 
