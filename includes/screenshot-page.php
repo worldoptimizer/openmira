@@ -73,6 +73,7 @@ function openmira_render_screenshot_page(): void
         'singleJobId' => $job_id,
         'pollMs' => 1500,
         'settleMs' => 700,
+        'captureTimeoutMs' => 30_000,
         'maxCaptureHeight' => 8000,
     ];
     $plugin_url = (string) OPENMIRA_PLUGIN_URL;
