@@ -350,19 +350,19 @@ Pilot #12 closes the bulk-patch discoverability loop. The next evidence-backed w
 
 Shipped the two targeted fixes before broadening the architecture:
 
-- Completed screenshot jobs now register exact MCP screenshot-image delivery at the legacy screenshot resource URI; `resources/read` returns blob content with the stored image MIME type.
+- Superseded: screenshot image resource delivery was later removed after dogfood testing showed Claude Code CLI could not consume it reliably. External capture now stores files on disk for human/CI inspection.
 - Project-map summary and memory snapshot are direct JSON MCP resources, avoiding the adapter's no-input ability-backed resource read path.
 - `render-gutenberg-pattern` now preserves feature-grid item `number`, `label`, and `accent_color` metadata.
 - Testimonial patterns now honor `background_color` and `text_color` by rendering a section group with styled quote content.
 
 Playground MCP smoke confirmed:
 
-- `resources/list` includes `openmira://project-map/summary`, `openmira://memory/snapshot`, and completed screenshot-image delivery.
+- `resources/list` includes `openmira://project-map/summary` and `openmira://memory/snapshot`. Screenshot image resources were removed before the next release.
 - `resources/read` returns JSON text for project-map and memory resources.
-- `resources/read` returns image blob content for an existing completed screenshot job.
+- Superseded: the historical image resource read was removed before release; only project-map and memory remain as MCP resources.
 - Server-side pattern smoke confirmed feature-grid metadata and testimonial background/text colors render into block markup.
 
-Next benchmark: Pilot #13 should reuse the complex-design brief with no special instruction to request inline screenshots. Success means the agent reads screenshot resources or uses the bridge file path without causing base64 context bloat.
+Next benchmark: Pilot #13 should reuse the complex-design brief with no special instruction to request inline screenshots. This historical criterion was later superseded by the external capture-to-disk decision.
 
 ## Pilot #13 Result — 2026-05-16
 
