@@ -145,7 +145,9 @@ function openmira_render_screenshot_page(): void
         .openmira-runner-job-title { align-items: center; display: flex; gap: 8px; justify-content: space-between; }
         .openmira-runner-job-title code { max-width: 160px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
         .openmira-runner-job-meta { color: #646970; font-size: 12px; margin: 6px 0; word-break: break-all; }
-        .openmira-runner-thumb { border: 1px solid #dcdcde; display: block; height: auto; margin-top: 8px; max-width: 220px; }
+        .openmira-runner-thumb-link { display: inline-block; line-height: 0; margin-top: 8px; }
+        .openmira-runner-thumb-link:focus-visible { outline: 2px solid #2271b1; outline-offset: 2px; }
+        .openmira-runner-thumb { border: 1px solid #dcdcde; display: block; height: auto; max-width: 220px; }
         .openmira-runner-active { color: #646970; margin-bottom: 10px; }
         .openmira-runner-frame-wrap { border: 1px solid #dcdcde; max-height: 72vh; overflow: auto; padding: 8px; }
         #openmira-runner-frame { background: #fff; border: 0; display: block; }
