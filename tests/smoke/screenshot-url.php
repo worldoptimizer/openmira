@@ -1,7 +1,5 @@
 <?php
 
-declare(strict_types=1);
-
 $required = [
     'openmira_screenshot_url',
     'openmira_get_screenshot_job_metadata',
