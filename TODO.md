@@ -3,11 +3,11 @@
 ## Current Status
 
 - **Done:** Validation phase is complete. Eighteen external-client pilots validated or refuted each flagship positioning claim: theme/page work, `theme.json` patch grammar, plugin bug-fix, hook authoring, hook navigation, sandbox plugin creation/promotion, and vision-based design intake are validated; hook-callback patch grammar is not justified for v1.
-- **Now:** Productization Phase A is active. Priority shifts from exploratory feature pilots to protecting the validated surface with integration smoke coverage and safety hardening: broad-scan guardrails, audit-log diff expansion, per-ability capability filters, production hard-blocks, and runaway protection.
+- **Done:** Productization Phase A is complete. CI, broad-scan guardrails, audit-log diff expansion, per-ability capability filters, production hard-blocks, and `execute-php` runaway protection are shipped to `main`.
 - **Done:** `openmira/get-project-map` v1 is implemented and smoke-tested in Playground. It returns live site/theme/plugin/build-tool/writable-location/rules/file inventory context, prunes heavy directories during scans, defaults to a bounded payload, supports `fields` filtering, and exposes a summary Resource.
 - **Partial:** Project-map v1 does not yet include a persistent symbol graph or PageRank focus weighting. Hook/template navigation now exists as dedicated abilities rather than inside the map.
 - **Done:** Safe-edit v1 is implemented for file operations: content hashes, unified diffs, ring-buffer backups, restore ability, read tracking, audit storage, audit admin page, and default-on Plan/Act gating.
-- **Partial:** Stale-write protection is enforced for existing `write-file`, `edit-file`, and file delete operations. Diff bodies are returned by abilities but the admin audit view currently shows summaries, not full diff expansion.
+- **Done:** Stale-write protection is enforced for existing `write-file`, `edit-file`, and file delete operations. Diff bodies are returned by abilities, stored on audit events, and shown as expandable full diffs in the admin audit view.
 - **Done:** `openmira/scaffold-theme` v1 creates real block, classic, and child themes. Playground smoke test created and activated a block theme, then verified front-end rendering in the browser.
 - **Done:** `.openmirarules.json` v1 is implemented with read/write abilities, memory overlay for `rules.*` keys, project-map integration, and scaffold-theme consumption of `text_domain` / `preferred_theme_type`.
 - **Done:** `openmira/scaffold-block` v1 creates PHP-rendered dynamic blocks inside the active theme, writes `block.json` / render / styles / no-build editor script, wires `functions.php`, and was verified on a published page in Playground.
@@ -49,7 +49,7 @@
 - **Done:** Phase A safety controls now include `OPENMIRA_BLOCK_PRODUCTION` and `openmira_ability_capability`. Ability permission callbacks capture the ability name, production blocking returns a structured `WP_Error`, resources use a bool-only permission wrapper, and smoke coverage verifies default allow, per-ability deny, and production block paths.
 - **Done:** `execute-php` runaway protection is implemented. Calls are rate-limited per user/window, responses include guard state and memory delta, large per-call memory growth is flagged as a structured guard error, and Playground REST smoke confirms the guard metadata path.
 - **Done:** Audit log diff expansion landed. File-changing abilities now store bounded full diffs on audit events, scaffold operations aggregate per-file diffs, the Audit Log table renders expandable diffs, and wp-env smoke coverage verifies storage, rendering, and truncation.
-- **Now:** Productization Phase A safety floor is in place; next tranche should be release packaging and README/onboarding cleanup.
+- **Now:** Prepare the 1.3.0 release: build an installable ZIP with bundled Composer dependencies, update release-facing docs/copy, rename the GitHub repo to `worldoptimizer/openmira`, tag `1.3.0`, and attach the built ZIP to the GitHub Release.
 
 ## Positioning
 

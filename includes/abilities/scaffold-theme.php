@@ -530,7 +530,7 @@ function openmira_theme_style_header(
 ): string {
     $header = [
         'Theme Name: ' . $name,
-        'Theme URI: https://github.com/worldoptimizer/Openmira',
+        'Theme URI: https://github.com/worldoptimizer/openmira',
         'Author: Open Mira',
         'Author URI: https://github.com/worldoptimizer',
         'Description: ' . $description,

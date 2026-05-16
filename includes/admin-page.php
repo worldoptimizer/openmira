@@ -251,7 +251,7 @@ function openmira_render_settings_page()
         <p><?php printf(
             /* translators: %s: link to the Configuration page */
             esc_html__(
-                'These MCP tools are exposed to AI agents when AI Abilities are enabled on the %s page.',
+                'These public MCP tools are exposed to AI agents when AI Abilities are enabled on the %s page. Site owners can restrict individual abilities with the openmira_ability_capability filter.',
                 domain: 'open-mira',
             ),
             '<a href="'

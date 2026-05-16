@@ -72,13 +72,13 @@ function openmira_render_enable_toggle(): void
         <p class="description" style="margin:0 0 8px;">
             <strong style="color:#d63638;"><?php esc_html_e('Security note:', domain: 'open-mira'); ?></strong>
             <?php esc_html_e(
-                'When enabled, AI agents can execute PHP code and perform filesystem operations on this site. For development and staging environments only. Always keep backups.',
+                'When enabled, AI agents can execute PHP code and perform filesystem operations on this site. Open Mira adds backups, audit diffs, capability filters, and production guardrails, but it is still intended for development and staging copies only.',
                 domain: 'open-mira',
             ); ?>
         </p>
         <p class="description" style="margin:0 0 14px;">
             <?php esc_html_e(
-                'Use Open Mira with a capable AI model and set your client to ask for confirmation before every action. Read what the agent is about to do before approving.',
+                'Use a capable AI model, keep your client in confirmation mode for writes, and review what the agent is about to do before approving.',
                 domain: 'open-mira',
             ); ?>
         </p>
@@ -138,7 +138,7 @@ function openmira_render_production_warning(): void
         <p>
             <strong><?php esc_html_e('⚠️ This looks like a production site.', domain: 'open-mira'); ?></strong>
             <?php esc_html_e(
-                'Keeping the plugin installed here is fine, but AI Abilities should only be active on a staging or development copy. Make your changes there, then deploy the result the regular way. On production, keep AI Abilities off.',
+                'Keeping the plugin installed here is fine, but AI Abilities should only be active on a staging or development copy. For a hard stop on production-looking sites, define OPENMIRA_BLOCK_PRODUCTION in wp-config.php.',
                 domain: 'open-mira',
             ); ?>
         </p>

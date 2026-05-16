@@ -80,7 +80,7 @@ function openmira_render_audit_page(): void
     <div class="wrap">
         <h1><?php esc_html_e('Audit Log', domain: 'open-mira'); ?></h1>
         <p><?php esc_html_e(
-            'Review recent Open Mira file operations, diffs, backup IDs, and restore points.',
+            'Review recent Open Mira file operations, expandable diffs, backup IDs, restore points, and Plan/Act safety settings.',
             domain: 'open-mira',
         ); ?></p>
         <?php openmira_render_audit_notice($result); ?>
@@ -133,7 +133,7 @@ function openmira_render_safety_settings(): void
             ); ?>
         </label>
         <p class="description"><?php esc_html_e(
-            'When enabled, agents must call openmira/set-safety-mode with mode=act before writes, deletes, restores, PHP execution, and builder writes.',
+            'When enabled, agents must call openmira/set-safety-mode with mode=act before writes, deletes, restores, PHP execution, builder writes, and patch operations.',
             domain: 'open-mira',
         ); ?></p>
         <?php submit_button(text: __('Save Safety Settings', domain: 'open-mira')); ?>

@@ -1,6 +1,7 @@
 {
   "private": true,
   "scripts": {
+    "build:release": "bash scripts/build-release.sh",
     "smoke:playground": "bash scripts/smoke-playground.sh",
     "smoke:wp-env": "bash scripts/smoke-wp-env.sh",
     "smoke:wp-env:all": "bash scripts/smoke-wp-env.sh",
