@@ -10,6 +10,9 @@ on:
 permissions:
   contents: read
 
+env:
+  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
+
 concurrency:
   group: integration-${{ github.ref }}
   cancel-in-progress: true
@@ -36,6 +39,11 @@ jobs:
           php-version: '8.0'
           tools: composer
           coverage: none
+
+      - name: Install system dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y ripgrep
 
       - name: Install Node dependencies
         run: npm ci
