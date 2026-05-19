@@ -55,6 +55,10 @@ The current surface has been validated through repeatable local pilots and wp-en
 
 Open Mira intentionally does not claim a universal patch operation for every WordPress concept. The patch grammar is currently strongest where it earned its place: `theme.json` design-system updates.
 
+## Skills
+
+Open Mira ships starter Skills as MCP Prompts. Skills are Markdown documents at `includes/skills/<id>/SKILL.md`, registered as MCP Prompts that any client supporting `prompts/list` can discover. The three starter skills are listed in the Skills admin page; add your own by creating a new `<id>/SKILL.md` file.
+
 ## Safety Model
 
 Open Mira is designed for development and staging environments.
@@ -95,7 +99,7 @@ The wp-env smoke suite runs automatically in GitHub Actions on pushes and pull r
 To build an installable ZIP:
 
 ```bash
-scripts/build-release.sh 1.3.0
+scripts/build-release.sh 1.4.0
 ```
 
 ## Contributing
