@@ -7,7 +7,7 @@ if (!defined('ABSPATH')) {
 
 wp_set_current_user(1);
 
-$expected = ['build-a-block-theme', 'openmira-feedback', 'wp-aware-editing'];
+$expected = ['build-a-block-theme', 'feedback', 'wp-aware-editing'];
 
 foreach ($expected as $skill_id) {
     $path = WP_PLUGIN_DIR . '/openmira/includes/skills/' . $skill_id . '/SKILL.md';
@@ -43,13 +43,13 @@ foreach ($skills as $skill) {
     }
 }
 
-$feedback = openmira_get_skill_ability(['skill_id' => 'openmira-feedback']);
+$feedback = openmira_get_skill_ability(['skill_id' => 'feedback']);
 if (is_wp_error($feedback)) {
     fwrite(STDERR, $feedback->get_error_message() . PHP_EOL);
     exit(1);
 }
 if (strlen((string) ($feedback['body'] ?? '')) <= 500) {
-    fwrite(STDERR, "openmira-feedback body is unexpectedly short.\n");
+    fwrite(STDERR, "feedback body is unexpectedly short.\n");
     exit(1);
 }
 
@@ -70,7 +70,7 @@ $prompt_names = array_keys($prompts);
 sort($prompt_names);
 $expected_prompts = [
     'openmira.build-a-block-theme',
-    'openmira.openmira-feedback',
+    'openmira.feedback',
     'openmira.wp-aware-editing',
 ];
 foreach ($expected_prompts as $prompt_name) {
@@ -81,9 +81,9 @@ foreach ($expected_prompts as $prompt_name) {
     }
 }
 
-$prompt = $server->get_mcp_prompt('openmira.openmira-feedback');
+$prompt = $server->get_mcp_prompt('openmira.feedback');
 if ($prompt === null) {
-    fwrite(STDERR, "Could not fetch openmira.openmira-feedback prompt.\n");
+    fwrite(STDERR, "Could not fetch openmira.feedback prompt.\n");
     exit(1);
 }
 
