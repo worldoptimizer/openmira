@@ -13,16 +13,20 @@ if (!defined('ABSPATH')) {
     exit();
 }
 
-add_action('admin_menu', static function (): void {
-    add_submenu_page(
-        parent_slug: 'openmira-connect',
-        page_title: __('Skills', domain: 'open-mira'),
-        menu_title: __('Skills', domain: 'open-mira'),
-        capability: 'manage_options',
-        menu_slug: 'openmira-skills',
-        callback: 'openmira_render_skills_page',
-    );
-});
+add_action(
+    'admin_menu',
+    static function (): void {
+        add_submenu_page(
+            parent_slug: 'openmira-connect',
+            page_title: __('Skills', domain: 'open-mira'),
+            menu_title: __('Skills', domain: 'open-mira'),
+            capability: 'manage_options',
+            menu_slug: 'openmira-skills',
+            callback: 'openmira_render_skills_page',
+        );
+    },
+    priority: 11,
+);
 
 /**
  * Render the Skills admin page.
