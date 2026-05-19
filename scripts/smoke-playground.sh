@@ -78,6 +78,10 @@ ability_post "openmira/execute-php" "$PHP_SMOKE_PAYLOAD" "${TMPDIR:-/tmp}/openmi
 jq -e '.success == true and .return_value.ok == true and .runaway_guard.max_calls >= 1' \
   "${TMPDIR:-/tmp}/openmira-smoke-execute-php.json" >/dev/null
 
+ability_get "openmira/list-skills" "${TMPDIR:-/tmp}/openmira-smoke-skills.json"
+jq -e '.count == 3 and ([.skills[].id] | sort) == ["build-a-block-theme","openmira-feedback","wp-aware-editing"]' \
+  "${TMPDIR:-/tmp}/openmira-smoke-skills.json" >/dev/null
+
 jq -n \
   --arg theme "$(jq -r '.theme.slug' "${TMPDIR:-/tmp}/openmira-smoke-theme.json")" \
   --arg block "$(jq -r '.block.name' "${TMPDIR:-/tmp}/openmira-smoke-block.json")" \

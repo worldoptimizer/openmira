@@ -9,7 +9,7 @@ declare(strict_types=1);
  * Plugin Name: Open Mira
  * Plugin URI: https://github.com/worldoptimizer/openmira
  * Description: Open WordPress MCP server with filesystem, PHP execution, builder context, and persistent project memory. For development and staging environments only.
- * Version: 1.3.0
+ * Version: 1.4.0
  * Requires at least: 6.9
  * Requires PHP: 8.0
  * Author: Open Mira contributors
@@ -37,7 +37,7 @@ if (!defined('ABSPATH')) {
     exit();
 }
 
-define(constant_name: 'OPENMIRA_VERSION', value: '1.3.0');
+define(constant_name: 'OPENMIRA_VERSION', value: '1.4.0');
 define(constant_name: 'OPENMIRA_MAX_EXECUTION_TIME', value: 30);
 if (!defined('OPENMIRA_BLOCK_PRODUCTION')) {
     define(constant_name: 'OPENMIRA_BLOCK_PRODUCTION', value: false);
@@ -238,6 +238,7 @@ add_action('network_admin_notices', callback: 'openmira_render_mcp_dependency_no
 add_action('rest_api_init', callback: 'openmira_register_missing_mcp_endpoint', priority: 999);
 
 require_once __DIR__ . '/includes/helpers.php';
+require_once __DIR__ . '/includes/skills-loader.php';
 require_once __DIR__ . '/includes/file-safety.php';
 require_once __DIR__ . '/includes/diagnostics.php';
 require_once __DIR__ . '/includes/admin-page.php';
@@ -247,6 +248,7 @@ require_once __DIR__ . '/includes/memory-store.php';
 require_once __DIR__ . '/includes/project-rules.php';
 require_once __DIR__ . '/includes/memory-page.php';
 require_once __DIR__ . '/includes/audit-page.php';
+require_once __DIR__ . '/includes/skills-page.php';
 require_once __DIR__ . '/includes/upload-link.php';
 
 // Dependency check: Abilities API must be active.
@@ -667,6 +669,11 @@ if ($is_enabled) {
             'description' => __('Persistent project facts shared across AI sessions.', domain: 'open-mira'),
         ]);
 
+        wp_register_ability_category('skills', [
+            'label' => __('Skills', domain: 'open-mira'),
+            'description' => __('MCP Prompts for repeatable Open Mira workflows.', domain: 'open-mira'),
+        ]);
+
         if (!wp_has_ability_category('mcp-adapter')) {
             wp_register_ability_category('mcp-adapter', [
                 'label' => __('MCP Adapter', domain: 'open-mira'),
@@ -706,6 +713,7 @@ if ($is_enabled) {
         require_once $dir . 'front-page.php';
         require_once $dir . 'apply-patch.php';
         require_once $dir . 'screenshot-url.php';
+        require_once $dir . 'skill.php';
         require_once $dir . 'probe-url.php';
         require_once $dir . 'graduate-sandbox-plugin.php';
         require_once $dir . 'scaffold-theme.php';
