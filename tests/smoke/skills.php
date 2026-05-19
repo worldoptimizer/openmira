@@ -103,6 +103,20 @@ if (strlen((string) $result['messages'][0]['content']['text']) <= 500) {
     exit(1);
 }
 
+global $admin_page_hooks;
+if (!did_action('admin_menu')) {
+    do_action('admin_menu');
+}
+if (!isset($admin_page_hooks['openmira-connect'])) {
+    fwrite(STDERR, "Parent menu openmira-connect not registered\n");
+    exit(1);
+}
+$expected_hook = $admin_page_hooks['openmira-connect'] . '_page_openmira-skills';
+if (!has_action($expected_hook)) {
+    fwrite(STDERR, "Skills page callback not registered against expected hook: {$expected_hook}\n");
+    exit(1);
+}
+
 echo wp_json_encode([
     'status' => 'ok',
     'skills' => $ids,

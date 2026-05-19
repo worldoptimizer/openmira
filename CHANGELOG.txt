@@ -1,3 +1,6 @@
+v1.4.1 - 2026/05/19
+* Fix: Skills admin page now registers after the parent Open Mira menu, so clicking Open Mira → Skills renders the page correctly instead of dispatching to the wrong admin hook.
+
 v1.4.0 - 2026/05/19
 * New: Skills (MCP Prompts) infrastructure. Open Mira now ships structured workflow guidance as MCP Prompts in addition to its existing tools and resources. Three starter skills are included: feedback (sanitized bug report composer), wp-aware-editing (canonical edit workflow), and build-a-block-theme (end-to-end block theme creation). Site owners and plugins can register their own skills by adding a SKILL.md file under includes/skills/<id>/.
 
