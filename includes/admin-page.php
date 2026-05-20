@@ -6,6 +6,15 @@
 declare(strict_types=1);
 
 /**
+ * Enqueue shared admin list-page styling.
+ */
+function openmira_enqueue_admin_list_styles(): void
+{
+    $plugin_url = (string) OPENMIRA_PLUGIN_URL;
+    wp_enqueue_style('openmira-admin-list', $plugin_url . 'assets/openmira-admin-list.css', [], OPENMIRA_VERSION);
+}
+
+/**
  * Collects every public MCP tool ability registered on the site, grouped by source.
  *
  * The source label is resolved per-ability via the `openmira_ability_source_label`

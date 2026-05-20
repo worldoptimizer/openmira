@@ -1,0 +1,47 @@
+.openmira-admin-toolbar {
+    align-items: center;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    margin: 16px 0;
+}
+
+.openmira-admin-toolbar .button + .button {
+    margin-left: 0;
+}
+
+.openmira-admin-source-badge {
+    border-radius: 999px;
+    display: inline-block;
+    font-size: 11px;
+    font-weight: 600;
+    line-height: 1.6;
+    margin-right: 8px;
+    padding: 1px 8px;
+    text-transform: uppercase;
+}
+
+.openmira-admin-source-badge--built-in {
+    background: #e7f5ff;
+    color: #0a4b78;
+}
+
+.openmira-admin-source-badge--user {
+    background: #edfaef;
+    color: #1b5e20;
+}
+
+.openmira-admin-source-badge--override {
+    background: #fff8e5;
+    color: #7a4d00;
+}
+
+.openmira-admin-action-link {
+    display: inline-block;
+    margin-right: 10px;
+    vertical-align: baseline;
+}
+
+.openmira-admin-card-actions form {
+    display: inline;
+}

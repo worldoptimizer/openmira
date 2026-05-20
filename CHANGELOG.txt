@@ -1,3 +1,10 @@
+v1.5.0 - 2026/05/20
+* New: Skills are now editable from the Open Mira admin. Create custom Skills, override built-in ones, export to ZIP, and import single SKILL.md files or full ZIP archives. Custom Skills live under wp-content/openmira-skills/ and survive plugin updates.
+* New: Memory import (companion to the existing Memory export). Paste or upload a previously exported JSON file to restore or seed memory entries.
+* New: Markdown editor (CodeMirror with line wrap) for Memory values and Skill bodies in the admin.
+* Improvement: Unified visual styling between the Memory and Skills admin pages — consistent toolbar, action links, and source badges.
+* Minor fixes.
+
 v1.4.1 - 2026/05/19
 * Fix: Skills admin page now registers after the parent Open Mira menu, so clicking Open Mira → Skills renders the page correctly instead of dispatching to the wrong admin hook.
 

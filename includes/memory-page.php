@@ -10,6 +10,15 @@ if (!defined('ABSPATH')) {
     exit();
 }
 
+add_action('admin_enqueue_scripts', static function (string $hook_suffix): void {
+    if ($hook_suffix !== 'open-mira_page_openmira-memory') {
+        return;
+    }
+
+    openmira_enqueue_admin_list_styles();
+    openmira_enqueue_markdown_editor('openmira-memory-value');
+});
+
 /**
  * Handle memory admin actions.
  */
@@ -40,6 +49,7 @@ function openmira_handle_memory_admin_actions(): void
         'save' => openmira_handle_memory_save_action(),
         'delete' => openmira_handle_memory_delete_action(),
         'clear' => openmira_handle_memory_clear_action(),
+        'import' => openmira_handle_memory_import_action(),
         default => new WP_Error('invalid_memory_action', 'Invalid memory action.'),
     };
 
@@ -99,6 +109,106 @@ function openmira_handle_memory_clear_action(): string
     openmira_update_memory_entries([]);
 
     return 'cleared';
+}
+
+/**
+ * Import memory entries from an uploaded JSON export.
+ *
+ * @return string|WP_Error
+ */
+function openmira_handle_memory_import_action(?array $input = null, ?array $files = null): string|WP_Error
+{
+    if (!current_user_can('manage_options')) {
+        return new WP_Error('memory_import_permission_denied', 'You do not have permission to import memory entries.');
+    }
+
+    $input ??= $_POST;
+    $files ??= $_FILES;
+    $upload = is_array($files['memory_import_file'] ?? null) ? $files['memory_import_file'] : [];
+    $tmp_name = is_string($upload['tmp_name'] ?? null) ? $upload['tmp_name'] : '';
+    $raw = '';
+    if ($tmp_name !== '' && is_readable($tmp_name)) {
+        $file_contents = file_get_contents($tmp_name);
+        if (!is_string($file_contents)) {
+            return new WP_Error('memory_import_read_failed', 'Could not read the uploaded memory export.');
+        }
+        $raw = $file_contents;
+    }
+    if ($raw === '') {
+        $raw = openmira_memory_request_string($input['memory_import_json'] ?? null);
+    }
+    if (trim($raw) === '') {
+        return new WP_Error('memory_import_missing_file', 'Choose a memory JSON export or paste JSON to import.');
+    }
+
+    $decoded = json_decode($raw, associative: true);
+    if (!is_array($decoded)) {
+        return new WP_Error('memory_import_invalid_json', 'Memory import file must be valid JSON.');
+    }
+
+    $skip_existing = array_key_exists('skip_existing', $input) && $input['skip_existing'] !== '';
+    $result = openmira_import_memory_entries($decoded, $skip_existing);
+    if (is_wp_error($result)) {
+        return $result;
+    }
+
+    return sprintf('imported-%d-updated-%d-skipped-%d', $result['imported'], $result['updated'], $result['skipped']);
+}
+
+/**
+ * Import memory entries from a decoded export payload.
+ *
+ * @param array<array-key, mixed> $payload
+ * @return array{imported: int, updated: int, skipped: int}|WP_Error
+ */
+function openmira_import_memory_entries(array $payload, bool $skip_existing): array|WP_Error
+{
+    $incoming = is_array($payload['entries'] ?? null) ? $payload['entries'] : null;
+    if ($incoming === null) {
+        return new WP_Error('memory_import_invalid_shape', 'Memory import must contain an entries object.');
+    }
+
+    $entries = openmira_get_memory_entries();
+    $counts = ['imported' => 0, 'updated' => 0, 'skipped' => 0];
+    foreach ($incoming as $key => $entry) {
+        if (!is_string($key) || !is_array($entry)) {
+            continue;
+        }
+        $valid = openmira_validate_memory_key($key);
+        if (is_wp_error($valid)) {
+            return $valid;
+        }
+        if (!array_key_exists('value', $entry)) {
+            return new WP_Error('memory_import_missing_value', 'Each imported memory entry must contain a value.');
+        }
+        $value = (string) $entry['value'];
+        if (strlen($value) > 20_000) {
+            return new WP_Error('memory_value_too_large', 'Memory value must not exceed 20000 bytes.');
+        }
+        if ($skip_existing && array_key_exists($key, $entries)) {
+            $counts['skipped']++;
+            continue;
+        }
+
+        $exists = array_key_exists($key, $entries);
+        $entries[$key] = [
+            'value' => $value,
+            'updated_at' => is_string($entry['updated_at'] ?? null)
+                ? sanitize_text_field((string) $entry['updated_at'])
+                : current_time(type: 'mysql', gmt: true),
+            'updated_by' => array_key_exists('updated_by', $entry) ? (int) $entry['updated_by'] : get_current_user_id(),
+        ];
+        if ($exists) {
+            $counts['updated']++;
+            continue;
+        }
+        $counts['imported']++;
+    }
+
+    ksort($entries);
+    openmira_update_memory_entries($entries);
+
+    return $counts;
 }
 
 /**
@@ -182,12 +292,17 @@ function openmira_render_memory_notice(string $result, string $error): void
         return;
     }
 
-    $message = match ($result) {
-        'created' => __('Memory entry created.', domain: 'open-mira'),
-        'updated' => __('Memory entry updated.', domain: 'open-mira'),
-        'deleted' => __('Memory entry deleted.', domain: 'open-mira'),
-        'not_found' => __('Memory entry was already absent.', domain: 'open-mira'),
-        'cleared' => __('All memory entries cleared.', domain: 'open-mira'),
+    $message = match (true) {
+        $result === 'created' => __('Memory entry created.', domain: 'open-mira'),
+        $result === 'updated' => __('Memory entry updated.', domain: 'open-mira'),
+        $result === 'deleted' => __('Memory entry deleted.', domain: 'open-mira'),
+        $result === 'not_found' => __('Memory entry was already absent.', domain: 'open-mira'),
+        $result === 'cleared' => __('All memory entries cleared.', domain: 'open-mira'),
+        str_starts_with($result, 'imported-') => sprintf(
+            /* translators: %s is an import result summary. */
+            __('Memory import complete: %s.', domain: 'open-mira'),
+            $result,
+        ),
         default => '',
     };
     if ($message === '') {
@@ -273,12 +388,17 @@ function openmira_render_memory_table(array $entries): void
     ?>
     <hr>
     <h2><?php esc_html_e('Stored Entries', domain: 'open-mira'); ?></h2>
-    <p>
+    <div class="openmira-admin-toolbar">
         <a class="button" href="<?php echo esc_url($export_url); ?>"><?php esc_html_e(
             'Export JSON',
             domain: 'open-mira',
         ); ?></a>
-    </p>
+        <button type="button" class="button" onclick="document.getElementById('openmira-memory-import-panel').toggleAttribute('hidden');"><?php esc_html_e(
+            'Import JSON',
+            domain: 'open-mira',
+        ); ?></button>
+    </div>
+    <?php openmira_render_memory_import_form(); ?>
     <?php openmira_render_memory_clear_form($entries); ?>
     <table class="wp-list-table widefat fixed striped">
         <thead>
@@ -301,6 +421,43 @@ function openmira_render_memory_table(array $entries): void
     </table>
     <?php
 }
+
+/**
+ * Render the memory import form.
+ */
+function openmira_render_memory_import_form(): void
+{ ?>
+    <div id="openmira-memory-import-panel" class="card" style="max-width: 760px; margin: 0 0 16px;" hidden>
+        <h2><?php esc_html_e('Import Memory', domain: 'open-mira'); ?></h2>
+        <form method="post" enctype="multipart/form-data" action="<?php echo
+            esc_url(admin_url('admin.php?page=openmira-memory'))
+        ; ?>">
+            <?php wp_nonce_field(action: 'openmira_memory_action', name: '_openmira_memory_nonce'); ?>
+            <input type="hidden" name="openmira_memory_action" value="import">
+            <p>
+                <label for="openmira-memory-import-file"><strong><?php esc_html_e(
+                    'Memory JSON export',
+                    domain: 'open-mira',
+                ); ?></strong></label><br>
+                <input id="openmira-memory-import-file" type="file" name="memory_import_file" accept="application/json,.json">
+            </p>
+            <p>
+                <label for="openmira-memory-import-json"><strong><?php esc_html_e(
+                    'Or paste JSON',
+                    domain: 'open-mira',
+                ); ?></strong></label><br>
+                <textarea id="openmira-memory-import-json" class="large-text code" rows="6" name="memory_import_json"></textarea>
+            </p>
+            <p>
+                <label><input type="checkbox" name="skip_existing" value="1"> <?php esc_html_e(
+                    'Skip existing memory keys',
+                    domain: 'open-mira',
+                ); ?></label>
+            </p>
+            <?php submit_button(__('Import Memory', domain: 'open-mira'), 'secondary', 'submit', false); ?>
+        </form>
+    </div>
+    <?php }
 
 /**
  * Render the clear-all form.
@@ -353,10 +510,9 @@ function openmira_render_memory_row(string $key, array $entry): void
         <td><?php echo esc_html((string) ($entry['updated_at'] ?? '')); ?></td>
         <td><?php echo esc_html($updated_by); ?></td>
         <td>
-            <a class="button button-small" href="<?php echo esc_url($edit_url); ?>"><?php esc_html_e(
-                'Edit',
-                domain: 'open-mira',
-            ); ?></a>
+            <a class="button button-small openmira-admin-action-link" href="<?php echo
+                esc_url($edit_url)
+            ; ?>"><?php esc_html_e('Edit', domain: 'open-mira'); ?></a>
             <?php openmira_render_memory_delete_form($key); ?>
         </td>
     </tr>
@@ -374,7 +530,7 @@ function openmira_render_memory_delete_form(string $key): void
         <?php wp_nonce_field(action: 'openmira_memory_action', name: '_openmira_memory_nonce'); ?>
         <input type="hidden" name="openmira_memory_action" value="delete">
         <input type="hidden" name="memory_key" value="<?php echo esc_attr($key); ?>">
-        <button type="submit" class="button button-small" style="color:#b32d2e;border-color:#b32d2e;" onclick="return confirm('<?php echo
+        <button type="submit" class="button button-small openmira-admin-action-link" style="color:#b32d2e;border-color:#b32d2e;" onclick="return confirm('<?php echo
             esc_js(__('Delete this memory entry?', domain: 'open-mira'))
         ; ?>');">
             <?php esc_html_e('Delete', domain: 'open-mira'); ?>
