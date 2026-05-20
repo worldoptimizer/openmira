@@ -341,7 +341,7 @@ function openmira_render_memory_editor(string $editing_key, ?array $editing_entr
                         id="openmira-memory-key"
                         class="regular-text"
                         name="memory_key"
-                        pattern="^[a-z0-9][a-z0-9._-]{0,79}$"
+                        pattern="^[a-z0-9][\-a-z0-9._]{0,79}$"
                         required
                         value="<?php echo esc_attr($editing_key); ?>"
                     >
@@ -357,7 +357,7 @@ function openmira_render_memory_editor(string $editing_key, ?array $editing_entr
                     domain: 'open-mira',
                 ); ?></label></th>
                 <td>
-                    <textarea id="openmira-memory-value" class="large-text code" rows="8" name="memory_value" required><?php echo
+                    <textarea id="openmira-memory-value" class="large-text code" rows="8" name="memory_value"><?php echo
                         esc_textarea($value)
                     ; ?></textarea>
                     <p class="description"><?php esc_html_e(
@@ -367,9 +367,19 @@ function openmira_render_memory_editor(string $editing_key, ?array $editing_entr
                 </td>
             </tr>
         </table>
-        <?php submit_button(
-            $editing_key !== '' ? __('Update Memory', domain: 'open-mira') : __('Add Memory', domain: 'open-mira'),
-        ); ?>
+        <p class="openmira-admin-form-actions">
+            <?php submit_button(
+                text: $editing_key !== ''
+                    ? __('Update Memory', domain: 'open-mira')
+                    : __('Add Memory', domain: 'open-mira'),
+                type: 'primary',
+                name: 'submit',
+                wrap: false,
+            ); ?>
+            <a class="button button-secondary" href="<?php echo
+                esc_url(admin_url('admin.php?page=openmira-memory'))
+            ; ?>"><?php esc_html_e('Cancel', domain: 'open-mira'); ?></a>
+        </p>
     </form>
     <?php
 }

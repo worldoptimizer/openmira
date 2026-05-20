@@ -84,6 +84,17 @@ function openmira_render_skills_page(): void
             echo '</div>';
             return;
         }
+        if ($action === 'view') {
+            $skill = $skills[$skill_id] ?? null;
+            if (is_array($skill)) {
+                openmira_render_skill_view($skill);
+            } else {
+                openmira_render_skill_error_notice(__('Skill not found.', domain: 'open-mira'));
+                openmira_render_skills_list($skills);
+            }
+            echo '</div>';
+            return;
+        }
 
         openmira_render_skills_list($skills);
         ?>
@@ -149,6 +160,7 @@ function openmira_render_skills_list(array $skills): void
     $user_skills = array_filter($skills, static fn(array $skill): bool => $skill['source'] === 'user');
     $built_in_skills = array_filter($skills, static fn(array $skill): bool => $skill['source'] === 'built-in');
     ?>
+    <h2><?php esc_html_e('Custom Skills', domain: 'open-mira'); ?></h2>
     <div class="openmira-admin-toolbar">
         <a class="button button-primary" href="<?php echo
             esc_url(add_query_arg([
@@ -170,8 +182,9 @@ function openmira_render_skills_list(array $skills): void
         <?php endif; ?>
     </div>
     <?php openmira_render_skill_import_panel(); ?>
-    <?php openmira_render_skill_group(__('User Skills', domain: 'open-mira'), $user_skills, true); ?>
-    <?php openmira_render_skill_group(__('Built-in Skills', domain: 'open-mira'), $built_in_skills, false); ?>
+    <?php openmira_render_skill_table($user_skills, true); ?>
+    <h2><?php esc_html_e('Built-in Skills', domain: 'open-mira'); ?></h2>
+    <?php openmira_render_skill_table($built_in_skills, false); ?>
     <?php
 }
 
@@ -180,7 +193,7 @@ function openmira_render_skills_list(array $skills): void
  */
 function openmira_render_skill_import_panel(): void
 { ?>
-    <div id="openmira-skill-import-panel" class="card" style="max-width: 760px; margin: 0 0 16px;" hidden>
+    <div id="openmira-skill-import-panel" class="card openmira-admin-import-panel" hidden>
         <h2><?php esc_html_e('Import Skills', domain: 'open-mira'); ?></h2>
         <form method="post" enctype="multipart/form-data" action="<?php echo
             esc_url(admin_url('admin.php?page=openmira-skills'))
@@ -199,7 +212,7 @@ function openmira_render_skill_import_panel(): void
                     'Skill ID for single SKILL.md imports',
                     domain: 'open-mira',
                 ); ?></strong></label><br>
-                <input id="openmira-single-skill-id" class="regular-text" name="single_skill_id" pattern="^[a-z0-9][a-z0-9._-]{0,79}$">
+                <input id="openmira-single-skill-id" class="regular-text" name="single_skill_id" pattern="^[a-z0-9][\-a-z0-9._]{0,79}$">
             </p>
             <p>
                 <label><input type="checkbox" name="skip_existing" value="1"> <?php esc_html_e(
@@ -207,70 +220,104 @@ function openmira_render_skill_import_panel(): void
                     domain: 'open-mira',
                 ); ?></label>
             </p>
-            <?php submit_button(__('Import Skills', domain: 'open-mira'), 'secondary', 'submit', false); ?>
+            <?php submit_button(
+                text: __('Import Skills', domain: 'open-mira'),
+                type: 'secondary',
+                name: 'submit',
+                wrap: false,
+            ); ?>
         </form>
     </div>
     <?php }
 
 /**
- * Render a skill group.
+ * Render a skills table.
  *
  * @param array<string, array<string, mixed>> $skills
  */
-function openmira_render_skill_group(string $title, array $skills, bool $is_user_group): void
+function openmira_render_skill_table(array $skills, bool $is_user_group): void
 { ?>
-    <h2><?php echo esc_html($title); ?></h2>
-    <?php if ($skills === []): ?>
-        <p><?php echo
-            esc_html(
-                $is_user_group
-                    ? __('No user skills yet.', domain: 'open-mira')
-                    : __('No built-in skills found.', domain: 'open-mira'),
-            )
-        ; ?></p>
-    <?php else: ?>
-        <?php foreach ($skills as $skill): ?>
-            <?php openmira_render_skill_card($skill); ?>
-        <?php endforeach; ?>
-    <?php endif; ?>
+    <table class="wp-list-table widefat fixed striped openmira-admin-skills-table">
+        <thead>
+            <tr>
+                <th scope="col"><?php esc_html_e('Title', domain: 'open-mira'); ?></th>
+                <th scope="col"><?php esc_html_e('ID', domain: 'open-mira'); ?></th>
+                <th scope="col"><?php esc_html_e('Source', domain: 'open-mira'); ?></th>
+                <th scope="col"><?php esc_html_e('Prompt', domain: 'open-mira'); ?></th>
+                <th scope="col"><?php esc_html_e('Actions', domain: 'open-mira'); ?></th>
+            </tr>
+        </thead>
+        <tbody>
+            <?php if ($skills === []): ?>
+                <tr>
+                    <td colspan="5"><?php echo
+                        esc_html(
+                            $is_user_group
+                                ? __('No custom skills yet.', domain: 'open-mira')
+                                : __('No built-in skills found.', domain: 'open-mira'),
+                        )
+                    ; ?></td>
+                </tr>
+            <?php else: ?>
+                <?php foreach ($skills as $skill): ?>
+                    <?php openmira_render_skill_row($skill); ?>
+                <?php endforeach; ?>
+            <?php endif; ?>
+        </tbody>
+    </table>
     <?php }
 
 /**
- * Render one skill card.
+ * Render one skill table row.
  *
  * @param array<string, mixed> $skill
  */
-function openmira_render_skill_card(array $skill): void
+function openmira_render_skill_row(array $skill): void
 {
     $skill_id = (string) $skill['id'];
     $source = (string) $skill['source'];
     $overrides = ($skill['overrides_built_in'] ?? false) === true;
+    $view_url = add_query_arg([
+        'page' => 'openmira-skills',
+        'skill_action' => 'view',
+        'skill_id' => $skill_id,
+    ], admin_url('admin.php'));
+    $edit_url = add_query_arg([
+        'page' => 'openmira-skills',
+        'skill_action' => 'edit',
+        'skill_id' => $skill_id,
+    ], admin_url('admin.php'));
     ?>
-    <section class="card" style="max-width: 960px; margin-top: 16px;">
-        <h3 style="margin-top:0;"><?php echo esc_html((string) $skill['title']); ?></h3>
-        <p>
+    <tr>
+        <td>
+            <strong>
+                <a href="<?php echo esc_url($source === 'user' ? $edit_url : $view_url); ?>">
+                    <?php echo esc_html((string) $skill['title']); ?>
+                </a>
+            </strong>
+            <p class="description"><?php echo esc_html((string) $skill['description']); ?></p>
+        </td>
+        <td><code><?php echo esc_html($skill_id); ?></code></td>
+        <td>
             <span class="openmira-admin-source-badge openmira-admin-source-badge--<?php echo
                 esc_attr($overrides ? 'override' : $source)
             ; ?>">
                 <?php echo esc_html(openmira_skill_source_label($source, $overrides)); ?>
             </span>
-            <strong><?php esc_html_e('ID:', domain: 'open-mira'); ?></strong> <code><?php echo
-                esc_html($skill_id)
-            ; ?></code>
-            <strong><?php esc_html_e('Prompt:', domain: 'open-mira'); ?></strong> <code><?php echo
-                esc_html((string) $skill['prompt_name'])
-            ; ?></code>
-        </p>
-        <p><?php echo esc_html((string) $skill['description']); ?></p>
-        <p class="openmira-admin-card-actions">
+        </td>
+        <td><code><?php echo esc_html((string) $skill['prompt_name']); ?></code></td>
+        <td class="openmira-admin-table-actions">
             <?php if ($source === 'user'): ?>
-                <a class="openmira-admin-action-link" href="<?php echo
-                    esc_url(add_query_arg([
-                        'page' => 'openmira-skills',
-                        'skill_action' => 'edit',
-                        'skill_id' => $skill_id,
-                    ], admin_url('admin.php')))
-                ; ?>"><?php esc_html_e('Edit', domain: 'open-mira'); ?></a>
+                <a class="openmira-admin-action-link" href="<?php echo esc_url($edit_url); ?>"><?php esc_html_e(
+                    'Edit',
+                    domain: 'open-mira',
+                ); ?></a>
+                <span class="openmira-admin-action-separator">|</span>
+                <a class="openmira-admin-action-link" href="<?php echo esc_url($view_url); ?>"><?php esc_html_e(
+                    'View',
+                    domain: 'open-mira',
+                ); ?></a>
+                <span class="openmira-admin-action-separator">|</span>
                 <a class="openmira-admin-action-link" href="<?php echo
                     esc_url(wp_nonce_url(
                         admin_url(
@@ -280,23 +327,51 @@ function openmira_render_skill_card(array $skill): void
                         action: 'openmira_skill_export',
                     ))
                 ; ?>"><?php esc_html_e('Export', domain: 'open-mira'); ?></a>
+                <span class="openmira-admin-action-separator">|</span>
                 <?php openmira_render_skill_delete_form($skill_id); ?>
-            <?php endif; ?>
-            <?php if ($source === 'built-in'): ?>
+            <?php else: ?>
                 <?php openmira_render_skill_customize_form($skill_id); ?>
+                <span class="openmira-admin-action-separator">|</span>
+                <a class="openmira-admin-action-link" href="<?php echo esc_url($view_url); ?>"><?php esc_html_e(
+                    'View',
+                    domain: 'open-mira',
+                ); ?></a>
             <?php endif; ?>
-            <button type="button" class="button button-small" onclick="this.closest('section').querySelector('details').open = !this.closest('section').querySelector('details').open;"><?php esc_html_e(
-                'Preview',
-                domain: 'open-mira',
-            ); ?></button>
-        </p>
-        <details>
-            <summary><?php esc_html_e('Preview SKILL.md', domain: 'open-mira'); ?></summary>
-            <pre style="white-space: pre-wrap; overflow: auto; max-height: 520px; padding: 12px; background: #f6f7f7; border: 1px solid #dcdcde;"><?php echo
-                esc_html((string) $skill['body'])
-            ; ?></pre>
-        </details>
-    </section>
+        </td>
+    </tr>
+    <?php
+}
+
+/**
+ * Render a view-only skill preview.
+ *
+ * @param array<string, mixed> $skill
+ */
+function openmira_render_skill_view(array $skill): void
+{
+    $source = (string) $skill['source'];
+    $overrides = ($skill['overrides_built_in'] ?? false) === true;
+    ?>
+    <h2><?php echo esc_html((string) $skill['title']); ?></h2>
+    <p>
+        <span class="openmira-admin-source-badge openmira-admin-source-badge--<?php echo
+            esc_attr($overrides ? 'override' : $source)
+        ; ?>">
+            <?php echo esc_html(openmira_skill_source_label($source, $overrides)); ?>
+        </span>
+        <strong><?php esc_html_e('ID:', domain: 'open-mira'); ?></strong>
+        <code><?php echo esc_html((string) $skill['id']); ?></code>
+        <strong><?php esc_html_e('Prompt:', domain: 'open-mira'); ?></strong>
+        <code><?php echo esc_html((string) $skill['prompt_name']); ?></code>
+    </p>
+    <p><?php echo esc_html((string) $skill['description']); ?></p>
+    <pre class="openmira-admin-skill-preview"><?php echo esc_html((string) $skill['body']); ?></pre>
+    <p>
+        <a class="button" href="<?php echo esc_url(admin_url('admin.php?page=openmira-skills')); ?>"><?php esc_html_e(
+            'Back to Skills',
+            domain: 'open-mira',
+        ); ?></a>
+    </p>
     <?php
 }
 
@@ -319,62 +394,83 @@ function openmira_render_skill_edit_form(?array $skill): void
     <form method="post" action="<?php echo esc_url(admin_url('admin.php?page=openmira-skills')); ?>">
         <?php wp_nonce_field(action: 'openmira_skill_action', name: '_openmira_skill_nonce'); ?>
         <input type="hidden" name="openmira_skill_action" value="save">
-        <table class="form-table" role="presentation">
-            <tr>
-                <th scope="row"><label for="openmira-skill-id"><?php esc_html_e(
-                    'Skill ID',
-                    domain: 'open-mira',
-                ); ?></label></th>
-                <td>
-                    <input id="openmira-skill-id" class="regular-text" name="skill_id" pattern="^[a-z0-9][a-z0-9._-]{0,79}$" required value="<?php echo
-                        esc_attr($skill_id)
-                    ; ?>" <?php disabled($editing); ?>>
-                    <?php if ($editing): ?>
-                        <input type="hidden" name="skill_id" value="<?php echo esc_attr($skill_id); ?>">
-                    <?php endif; ?>
-                    <p class="description"><?php esc_html_e(
-                        'Use lowercase letters, numbers, dots, underscores, and hyphens. Maximum 80 characters.',
+        <fieldset class="openmira-admin-fieldset">
+            <legend><?php esc_html_e('Identity', domain: 'open-mira'); ?></legend>
+            <table class="form-table" role="presentation">
+                <tr>
+                    <th scope="row"><label for="openmira-skill-id"><?php esc_html_e(
+                        'Skill ID',
                         domain: 'open-mira',
-                    ); ?></p>
-                </td>
-            </tr>
-            <tr>
-                <th scope="row"><label for="openmira-skill-title"><?php esc_html_e(
-                    'Title',
-                    domain: 'open-mira',
-                ); ?></label></th>
-                <td><input id="openmira-skill-title" class="large-text" name="skill_title" required value="<?php echo
-                    esc_attr($title)
-                ; ?>"></td>
-            </tr>
-            <tr>
-                <th scope="row"><label for="openmira-skill-description"><?php esc_html_e(
-                    'Description',
-                    domain: 'open-mira',
-                ); ?></label></th>
-                <td><input id="openmira-skill-description" class="large-text" name="skill_description" required value="<?php echo
-                    esc_attr($description)
-                ; ?>"></td>
-            </tr>
-            <tr>
-                <th scope="row"><label for="openmira-skill-body"><?php esc_html_e(
-                    'Body',
-                    domain: 'open-mira',
-                ); ?></label></th>
-                <td>
-                    <textarea id="openmira-skill-body" class="large-text code" rows="18" name="skill_body" required><?php echo
-                        esc_textarea($body)
-                    ; ?></textarea>
-                    <p class="description"><?php esc_html_e(
-                        'Markdown prompt body. Maximum 64 KB.',
+                    ); ?></label></th>
+                    <td>
+                        <input id="openmira-skill-id" class="regular-text" name="skill_id" pattern="^[a-z0-9][\-a-z0-9._]{0,79}$" required value="<?php echo
+                            esc_attr($skill_id)
+                        ; ?>" <?php disabled($editing); ?>>
+                        <?php if ($editing): ?>
+                            <input type="hidden" name="skill_id" value="<?php echo esc_attr($skill_id); ?>">
+                        <?php endif; ?>
+                        <p class="description"><?php esc_html_e(
+                            'Use lowercase letters, numbers, dots, underscores, and hyphens. Maximum 80 characters.',
+                            domain: 'open-mira',
+                        ); ?></p>
+                    </td>
+                </tr>
+                <tr>
+                    <th scope="row"><label for="openmira-skill-title"><?php esc_html_e(
+                        'Title',
                         domain: 'open-mira',
-                    ); ?></p>
-                </td>
-            </tr>
-        </table>
-        <?php submit_button(
-            $editing ? __('Update Skill', domain: 'open-mira') : __('Create Skill', domain: 'open-mira'),
-        ); ?>
+                    ); ?></label></th>
+                    <td><input id="openmira-skill-title" class="large-text" name="skill_title" required value="<?php echo
+                        esc_attr($title)
+                    ; ?>"></td>
+                </tr>
+            </table>
+        </fieldset>
+        <fieldset class="openmira-admin-fieldset">
+            <legend><?php esc_html_e('Metadata', domain: 'open-mira'); ?></legend>
+            <table class="form-table" role="presentation">
+                <tr>
+                    <th scope="row"><label for="openmira-skill-description"><?php esc_html_e(
+                        'Description',
+                        domain: 'open-mira',
+                    ); ?></label></th>
+                    <td><input id="openmira-skill-description" class="large-text" name="skill_description" required value="<?php echo
+                        esc_attr($description)
+                    ; ?>"></td>
+                </tr>
+            </table>
+        </fieldset>
+        <fieldset class="openmira-admin-fieldset">
+            <legend><?php esc_html_e('Content', domain: 'open-mira'); ?></legend>
+            <table class="form-table" role="presentation">
+                <tr>
+                    <th scope="row"><label for="openmira-skill-body"><?php esc_html_e(
+                        'Body',
+                        domain: 'open-mira',
+                    ); ?></label></th>
+                    <td>
+                        <textarea id="openmira-skill-body" class="large-text code" rows="18" name="skill_body"><?php echo
+                            esc_textarea($body)
+                        ; ?></textarea>
+                        <p class="description"><?php esc_html_e(
+                            'Markdown prompt body. Maximum 64 KB.',
+                            domain: 'open-mira',
+                        ); ?></p>
+                    </td>
+                </tr>
+            </table>
+        </fieldset>
+        <p class="openmira-admin-form-actions">
+            <?php submit_button(
+                text: $editing ? __('Update Skill', domain: 'open-mira') : __('Create Skill', domain: 'open-mira'),
+                type: 'primary',
+                name: 'submit',
+                wrap: false,
+            ); ?>
+            <a class="button button-secondary" href="<?php echo
+                esc_url(admin_url('admin.php?page=openmira-skills'))
+            ; ?>"><?php esc_html_e('Cancel', domain: 'open-mira'); ?></a>
+        </p>
     </form>
     <?php
 }
@@ -384,9 +480,9 @@ function openmira_render_skill_edit_form(?array $skill): void
  */
 function openmira_render_skill_delete_form(string $skill_id): void
 { ?>
-    <form method="post" action="<?php echo
+    <form class="openmira-admin-inline-form" method="post" action="<?php echo
         esc_url(admin_url('admin.php?page=openmira-skills'))
-    ; ?>" style="display:inline;">
+    ; ?>">
         <?php wp_nonce_field(action: 'openmira_skill_action', name: '_openmira_skill_nonce'); ?>
         <input type="hidden" name="openmira_skill_action" value="delete">
         <input type="hidden" name="skill_id" value="<?php echo esc_attr($skill_id); ?>">
@@ -401,13 +497,13 @@ function openmira_render_skill_delete_form(string $skill_id): void
  */
 function openmira_render_skill_customize_form(string $skill_id): void
 { ?>
-    <form method="post" action="<?php echo
+    <form class="openmira-admin-inline-form" method="post" action="<?php echo
         esc_url(admin_url('admin.php?page=openmira-skills'))
-    ; ?>" style="display:inline;">
+    ; ?>">
         <?php wp_nonce_field(action: 'openmira_skill_action', name: '_openmira_skill_nonce'); ?>
         <input type="hidden" name="openmira_skill_action" value="customize">
         <input type="hidden" name="skill_id" value="<?php echo esc_attr($skill_id); ?>">
-        <button type="submit" class="button button-small"><?php esc_html_e(
+        <button type="submit" class="button-link openmira-admin-action-link"><?php esc_html_e(
             'Customize',
             domain: 'open-mira',
         ); ?></button>

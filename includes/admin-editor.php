@@ -30,7 +30,17 @@ function openmira_enqueue_markdown_editor(string $textarea_id): void
         return;
     }
     wp_add_inline_script('code-editor', sprintf(
-        'jQuery(function($){ if (window.wp && wp.codeEditor) { wp.codeEditor.initialize($(%s), %s); } });',
+        'jQuery(function($){
+            if (!window.wp || !wp.codeEditor) { return; }
+            var $textarea = $(%s);
+            if (!$textarea.length) { return; }
+            var instance = wp.codeEditor.initialize($textarea, %s);
+            $textarea.closest("form").on("submit", function () {
+                if (instance && instance.codemirror) {
+                    instance.codemirror.save();
+                }
+            });
+        });',
         wp_json_encode('#' . $textarea_id),
         wp_json_encode($settings),
     ));

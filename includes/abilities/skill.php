@@ -57,7 +57,7 @@ wp_register_ability('openmira/get-skill', [
             'skill_id' => [
                 'type' => 'string',
                 'description' => 'Skill ID, e.g. wp-aware-editing.',
-                'pattern' => '^[a-z0-9][a-z0-9._-]{0,79}$',
+                'pattern' => '^[a-z0-9][\-a-z0-9._]{0,79}$',
             ],
         ],
         'required' => ['skill_id'],

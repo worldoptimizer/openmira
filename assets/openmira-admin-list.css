@@ -10,6 +10,19 @@
     margin-left: 0;
 }
 
+.openmira-admin-import-panel {
+    margin: 0 0 16px;
+    max-width: 760px;
+}
+
+.openmira-admin-skills-table {
+    margin-bottom: 24px;
+}
+
+.openmira-admin-skills-table .description {
+    margin: 4px 0 0;
+}
+
 .openmira-admin-source-badge {
     border-radius: 999px;
     display: inline-block;
@@ -38,10 +51,41 @@
 
 .openmira-admin-action-link {
     display: inline-block;
-    margin-right: 10px;
     vertical-align: baseline;
 }
 
-.openmira-admin-card-actions form {
+.openmira-admin-action-separator {
+    color: #8c8f94;
+    margin: 0 6px;
+}
+
+.openmira-admin-inline-form {
     display: inline;
+}
+
+.openmira-admin-fieldset {
+    border: 1px solid #dcdcde;
+    margin: 16px 0;
+    max-width: 960px;
+    padding: 0 16px 12px;
+}
+
+.openmira-admin-fieldset legend {
+    font-weight: 600;
+    padding: 0 6px;
+}
+
+.openmira-admin-form-actions {
+    align-items: center;
+    display: flex;
+    gap: 8px;
+}
+
+.openmira-admin-skill-preview {
+    background: #f6f7f7;
+    border: 1px solid #dcdcde;
+    max-height: 620px;
+    overflow: auto;
+    padding: 12px;
+    white-space: pre-wrap;
 }
