@@ -53,7 +53,7 @@ function openmira_ensure_user_skills_dir(): bool|WP_Error
  */
 function openmira_validate_skill_id(string $skill_id): bool|WP_Error
 {
-    if (preg_match('/^[a-z0-9][a-z0-9._-]{0,79}$/', $skill_id) !== 1) {
+    if (preg_match('/^[a-z0-9][\-a-z0-9._]{0,79}$/', $skill_id) !== 1) {
         return new WP_Error(
             'openmira_invalid_skill_id',
             'Skill ID must be 1-80 characters and contain only lowercase letters, numbers, dots, underscores, and hyphens.',

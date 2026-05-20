@@ -44,8 +44,14 @@ function openmira_handle_skill_admin_actions(): void
     $redirect_args = ['page' => 'openmira-skills'];
     if (is_wp_error($result)) {
         $redirect_args['openmira_skill_error'] = rawurlencode($result->get_error_message());
-    } else {
-        $redirect_args['openmira_skill_result'] = $result['status'];
+        wp_safe_redirect(add_query_arg($redirect_args, admin_url('admin.php')));
+        exit();
+    }
+
+    $redirect_args['openmira_skill_result'] = $result['status'];
+    if ($result['status'] === 'customized' && is_string($result['id'] ?? null)) {
+        $redirect_args['skill_action'] = 'edit';
+        $redirect_args['skill_id'] = $result['id'];
     }
 
     wp_safe_redirect(add_query_arg($redirect_args, admin_url('admin.php')));
@@ -426,7 +432,7 @@ function openmira_import_skills_zip(string $zip_path, bool $skip_existing): arra
     for ($index = 0; $index < $zip->numFiles; $index++) {
         $name = $zip->getNameIndex($index);
         $match = [];
-        if (!is_string($name) || preg_match('#^([a-z0-9][a-z0-9._-]{0,79})/SKILL\.md$#', $name, $match) !== 1) {
+        if (!is_string($name) || preg_match('#^([a-z0-9][\-a-z0-9._]{0,79})/SKILL\.md$#', $name, $match) !== 1) {
             continue;
         }
 

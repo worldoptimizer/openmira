@@ -221,6 +221,27 @@ if (!has_action($expected_hook)) {
     exit(1);
 }
 
+$original_get = $_GET;
+$_GET = ['page' => 'openmira-skills', 'skill_action' => 'add'];
+ob_start();
+openmira_render_skills_page();
+$add_page_html = ob_get_clean();
+$_GET = $original_get;
+if (!is_string($add_page_html) || !str_contains($add_page_html, 'pattern="^[a-z0-9][\-a-z0-9._]{0,79}$"')) {
+    fwrite(STDERR, "Skills add form did not render the fixed browser-safe pattern attribute.\n");
+    exit(1);
+}
+
+$_GET = ['page' => 'openmira-skills', 'skill_action' => 'view', 'skill_id' => 'feedback'];
+ob_start();
+openmira_render_skills_page();
+$view_page_html = ob_get_clean();
+$_GET = $original_get;
+if (!is_string($view_page_html) || !str_contains($view_page_html, 'openmira-admin-skill-preview')) {
+    fwrite(STDERR, "Skills view page did not render the preview CSS class.\n");
+    exit(1);
+}
+
 echo wp_json_encode([
     'status' => 'ok',
     'skills' => $ids,

@@ -1,3 +1,11 @@
+v1.5.1 - 2026/05/20
+* Fix: Skills admin form no longer triggers a browser console error on Chrome (`Invalid character in character class`). The skill ID pattern attribute uses an unambiguous character class compatible with modern browser regex parsers.
+* Fix: Skills admin form no longer triggers "An invalid form control is not focusable" on submit. The Markdown editor now syncs its content to the underlying textarea before form submission, and required-field validation is enforced server-side instead of client-side on hidden controls.
+* Improvement: Skills admin uses the WordPress wp-list-table layout to match the Memory admin page. Inline styles removed; visual styling consolidated in the shared admin CSS file.
+* Improvement: Customizing a built-in skill goes directly to the edit form (one click) instead of routing through the list (two clicks).
+* Improvement: Skill edit form has a Cancel button and groups fields into Identity / Metadata / Content fieldsets.
+* Minor fixes.
+
 v1.5.0 - 2026/05/20
 * New: Skills are now editable from the Open Mira admin. Create custom Skills, override built-in ones, export to ZIP, and import single SKILL.md files or full ZIP archives. Custom Skills live under wp-content/openmira-skills/ and survive plugin updates.
 * New: Memory import (companion to the existing Memory export). Paste or upload a previously exported JSON file to restore or seed memory entries.
