@@ -57,7 +57,9 @@ Open Mira intentionally does not claim a universal patch operation for every Wor
 
 ## Skills
 
-Open Mira ships starter Skills as MCP Prompts. Skills are Markdown documents at `includes/skills/<id>/SKILL.md`, registered as MCP Prompts that any client supporting `prompts/list` can discover. The three starter skills are listed in the Skills admin page; add your own by creating a new `<id>/SKILL.md` file.
+Open Mira ships starter Skills as MCP Prompts. Skills are Markdown documents at `includes/skills/<id>/SKILL.md`, registered as MCP Prompts that any client supporting `prompts/list` can discover.
+
+Skills can be customized via the admin **Open Mira → Skills** page. Custom skills are stored under `wp-content/openmira-skills/` and survive plugin updates. Built-in skills ship with the plugin and can be overridden by creating a custom skill with the same ID.
 
 ## Safety Model
 
@@ -81,7 +83,7 @@ Screenshots are captured externally through the Playwright bridge at `scripts/op
 
 ## Project Memory
 
-Agents can call `openmira/read-memory`, `openmira/write-memory`, and `openmira/delete-memory` to persist durable project facts in WordPress options. Site administrators can review, edit, delete, clear, and export entries from **Open Mira → Memory**.
+Agents can call `openmira/read-memory`, `openmira/write-memory`, and `openmira/delete-memory` to persist durable project facts in WordPress options. Site administrators can review, edit, delete, clear, export, and import entries from **Open Mira → Memory**.
 
 ## Development
 
@@ -99,7 +101,7 @@ The wp-env smoke suite runs automatically in GitHub Actions on pushes and pull r
 To build an installable ZIP:
 
 ```bash
-scripts/build-release.sh 1.4.0
+scripts/build-release.sh 1.5.0
 ```
 
 ## Contributing

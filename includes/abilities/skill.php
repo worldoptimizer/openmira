@@ -57,7 +57,7 @@ wp_register_ability('openmira/get-skill', [
             'skill_id' => [
                 'type' => 'string',
                 'description' => 'Skill ID, e.g. wp-aware-editing.',
-                'pattern' => '^[a-z0-9][a-z0-9-]{0,79}$',
+                'pattern' => '^[a-z0-9][a-z0-9._-]{0,79}$',
             ],
         ],
         'required' => ['skill_id'],
@@ -71,6 +71,9 @@ wp_register_ability('openmira/get-skill', [
             'description' => ['type' => 'string'],
             'body' => ['type' => 'string'],
             'prompt_name' => ['type' => 'string'],
+            'source' => ['type' => 'string'],
+            'source_label' => ['type' => 'string'],
+            'overrides_built_in' => ['type' => 'boolean'],
         ],
         'required' => ['id', 'title', 'description', 'body'],
     ],
@@ -91,7 +94,7 @@ wp_register_ability('openmira/get-skill', [
 /**
  * List installed skills.
  *
- * @return array{skills: list<array{id: string, title: string, description: string, prompt_name: string}>, count: int}
+ * @return array{skills: list<array{id: string, title: string, description: string, prompt_name: string, source: string, source_label: string, overrides_built_in: bool}>, count: int}
  */
 function openmira_list_skills_ability(): array
 {
@@ -102,6 +105,9 @@ function openmira_list_skills_ability(): array
             'title' => $skill['title'],
             'description' => $skill['description'],
             'prompt_name' => $skill['prompt_name'],
+            'source' => $skill['source'],
+            'source_label' => $skill['source_label'],
+            'overrides_built_in' => $skill['overrides_built_in'],
         ];
     }
 
@@ -112,12 +118,14 @@ function openmira_list_skills_ability(): array
  * Return one installed skill body.
  *
  * @param array<string, mixed> $input
- * @return array{id: string, title: string, description: string, body: string, prompt_name: string}|WP_Error
+ * @return array{id: string, title: string, description: string, body: string, prompt_name: string, source: string, source_label: string, overrides_built_in: bool}|WP_Error
  */
 function openmira_get_skill_ability(array $input): array|WP_Error
 {
-    $skill_id = is_string($input['skill_id'] ?? null) ? sanitize_key($input['skill_id']) : '';
-    $skill = $skill_id !== '' ? openmira_get_skill($skill_id) : null;
+    $skill_id = is_string($input['skill_id'] ?? null) ? $input['skill_id'] : '';
+    $skill = $skill_id !== '' && !is_wp_error(openmira_validate_skill_id($skill_id))
+        ? openmira_get_skill($skill_id)
+        : null;
     if ($skill === null) {
         return new WP_Error('openmira_skill_not_found', sprintf('Skill not found: %s', $skill_id));
     }
@@ -128,5 +136,8 @@ function openmira_get_skill_ability(array $input): array|WP_Error
         'description' => $skill['description'],
         'body' => $skill['body'],
         'prompt_name' => $skill['prompt_name'],
+        'source' => $skill['source'],
+        'source_label' => $skill['source_label'],
+        'overrides_built_in' => $skill['overrides_built_in'],
     ];
 }

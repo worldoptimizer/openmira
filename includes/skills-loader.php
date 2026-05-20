@@ -15,49 +15,119 @@ if (!defined('ABSPATH')) {
 
 const OPENMIRA_SKILLS_DIR = __DIR__ . '/skills';
 
+const OPENMIRA_USER_SKILLS_DIR = WP_CONTENT_DIR . '/openmira-skills';
+
 const OPENMIRA_SKILL_ABILITY_NAMESPACE = 'openmira-skill';
 
 const OPENMIRA_SKILL_PROMPT_PREFIX = 'openmira.';
 
 /**
+ * Return the user-content skills directory.
+ */
+function openmira_user_skills_dir(): string
+{
+    $default = OPENMIRA_USER_SKILLS_DIR;
+    $filtered = apply_filters('openmira_user_skills_dir', $default);
+
+    return is_string($filtered) && $filtered !== '' ? $filtered : $default;
+}
+
+/**
+ * Ensure the user-content skills directory exists and is writable.
+ */
+function openmira_ensure_user_skills_dir(): bool|WP_Error
+{
+    $dir = openmira_user_skills_dir();
+    if (!is_dir($dir) && !wp_mkdir_p($dir)) {
+        return new WP_Error('openmira_skills_dir_unavailable', 'Could not create the Open Mira user skills directory.');
+    }
+    if (!is_writable($dir)) {
+        return new WP_Error('openmira_skills_dir_not_writable', 'The Open Mira user skills directory is not writable.');
+    }
+
+    return true;
+}
+
+/**
+ * Validate a skill ID.
+ */
+function openmira_validate_skill_id(string $skill_id): bool|WP_Error
+{
+    if (preg_match('/^[a-z0-9][a-z0-9._-]{0,79}$/', $skill_id) !== 1) {
+        return new WP_Error(
+            'openmira_invalid_skill_id',
+            'Skill ID must be 1-80 characters and contain only lowercase letters, numbers, dots, underscores, and hyphens.',
+        );
+    }
+
+    return true;
+}
+
+/**
  * Return the parsed list of installed skills.
  *
- * @return array<string, array{id: string, title: string, description: string, body: string, path: string, prompt_name: string, ability_name: string}>
+ * @return array<string, array{id: string, title: string, description: string, body: string, path: string, prompt_name: string, ability_name: string, source: string, source_label: string, overrides_built_in: bool}>
  */
 function openmira_get_skills(): array
 {
+    $built_in = openmira_scan_skills_directory(OPENMIRA_SKILLS_DIR, 'built-in');
+    $user = is_dir(openmira_user_skills_dir())
+        ? openmira_scan_skills_directory(openmira_user_skills_dir(), 'user')
+        : [];
+
+    $skills = $built_in;
+    foreach ($user as $id => $skill) {
+        $skill['overrides_built_in'] = array_key_exists($id, $built_in);
+        $skill['source_label'] = $skill['overrides_built_in'] ? 'user-override' : 'user';
+        $skills[$id] = $skill;
+    }
+
+    ksort($skills);
+    return $skills;
+}
+
+/**
+ * Scan one skills directory.
+ *
+ * @return array<string, array{id: string, title: string, description: string, body: string, path: string, prompt_name: string, ability_name: string, source: string, source_label: string, overrides_built_in: bool}>
+ */
+function openmira_scan_skills_directory(string $base_dir, string $source): array
+{
     $skills = [];
-    $entries = is_dir(OPENMIRA_SKILLS_DIR) ? scandir(OPENMIRA_SKILLS_DIR) : [];
+    $entries = is_dir($base_dir) ? scandir($base_dir) : [];
     foreach ((array) $entries as $entry) {
         if (!is_string($entry) || $entry === '.' || $entry === '..') {
             continue;
         }
-        $dir = OPENMIRA_SKILLS_DIR . '/' . $entry;
+        if (is_wp_error(openmira_validate_skill_id($entry))) {
+            continue;
+        }
+
+        $dir = $base_dir . '/' . $entry;
         $file = $dir . '/SKILL.md';
         if (!is_dir($dir) || !is_file($file) || !is_readable($file)) {
             continue;
         }
-        $id = sanitize_key($entry);
-        if ($id === '' || $id !== $entry) {
-            continue;
-        }
+
         $raw = file_get_contents($file);
         if (!is_string($raw)) {
             continue;
         }
         $parsed = openmira_parse_skill_markdown($raw);
-        $skills[$id] = [
-            'id' => $id,
-            'title' => $parsed['title'] !== '' ? $parsed['title'] : $id,
+        $skills[$entry] = [
+            'id' => $entry,
+            'title' => $parsed['title'] !== '' ? $parsed['title'] : $entry,
             'description' => $parsed['description'],
             'body' => $parsed['body'],
             'path' => $file,
-            'prompt_name' => openmira_skill_prompt_name($id),
-            'ability_name' => openmira_skill_ability_name($id),
+            'prompt_name' => openmira_skill_prompt_name($entry),
+            'ability_name' => openmira_skill_ability_name($entry),
+            'source' => $source,
+            'source_label' => $source,
+            'overrides_built_in' => false,
         ];
     }
 
-    ksort($skills);
     return $skills;
 }
 
@@ -97,11 +167,40 @@ function openmira_parse_skill_markdown(string $raw): array
 }
 
 /**
+ * Return a complete SKILL.md document.
+ */
+function openmira_build_skill_markdown(string $title, string $description, string $body): string
+{
+    return (
+        "---\n"
+        . 'title: "'
+        . openmira_skill_frontmatter_escape($title)
+        . '"'
+        . "\n"
+        . 'description: "'
+        . openmira_skill_frontmatter_escape($description)
+        . '"'
+        . "\n"
+        . "---\n\n"
+        . rtrim($body)
+        . "\n"
+    );
+}
+
+/**
+ * Escape a scalar for the small frontmatter subset Open Mira writes.
+ */
+function openmira_skill_frontmatter_escape(string $value): string
+{
+    return str_replace(['\\', '"'], ['\\\\', '\\"'], $value);
+}
+
+/**
  * Return the WordPress ability name backing a skill prompt.
  */
 function openmira_skill_ability_name(string $skill_id): string
 {
-    return OPENMIRA_SKILL_ABILITY_NAMESPACE . '/' . sanitize_key($skill_id);
+    return OPENMIRA_SKILL_ABILITY_NAMESPACE . '/' . $skill_id;
 }
 
 /**
@@ -112,19 +211,21 @@ function openmira_skill_ability_name(string $skill_id): string
  */
 function openmira_skill_prompt_name(string $skill_id): string
 {
-    return OPENMIRA_SKILL_PROMPT_PREFIX . sanitize_key($skill_id);
+    return OPENMIRA_SKILL_PROMPT_PREFIX . $skill_id;
 }
 
 /**
- * Resolve a skill from a skill ID or backing ability name.
+ * Resolve a skill from a skill ID.
  *
- * @return array{id: string, title: string, description: string, body: string, path: string, prompt_name: string, ability_name: string}|null
+ * @return array{id: string, title: string, description: string, body: string, path: string, prompt_name: string, ability_name: string, source: string, source_label: string, overrides_built_in: bool}|null
  */
 function openmira_get_skill(string $skill_id): ?array
 {
-    $skill_id = sanitize_key($skill_id);
-    $skills = openmira_get_skills();
+    if (is_wp_error(openmira_validate_skill_id($skill_id))) {
+        return null;
+    }
 
+    $skills = openmira_get_skills();
     return $skills[$skill_id] ?? null;
 }
 
