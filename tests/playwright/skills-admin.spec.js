@@ -47,7 +47,8 @@ test('Skills admin renders and creates a CPT-backed skill', async ({ page }) => 
 
   await page.getByRole('button', { name: 'Create Skill' }).click();
   await expect(page.locator('.notice-success')).toContainText('Skill created', { timeout: 15000 });
-  await expect(page.locator('table.wp-list-table')).toContainText(skillId);
-  await expect(page.locator('table.wp-list-table')).toContainText('CPT');
-  await expect(page.locator('table.wp-list-table')).toContainText('Enabled');
+  const customSkillsTable = page.locator('table.wp-list-table').first();
+  await expect(customSkillsTable).toContainText(skillId);
+  await expect(customSkillsTable).toContainText('CPT');
+  await expect(customSkillsTable).toContainText('Enabled');
 });
