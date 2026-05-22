@@ -36,7 +36,7 @@ function openmira_register_skill_cpt(): void
         'show_in_rest' => false,
         'supports' => ['title', 'editor', 'excerpt', 'revisions'],
         'capability_type' => 'openmira_skill',
-        'map_meta_cap' => true,
+        'map_meta_cap' => false,
         'capabilities' => [
             'edit_post' => 'manage_options',
             'read_post' => 'manage_options',

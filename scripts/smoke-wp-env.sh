@@ -45,7 +45,7 @@ if ! rg -q 'wp-admin' "$ADMIN_HTML"; then
   exit 1
 fi
 
-NONCE="$(rg -o 'createNonceMiddleware\( "[^"]+"' "$ADMIN_HTML" | sed -E 's/.*"([^"]+)"/\1/' | head -1)"
+NONCE="$(rg -o 'createNonceMiddleware\( "[^"]+"' "$ADMIN_HTML" | sed -E 's/.*"([^"]+)"/\1/' | head -1 || true)"
 if [[ -z "$NONCE" ]]; then
   echo "Could not discover REST nonce from Open Mira admin page." >&2
   exit 1
