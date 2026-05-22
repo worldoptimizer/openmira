@@ -30,26 +30,22 @@ rm -f "$COOKIE_JAR" "$LOGIN_HTML" "$ADMIN_HTML" "$ACT_JSON" "$THEME_JSON" "$ABSP
 
 wp-env start
 wp-env run cli wp plugin activate openmira >/dev/null
+wp-env run cli wp user update "$USERNAME" --user_pass="$PASSWORD" --skip-email >/dev/null
+wp-env run cli bash -lc 'mkdir -p /var/www/html/wp-content/mu-plugins && cp /var/www/html/wp-content/plugins/openmira/tests/mu-plugins/openmira-wp-env-autologin.php /var/www/html/wp-content/mu-plugins/openmira-wp-env-autologin.php' >/dev/null
 wp-env run cli wp eval '
 update_option("openmira_ai_abilities_enabled", "1");
 update_option("openmira_ai_abilities_domain", (string) wp_parse_url(home_url(), PHP_URL_HOST));
 ' >/dev/null
 
-curl -sS -c "$COOKIE_JAR" -b "$COOKIE_JAR" "$BASE_URL/wp-login.php" > "$LOGIN_HTML"
 curl -sS -L -c "$COOKIE_JAR" -b "$COOKIE_JAR" \
-  --data-urlencode "log=${USERNAME}" \
-  --data-urlencode "pwd=${PASSWORD}" \
-  --data-urlencode "wp-submit=Log In" \
-  --data-urlencode "redirect_to=${BASE_URL}/wp-admin/admin.php?page=openmira" \
-  --data-urlencode "testcookie=1" \
-  "$BASE_URL/wp-login.php" > "$ADMIN_HTML"
+  "$BASE_URL/?openmira_ci_login=1&openmira_ci_redirect=openmira" > "$ADMIN_HTML"
 
 if ! rg -q 'wp-admin' "$ADMIN_HTML"; then
   echo "wp-env admin login failed for ${USERNAME}." >&2
   exit 1
 fi
 
-NONCE="$(rg -o 'createNonceMiddleware\( "[^"]+"' "$ADMIN_HTML" | sed -E 's/.*"([^"]+)"/\1/' | head -1)"
+NONCE="$(rg -o 'createNonceMiddleware\( "[^"]+"' "$ADMIN_HTML" | sed -E 's/.*"([^"]+)"/\1/' | head -1 || true)"
 if [[ -z "$NONCE" ]]; then
   echo "Could not discover REST nonce from Open Mira admin page." >&2
   exit 1

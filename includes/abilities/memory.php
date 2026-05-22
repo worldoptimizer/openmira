@@ -25,7 +25,7 @@ wp_register_ability('openmira/read-memory', [
             'key' => [
                 'type' => 'string',
                 'description' => 'Optional memory key. Omit or pass an empty string to list all entries.',
-                'pattern' => '^$|^[a-z0-9][\-a-z0-9._]{0,79}$',
+                'pattern' => '^$|^[a-z0-9][-a-z0-9._]{0,79}$',
             ],
         ],
         'additionalProperties' => false,
@@ -99,7 +99,7 @@ wp_register_ability('openmira/write-memory', [
             'key' => [
                 'type' => 'string',
                 'description' => 'Stable memory key.',
-                'pattern' => '^[a-z0-9][\-a-z0-9._]{0,79}$',
+                'pattern' => '^[a-z0-9][-a-z0-9._]{0,79}$',
             ],
             'value' => [
                 'type' => 'string',
@@ -217,7 +217,7 @@ wp_register_ability('openmira/delete-memory', [
             'key' => [
                 'type' => 'string',
                 'description' => 'Memory key to delete.',
-                'pattern' => '^[a-z0-9][\-a-z0-9._]{0,79}$',
+                'pattern' => '^[a-z0-9][-a-z0-9._]{0,79}$',
             ],
         ],
         'required' => ['key'],

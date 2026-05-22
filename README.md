@@ -59,7 +59,7 @@ Open Mira intentionally does not claim a universal patch operation for every Wor
 
 Open Mira ships starter Skills as MCP Prompts. Skills are Markdown documents at `includes/skills/<id>/SKILL.md`, registered as MCP Prompts that any client supporting `prompts/list` can discover.
 
-Skills can be customized via the admin **Open Mira → Skills** page. Custom skills are stored under `wp-content/openmira-skills/` and survive plugin updates. Built-in skills ship with the plugin and can be overridden by creating a custom skill with the same ID.
+Skills can be customized via the admin **Open Mira → Skills** page. Custom skills are stored as private `openmira_skill` posts, so they survive plugin updates and get native WordPress revisions. Built-in skills ship from the plugin filesystem and can be overridden by creating a custom CPT skill with the same ID; each custom skill also has an **Enable prompt** toggle.
 
 ## Safety Model
 

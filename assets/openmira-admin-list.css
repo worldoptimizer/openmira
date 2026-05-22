@@ -39,7 +39,17 @@
     color: #0a4b78;
 }
 
+.openmira-admin-source-badge--filesystem {
+    background: #e7f5ff;
+    color: #0a4b78;
+}
+
 .openmira-admin-source-badge--user {
+    background: #edfaef;
+    color: #1b5e20;
+}
+
+.openmira-admin-source-badge--cpt {
     background: #edfaef;
     color: #1b5e20;
 }
@@ -57,6 +67,10 @@
 .openmira-admin-action-separator {
     color: #8c8f94;
     margin: 0 6px;
+}
+
+.openmira-admin-muted {
+    color: #8c8f94;
 }
 
 .openmira-admin-inline-form {

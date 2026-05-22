@@ -58,3 +58,55 @@ jobs:
         run: |
           VERSION="$(sed -nE "s/.*OPENMIRA_VERSION.*value: '([^']+)'.*/\1/p" openmira.php | head -n 1)"
           scripts/build-release.sh "$VERSION"
+
+  skills-admin-ui-smoke:
+    name: Skills admin UI smoke
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+
+      - name: Set up PHP
+        uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.0'
+          tools: composer
+          coverage: none
+
+      - name: Install system dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y ripgrep
+
+      - name: Install Node dependencies
+        run: npm ci
+
+      - name: Install Composer dependencies
+        run: composer install --no-dev --no-interaction --prefer-dist
+
+      - name: Install Playwright browser
+        run: npx playwright install --with-deps chromium
+
+      - name: Start wp-env and activate Open Mira
+        run: |
+          npm run wp-env -- start
+          npm run wp-env -- run cli wp plugin activate openmira
+          npm run wp-env -- run cli wp user update admin --user_pass=password --skip-email
+          npm run wp-env -- run cli bash -lc 'mkdir -p /var/www/html/wp-content/mu-plugins && cp /var/www/html/wp-content/plugins/openmira/tests/mu-plugins/openmira-wp-env-autologin.php /var/www/html/wp-content/mu-plugins/openmira-wp-env-autologin.php'
+          npm run wp-env -- run cli wp eval '
+          update_option("openmira_ai_abilities_enabled", "1");
+          update_option("openmira_ai_abilities_domain", (string) wp_parse_url(home_url(), PHP_URL_HOST));
+          '
+
+      - name: Run Skills admin Playwright smoke
+        run: npx playwright test tests/playwright/skills-admin.spec.js --browser=chromium --reporter=list
+        env:
+          OPENMIRA_WP_ENV_AUTO_LOGIN: '1'

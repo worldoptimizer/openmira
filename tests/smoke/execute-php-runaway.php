@@ -37,7 +37,7 @@ delete_transient('openmira_execute_php_rate_' . get_current_user_id());
 $memory_filter = static fn(int $_max_memory_delta_bytes): int => 1;
 add_filter('openmira_execute_php_max_memory_delta_bytes', $memory_filter);
 
-$memory_limited = openmira_execute_php(['code' => '$x = str_repeat("x", 1048576); return strlen($x);']);
+$memory_limited = openmira_execute_php(['code' => '$x = str_repeat("x", 16777216); return strlen($x);']);
 remove_filter('openmira_execute_php_max_memory_delta_bytes', $memory_filter);
 
 if (

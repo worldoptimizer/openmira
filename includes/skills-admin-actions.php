@@ -13,8 +13,6 @@ if (!defined('ABSPATH')) {
     exit();
 }
 
-const OPENMIRA_SKILL_BODY_MAX_BYTES = 65_536;
-
 /**
  * Handle Skills admin actions with PRG redirects.
  */
@@ -24,7 +22,7 @@ function openmira_handle_skill_admin_actions(): void
         return;
     }
 
-    if (isset($_GET['openmira_skill_export'])) {
+    if (array_key_exists('openmira_skill_export', $_GET)) {
         openmira_handle_skill_export_action();
     }
 
@@ -37,6 +35,7 @@ function openmira_handle_skill_admin_actions(): void
         'save' => openmira_handle_skill_save_action($_POST),
         'delete' => openmira_handle_skill_delete_action($_POST),
         'customize' => openmira_handle_skill_customize_action($_POST),
+        'toggle_prompt' => openmira_handle_skill_toggle_prompt_action($_POST),
         'import' => openmira_handle_skill_import_action($_POST, $_FILES),
         default => new WP_Error('openmira_invalid_skill_action', 'Invalid skill action.'),
     };
@@ -59,10 +58,35 @@ function openmira_handle_skill_admin_actions(): void
 }
 
 /**
+ * Handle prompt enable/disable requests.
+ *
+ * @param array<array-key, mixed>|null $input
+ * @return array{status: string, id: string, post_id?: int}|WP_Error
+ */
+function openmira_handle_skill_toggle_prompt_action(?array $input = null): array|WP_Error
+{
+    if (!current_user_can('manage_options')) {
+        return new WP_Error(
+            'openmira_skill_permission_denied',
+            'You do not have permission to update Open Mira Skills.',
+        );
+    }
+
+    $input ??= $_POST;
+    if ($input === $_POST) {
+        check_admin_referer(action: 'openmira_skill_action', query_arg: '_openmira_skill_nonce');
+    }
+
+    $skill_id = openmira_skill_request_string($input['skill_id'] ?? null);
+    $enabled = openmira_skill_request_string($input['enable_prompt'] ?? null) === '1';
+    return openmira_set_cpt_skill_prompt_enabled($skill_id, $enabled);
+}
+
+/**
  * Handle create/update requests.
  *
  * @param array<array-key, mixed>|null $input
- * @return array{status: string, id: string}|WP_Error
+ * @return array{status: string, id: string, post_id?: int}|WP_Error
  */
 function openmira_handle_skill_save_action(?array $input = null): array|WP_Error
 {
@@ -153,11 +177,11 @@ function openmira_handle_skill_export_action(): void
             wp_die(esc_html__('Skill not found.', domain: 'open-mira'));
             return;
         }
-        $body = file_get_contents($skill['path']);
-        if ($body === false) {
-            wp_die(esc_html__('Could not read the skill file.', domain: 'open-mira'));
-            return;
-        }
+        $body = openmira_build_skill_markdown(
+            (string) $skill['title'],
+            (string) $skill['description'],
+            (string) $skill['body'],
+        );
         openmira_stream_download(
             filename: $skill_id . '-SKILL.md',
             content_type: 'text/markdown; charset=utf-8',
@@ -171,7 +195,7 @@ function openmira_handle_skill_export_action(): void
         return;
     }
 
-    openmira_stream_file_download('openmira-skills.zip', 'application/zip', $zip);
+    openmira_stream_file_download(filename: 'openmira-skills.zip', content_type: 'application/zip', path: $zip);
 }
 
 /**
@@ -248,7 +272,7 @@ function openmira_skill_import_upload_info(array $files): array|WP_Error
  * Save one user skill.
  *
  * @param array{id?: string, title?: string, description?: string, body?: string} $input
- * @return array{status: string, id: string}|WP_Error
+ * @return array{status: string, id: string, post_id?: int}|WP_Error
  */
 function openmira_save_user_skill(array $input): array|WP_Error
 {
@@ -278,27 +302,16 @@ function openmira_save_user_skill(array $input): array|WP_Error
         return new WP_Error('openmira_skill_body_too_large', 'Skill body must not exceed 64 KB.');
     }
 
-    $dir_ok = openmira_ensure_user_skills_dir();
-    if (is_wp_error($dir_ok)) {
-        return $dir_ok;
-    }
-
-    $file = openmira_user_skill_file_path($skill_id);
-    $dir = dirname($file);
-    if (!is_dir($dir) && !wp_mkdir_p($dir)) {
-        return new WP_Error('openmira_skill_write_failed', 'Could not create the skill directory.');
-    }
-
-    $created = !is_file($file);
-    $markdown = openmira_build_skill_markdown($title, $description, $body);
-    if (file_put_contents($file, $markdown, LOCK_EX) === false) {
-        return new WP_Error('openmira_skill_write_failed', 'Could not write the skill file.');
-    }
-
-    return [
-        'status' => $created ? 'created' : 'updated',
+    $existing_post = openmira_get_cpt_skill_post($skill_id);
+    return openmira_upsert_cpt_skill([
         'id' => $skill_id,
-    ];
+        'title' => $title,
+        'description' => $description,
+        'body' => $body,
+        'enabled' => $existing_post instanceof WP_Post
+            ? openmira_is_cpt_skill_prompt_enabled($existing_post->ID)
+            : true,
+    ]);
 }
 
 /**
@@ -313,25 +326,7 @@ function openmira_delete_user_skill(string $skill_id): array|WP_Error
         return $valid;
     }
 
-    $file = openmira_user_skill_file_path($skill_id);
-    if (!is_file($file)) {
-        return new WP_Error(
-            'openmira_skill_not_user_editable',
-            'Only user skills can be deleted. Built-in skills are read-only.',
-        );
-    }
-
-    if (!unlink($file)) {
-        return new WP_Error('openmira_skill_delete_failed', 'Could not delete the user skill file.');
-    }
-
-    $dir = dirname($file);
-    $remaining = is_dir($dir) ? scandir($dir) : false;
-    if (is_array($remaining) && count(array_diff($remaining, ['.', '..'])) === 0) {
-        rmdir($dir);
-    }
-
-    return ['status' => 'deleted', 'id' => $skill_id];
+    return openmira_delete_cpt_skill($skill_id);
 }
 
 /**
@@ -346,25 +341,24 @@ function openmira_customize_built_in_skill(string $skill_id): array|WP_Error
         return $valid;
     }
 
-    $built_in = openmira_scan_skills_directory(OPENMIRA_SKILLS_DIR, source: 'built-in');
+    $built_in = openmira_scan_skills_directory(OPENMIRA_SKILLS_DIR, source: 'filesystem');
     if (!array_key_exists($skill_id, $built_in)) {
         return new WP_Error('openmira_skill_not_built_in', 'Only built-in skills can be customized.');
     }
 
-    $target = openmira_user_skill_file_path($skill_id);
-    if (is_file($target)) {
+    if (openmira_get_cpt_skill_post($skill_id) instanceof WP_Post) {
         return new WP_Error('openmira_skill_already_customized', 'This skill already has a user override.');
     }
 
-    $dir_ok = openmira_ensure_user_skills_dir();
-    if (is_wp_error($dir_ok)) {
-        return $dir_ok;
-    }
-    if (!is_dir(dirname($target)) && !wp_mkdir_p(dirname($target))) {
-        return new WP_Error('openmira_skill_write_failed', 'Could not create the skill directory.');
-    }
-    if (!copy($built_in[$skill_id]['path'], $target)) {
-        return new WP_Error('openmira_skill_write_failed', 'Could not copy the built-in skill.');
+    $result = openmira_upsert_cpt_skill([
+        'id' => $skill_id,
+        'title' => $built_in[$skill_id]['title'],
+        'description' => $built_in[$skill_id]['description'],
+        'body' => $built_in[$skill_id]['body'],
+        'enabled' => true,
+    ]);
+    if (is_wp_error($result)) {
+        return $result;
     }
 
     return ['status' => 'customized', 'id' => $skill_id];
@@ -382,8 +376,8 @@ function openmira_import_skill_markdown(string $skill_id, string $raw, bool $ski
         return $valid;
     }
 
-    $user_file = openmira_user_skill_file_path($skill_id);
-    if ($skip_existing && is_file($user_file)) {
+    $existing = openmira_get_cpt_skill_post($skill_id);
+    if ($skip_existing && $existing instanceof WP_Post) {
         return ['status' => 'imported-0-updated-0-skipped-1', 'imported' => 0, 'updated' => 0, 'skipped' => 1];
     }
 
@@ -393,7 +387,7 @@ function openmira_import_skill_markdown(string $skill_id, string $raw, bool $ski
         return new WP_Error('openmira_skill_body_too_large', 'Skill body must not exceed 64 KB.');
     }
 
-    $created = !is_file($user_file);
+    $created = !$existing instanceof WP_Post;
     $result = openmira_save_user_skill([
         'id' => $skill_id,
         'title' => $parsed['title'] !== '' ? $parsed['title'] : $skill_id,
@@ -432,7 +426,7 @@ function openmira_import_skills_zip(string $zip_path, bool $skip_existing): arra
     for ($index = 0; $index < $zip->numFiles; $index++) {
         $name = $zip->getNameIndex($index);
         $match = [];
-        if (!is_string($name) || preg_match('#^([a-z0-9][\-a-z0-9._]{0,79})/SKILL\.md$#', $name, $match) !== 1) {
+        if (!is_string($name) || preg_match('#^([a-z0-9][-a-z0-9._]{0,79})/SKILL\.md$#', $name, $match) !== 1) {
             continue;
         }
 
@@ -471,7 +465,7 @@ function openmira_create_user_skills_zip(): string|WP_Error
         return new WP_Error('openmira_zip_unavailable', 'ZipArchive is not available on this server.');
     }
 
-    $skills = array_filter(openmira_get_skills(), static fn(array $skill): bool => $skill['source'] === 'user');
+    $skills = array_filter(openmira_get_skills(), static fn(array $skill): bool => $skill['source'] === 'cpt');
     if ($skills === []) {
         return new WP_Error('openmira_no_user_skills', 'There are no user skills to export.');
     }
@@ -487,11 +481,12 @@ function openmira_create_user_skills_zip(): string|WP_Error
     }
 
     foreach ($skills as $skill) {
-        $contents = file_get_contents($skill['path']);
-        if (!is_string($contents)) {
-            continue;
-        }
-        $zip->addFromString($skill['id'] . '/SKILL.md', $contents);
+        $contents = openmira_build_skill_markdown(
+            (string) $skill['title'],
+            (string) $skill['description'],
+            (string) $skill['body'],
+        );
+        $zip->addFromString((string) $skill['id'] . '/SKILL.md', $contents);
     }
     $zip->close();
 
