@@ -17,7 +17,7 @@ Open Mira ships starter Skills as MCP Prompts. Skills are Markdown documents reg
 
 ## File format
 
-Each skill lives at:
+Built-in skills live at:
 
 ```text
 includes/skills/<id>/SKILL.md
@@ -40,24 +40,26 @@ The folder name is the skill ID. Open Mira accepts lowercase IDs with letters, n
 
 ## Customizing skills
 
-Open Mira loads skills from two locations:
+Open Mira loads skills from two built-in sources:
 
 ```text
-includes/skills/<id>/SKILL.md
-wp-content/openmira-skills/<id>/SKILL.md
+filesystem: includes/skills/<id>/SKILL.md
+CPT:        openmira_skill posts
 ```
 
-Built-in skills live in the plugin directory and update with Open Mira. Custom skills live under `wp-content/openmira-skills/`, survive plugin updates, and are the right place for site-specific workflows.
+Built-in skills live in the plugin directory and update with Open Mira. Custom skills live as private `openmira_skill` posts, survive plugin updates, and get native WordPress revisions. The admin page exposes a **Revisions** action for custom skills once WordPress has at least one revision to show.
 
-If a custom skill uses the same ID as a built-in skill, the custom version wins. The admin page labels that state as **Custom (overrides built-in)** so it is clear that the plugin copy is still present but shadowed.
+If a custom CPT skill uses the same ID as a built-in skill, the custom version wins. The admin page labels that state as **Custom (overrides built-in)** so it is clear that the plugin copy is still present but shadowed.
 
-Use **Open Mira → Skills** to create, edit, delete, import, and export custom skills. Built-in skills are read-only; click **Customize** to copy a built-in `SKILL.md` into `wp-content/openmira-skills/<id>/SKILL.md` before editing.
+Use **Open Mira → Skills** to create, edit, delete, import, and export custom skills. Built-in skills are read-only; click **Customize** to create a CPT-backed custom copy before editing. Custom skills also include an **Enable prompt** toggle; disabled skills remain visible in the admin and abilities, but are not registered as MCP Prompts.
+
+Open Mira 1.6.0 migrates legacy 1.5.x files from `wp-content/openmira-skills/<id>/SKILL.md` into CPT storage on first boot. The files are left on disk for one minor version as a safety fallback, but Open Mira no longer loads custom prompts directly from that writable filesystem path.
 
 ## Export and import format
 
 Single-skill exports are plain `SKILL.md` files.
 
-Bulk exports are ZIP archives with one top-level folder per skill ID:
+Bulk exports are ZIP archives with one top-level folder per custom skill ID:
 
 ```text
 openmira-skills.zip
@@ -67,8 +69,8 @@ openmira-skills.zip
     └── SKILL.md
 ```
 
-This ZIP shape is the stable interchange format for sharing Open Mira skills across local and staging sites.
+This ZIP shape is the stable interchange format for sharing Open Mira skills across local and staging sites. Importing either a single `SKILL.md` file or a ZIP creates or updates CPT-backed custom skills.
 
 ## Admin view
 
-Open **Open Mira → Skills** in WordPress to see installed skill titles, IDs, prompt names, descriptions, source badges, and `SKILL.md` previews.
+Open **Open Mira → Skills** in WordPress to see installed skill titles, IDs, source, prompt names, prompt enablement, descriptions, revision links, and `SKILL.md` previews.

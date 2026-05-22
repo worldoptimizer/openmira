@@ -59,10 +59,11 @@ function openmira_render_skills_page(): void
         <h1><?php esc_html_e('Open Mira Skills', domain: 'open-mira'); ?></h1>
         <p><?php echo
             wp_kses_post(
-                'Skills are MCP Prompts loaded from <code>includes/skills/&lt;id&gt;/SKILL.md</code> and <code>wp-content/openmira-skills/&lt;id&gt;/SKILL.md</code>. Built-in skills are read-only; customize one to copy it into user content for editing.',
+                'Skills are MCP Prompts loaded from plugin-bundled <code>includes/skills/&lt;id&gt;/SKILL.md</code> files and custom <code>openmira_skill</code> posts. Built-in filesystem skills are read-only; customize one to create a CPT-backed copy with native WordPress revisions.',
             )
         ; ?></p>
         <?php openmira_render_skill_notice(); ?>
+        <?php openmira_render_legacy_skill_files_notice(); ?>
         <?php
 
         if ($action === 'add') {
@@ -72,7 +73,7 @@ function openmira_render_skills_page(): void
         }
         if ($action === 'edit') {
             $skill = $skills[$skill_id] ?? null;
-            if (is_array($skill) && $skill['source'] === 'user') {
+            if (is_array($skill) && $skill['source'] === 'cpt') {
                 openmira_render_skill_edit_form($skill);
             } else {
                 openmira_render_skill_error_notice(__(
@@ -127,9 +128,11 @@ function openmira_render_skill_notice(): void
         $result === 'updated' => __('Skill updated.', domain: 'open-mira'),
         $result === 'deleted' => __('Skill deleted.', domain: 'open-mira'),
         $result === 'customized' => __(
-            'Built-in skill copied to user content. You can edit it now.',
+            'Built-in skill copied to a custom skill. You can edit it now.',
             domain: 'open-mira',
         ),
+        $result === 'enabled' => __('Skill prompt enabled.', domain: 'open-mira'),
+        $result === 'disabled' => __('Skill prompt disabled.', domain: 'open-mira'),
         str_starts_with($result, 'imported-') => sprintf(
             /* translators: %s is an import result summary. */
             __('Skills import complete: %s.', domain: 'open-mira'),
@@ -139,6 +142,30 @@ function openmira_render_skill_notice(): void
     };
     ?>
     <div class="notice notice-success is-dismissible"><p><?php echo esc_html($message); ?></p></div>
+    <?php
+}
+
+/**
+ * Render a one-version deprecation notice for legacy filesystem user skills.
+ */
+function openmira_render_legacy_skill_files_notice(): void
+{
+    if (!function_exists('openmira_has_legacy_user_skill_files') || !openmira_has_legacy_user_skill_files()) {
+        return;
+    }
+    ?>
+    <div class="notice notice-warning">
+        <p><?php echo
+            wp_kses_post(sprintf(
+                /* translators: %s is the legacy skills directory. */
+                __(
+                    'Legacy filesystem skills were migrated into CPT storage. Files under <code>%s</code> are no longer loaded by Open Mira and will be ignored fully in a future release.',
+                    domain: 'open-mira',
+                ),
+                esc_html(openmira_user_skills_dir()),
+            ))
+        ; ?></p>
+    </div>
     <?php
 }
 
@@ -157,8 +184,8 @@ function openmira_render_skill_error_notice(string $message): void
  */
 function openmira_render_skills_list(array $skills): void
 {
-    $user_skills = array_filter($skills, static fn(array $skill): bool => $skill['source'] === 'user');
-    $built_in_skills = array_filter($skills, static fn(array $skill): bool => $skill['source'] === 'built-in');
+    $user_skills = array_filter($skills, static fn(array $skill): bool => $skill['source'] === 'cpt');
+    $built_in_skills = array_filter($skills, static fn(array $skill): bool => $skill['source'] === 'filesystem');
     ?>
     <h2><?php esc_html_e('Custom Skills', domain: 'open-mira'); ?></h2>
     <div class="openmira-admin-toolbar">
@@ -212,7 +239,7 @@ function openmira_render_skill_import_panel(): void
                     'Skill ID for single SKILL.md imports',
                     domain: 'open-mira',
                 ); ?></strong></label><br>
-                <input id="openmira-single-skill-id" class="regular-text" name="single_skill_id" pattern="^[a-z0-9][\-a-z0-9._]{0,79}$">
+                <input id="openmira-single-skill-id" class="regular-text" name="single_skill_id" pattern="^[a-z0-9][-a-z0-9._]{0,79}$">
             </p>
             <p>
                 <label><input type="checkbox" name="skip_existing" value="1"> <?php esc_html_e(
@@ -243,14 +270,15 @@ function openmira_render_skill_table(array $skills, bool $is_user_group): void
                 <th scope="col"><?php esc_html_e('Title', domain: 'open-mira'); ?></th>
                 <th scope="col"><?php esc_html_e('ID', domain: 'open-mira'); ?></th>
                 <th scope="col"><?php esc_html_e('Source', domain: 'open-mira'); ?></th>
-                <th scope="col"><?php esc_html_e('Prompt', domain: 'open-mira'); ?></th>
+                <th scope="col"><?php esc_html_e('Prompt name', domain: 'open-mira'); ?></th>
+                <th scope="col"><?php esc_html_e('Enable prompt', domain: 'open-mira'); ?></th>
                 <th scope="col"><?php esc_html_e('Actions', domain: 'open-mira'); ?></th>
             </tr>
         </thead>
         <tbody>
             <?php if ($skills === []): ?>
                 <tr>
-                    <td colspan="5"><?php echo
+                    <td colspan="6"><?php echo
                         esc_html(
                             $is_user_group
                                 ? __('No custom skills yet.', domain: 'open-mira')
@@ -291,7 +319,7 @@ function openmira_render_skill_row(array $skill): void
     <tr>
         <td>
             <strong>
-                <a href="<?php echo esc_url($source === 'user' ? $edit_url : $view_url); ?>">
+                <a href="<?php echo esc_url($source === 'cpt' ? $edit_url : $view_url); ?>">
                     <?php echo esc_html((string) $skill['title']); ?>
                 </a>
             </strong>
@@ -307,7 +335,14 @@ function openmira_render_skill_row(array $skill): void
         </td>
         <td><code><?php echo esc_html((string) $skill['prompt_name']); ?></code></td>
         <td class="openmira-admin-table-actions">
-            <?php if ($source === 'user'): ?>
+            <?php if ($source === 'cpt'): ?>
+                <?php openmira_render_skill_prompt_toggle_form($skill_id, ($skill['enabled'] ?? true) !== false); ?>
+            <?php else: ?>
+                <?php esc_html_e('Always enabled', domain: 'open-mira'); ?>
+            <?php endif; ?>
+        </td>
+        <td class="openmira-admin-table-actions">
+            <?php if ($source === 'cpt'): ?>
                 <a class="openmira-admin-action-link" href="<?php echo esc_url($edit_url); ?>"><?php esc_html_e(
                     'Edit',
                     domain: 'open-mira',
@@ -317,6 +352,8 @@ function openmira_render_skill_row(array $skill): void
                     'View',
                     domain: 'open-mira',
                 ); ?></a>
+                <span class="openmira-admin-action-separator">|</span>
+                <?php openmira_render_skill_revisions_link((int) ($skill['post_id'] ?? 0)); ?>
                 <span class="openmira-admin-action-separator">|</span>
                 <a class="openmira-admin-action-link" href="<?php echo
                     esc_url(wp_nonce_url(
@@ -363,6 +400,12 @@ function openmira_render_skill_view(array $skill): void
         <code><?php echo esc_html((string) $skill['id']); ?></code>
         <strong><?php esc_html_e('Prompt:', domain: 'open-mira'); ?></strong>
         <code><?php echo esc_html((string) $skill['prompt_name']); ?></code>
+        <strong><?php esc_html_e('Enabled:', domain: 'open-mira'); ?></strong>
+        <?php echo
+            esc_html(
+                ($skill['enabled'] ?? true) !== false ? __('Yes', domain: 'open-mira') : __('No', domain: 'open-mira'),
+            )
+        ; ?>
     </p>
     <p><?php echo esc_html((string) $skill['description']); ?></p>
     <pre class="openmira-admin-skill-preview"><?php echo esc_html((string) $skill['body']); ?></pre>
@@ -403,7 +446,7 @@ function openmira_render_skill_edit_form(?array $skill): void
                         domain: 'open-mira',
                     ); ?></label></th>
                     <td>
-                        <input id="openmira-skill-id" class="regular-text" name="skill_id" pattern="^[a-z0-9][\-a-z0-9._]{0,79}$" required value="<?php echo
+                        <input id="openmira-skill-id" class="regular-text" name="skill_id" pattern="^[a-z0-9][-a-z0-9._]{0,79}$" required value="<?php echo
                             esc_attr($skill_id)
                         ; ?>" <?php disabled($editing); ?>>
                         <?php if ($editing): ?>
@@ -511,6 +554,50 @@ function openmira_render_skill_customize_form(string $skill_id): void
     <?php }
 
 /**
+ * Render prompt enable toggle form.
+ */
+function openmira_render_skill_prompt_toggle_form(string $skill_id, bool $enabled): void
+{ ?>
+    <form class="openmira-admin-inline-form" method="post" action="<?php echo
+        esc_url(admin_url('admin.php?page=openmira-skills'))
+    ; ?>">
+        <?php wp_nonce_field(action: 'openmira_skill_action', name: '_openmira_skill_nonce'); ?>
+        <input type="hidden" name="openmira_skill_action" value="toggle_prompt">
+        <input type="hidden" name="skill_id" value="<?php echo esc_attr($skill_id); ?>">
+        <input type="hidden" name="enable_prompt" value="<?php echo esc_attr($enabled ? '0' : '1'); ?>">
+        <button type="submit" class="button-link openmira-admin-action-link">
+            <?php echo esc_html($enabled ? __('Enabled', domain: 'open-mira') : __('Disabled', domain: 'open-mira')); ?>
+        </button>
+    </form>
+    <?php }
+
+/**
+ * Render native WordPress revisions link for a CPT skill.
+ */
+function openmira_render_skill_revisions_link(int $post_id): void
+{
+    if ($post_id <= 0) {
+        ?><span class="openmira-admin-muted"><?php esc_html_e('Revisions', domain: 'open-mira'); ?></span><?php
+
+        return;
+    }
+
+    $revisions = wp_get_post_revisions($post_id, ['posts_per_page' => 1]);
+    $revision = reset($revisions);
+    if (!$revision instanceof WP_Post) {
+        ?><span class="openmira-admin-muted"><?php esc_html_e('Revisions', domain: 'open-mira'); ?></span><?php
+
+        return;
+    }
+
+    ?>
+    <a class="openmira-admin-action-link" href="<?php echo
+        esc_url(admin_url('revision.php?revision=' . (int) $revision->ID))
+    ; ?>"><?php esc_html_e('Revisions', domain: 'open-mira'); ?></a>
+    <?php
+}
+
+/**
  * Return source label for a skill.
  */
 function openmira_skill_source_label(string $source, bool $overrides): string
@@ -518,9 +605,9 @@ function openmira_skill_source_label(string $source, bool $overrides): string
     if ($overrides) {
         return __('Custom (overrides built-in)', domain: 'open-mira');
     }
-    if ($source === 'user') {
-        return __('User', domain: 'open-mira');
+    if ($source === 'cpt') {
+        return __('CPT', domain: 'open-mira');
     }
 
-    return __('Built-in', domain: 'open-mira');
+    return __('Filesystem', domain: 'open-mira');
 }

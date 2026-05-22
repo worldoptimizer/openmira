@@ -52,7 +52,7 @@ function openmira_update_memory_entries(array $entries): void
  */
 function openmira_validate_memory_key(string $key): bool|WP_Error
 {
-    if (preg_match('/^[a-z0-9][\-a-z0-9._]{0,79}$/', $key) !== 1) {
+    if (preg_match('/^[a-z0-9][-a-z0-9._]{0,79}$/', $key) !== 1) {
         return new WP_Error(
             'invalid_memory_key',
             'Memory key must be 1-80 characters and contain only lowercase letters, numbers, dots, underscores, and hyphens.',

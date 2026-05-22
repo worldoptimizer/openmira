@@ -1,3 +1,12 @@
+v1.6.0 - 2026/05/22
+* Security: Custom Skills now store user-created prompt content in a private WordPress CPT (`openmira_skill`) instead of writing prompt files under `wp-content/openmira-skills/`. This removes the writable-filesystem prompt injection surface from the Skills admin.
+* New: Custom Skills now get native WordPress revisions. Admin users can open the native revision viewer for CPT-backed Skills after revisions exist.
+* New: Per-skill prompt enablement. CPT-backed Skills can be disabled from MCP Prompt registration without deleting their content.
+* New: Source abstraction for Skills. Built-in filesystem Skills and CPT-backed custom Skills are assembled through filterable sources, allowing plugins to register additional backends.
+* Improvement: 1.5.x filesystem Skills migrate automatically into CPT storage on first 1.6.0 boot. Legacy files are left in place with a deprecation notice for one minor version, but are no longer loaded as prompt sources.
+* Improvement: Skills import/export keeps the stable `SKILL.md` and ZIP interchange format while reading and writing CPT-backed custom Skills.
+* Minor fixes.
+
 v1.5.1 - 2026/05/20
 * Fix: Skills admin form no longer triggers a browser console error on Chrome (`Invalid character in character class`). The skill ID pattern attribute uses an unambiguous character class compatible with modern browser regex parsers.
 * Fix: Skills admin form no longer triggers "An invalid form control is not focusable" on submit. The Markdown editor now syncs its content to the underlying textarea before form submission, and required-field validation is enforced server-side instead of client-side on hidden controls.

@@ -6,7 +6,8 @@
 declare(strict_types=1);
 
 /**
- * Skills loader: discovers Markdown skill files and exposes them as MCP prompts.
+ * Skills loader: discovers built-in Markdown skill files plus registered skill sources
+ * and exposes enabled skills as MCP prompts.
  */
 
 if (!defined('ABSPATH')) {
@@ -21,6 +22,74 @@ const OPENMIRA_SKILL_ABILITY_NAMESPACE = 'openmira-skill';
 
 const OPENMIRA_SKILL_PROMPT_PREFIX = 'openmira.';
 
+const OPENMIRA_SKILL_BODY_MAX_BYTES = 65_536;
+
+/**
+ * Skill source contract.
+ */
+interface OpenMira_Skill_Source
+{
+    /**
+     * @return array<string, array<string, mixed>>
+     */
+    public function list_skills(): array;
+
+    /**
+     * @return array<string, mixed>|null
+     */
+    public function get_skill(string $id): ?array;
+}
+
+/**
+ * Filesystem-backed built-in skills source.
+ */
+final class OpenMira_Filesystem_Skill_Source implements OpenMira_Skill_Source
+{
+    private string $base_dir;
+
+    private string $source;
+
+    public function __construct(string $base_dir, string $source)
+    {
+        $this->base_dir = $base_dir;
+        $this->source = $source;
+    }
+
+    public function list_skills(): array
+    {
+        return openmira_scan_skills_directory($this->base_dir, $this->source);
+    }
+
+    public function get_skill(string $id): ?array
+    {
+        $valid = openmira_validate_skill_id($id);
+        if (is_wp_error($valid)) {
+            return null;
+        }
+
+        $file = rtrim($this->base_dir, characters: '/\\') . '/' . $id . '/SKILL.md';
+        if (!is_file($file) || !is_readable($file)) {
+            return null;
+        }
+
+        $raw = file_get_contents($file);
+        if (!is_string($raw)) {
+            return null;
+        }
+
+        $parsed = openmira_parse_skill_markdown($raw);
+        return openmira_normalize_skill([
+            'id' => $id,
+            'title' => $parsed['title'] !== '' ? $parsed['title'] : $id,
+            'description' => $parsed['description'],
+            'body' => $parsed['body'],
+            'path' => $file,
+            'source' => $this->source,
+            'enabled' => true,
+        ]);
+    }
+}
+
 /**
  * Return the user-content skills directory.
  */
@@ -34,6 +103,9 @@ function openmira_user_skills_dir(): string
 
 /**
  * Ensure the user-content skills directory exists and is writable.
+ *
+ * @deprecated 1.6.0 User-created skills are stored in the openmira_skill CPT. This helper remains for one
+ *             minor version so legacy 1.5.x filesystem skills can be migrated.
  */
 function openmira_ensure_user_skills_dir(): bool|WP_Error
 {
@@ -53,7 +125,7 @@ function openmira_ensure_user_skills_dir(): bool|WP_Error
  */
 function openmira_validate_skill_id(string $skill_id): bool|WP_Error
 {
-    if (preg_match('/^[a-z0-9][\-a-z0-9._]{0,79}$/', $skill_id) !== 1) {
+    if (preg_match('/^[a-z0-9][-a-z0-9._]{0,79}$/', $skill_id) !== 1) {
         return new WP_Error(
             'openmira_invalid_skill_id',
             'Skill ID must be 1-80 characters and contain only lowercase letters, numbers, dots, underscores, and hyphens.',
@@ -64,22 +136,64 @@ function openmira_validate_skill_id(string $skill_id): bool|WP_Error
 }
 
 /**
+ * Return registered skill sources.
+ *
+ * @return array<string, OpenMira_Skill_Source>
+ */
+function openmira_get_skill_sources(): array
+{
+    $sources = [
+        'filesystem' => new OpenMira_Filesystem_Skill_Source(OPENMIRA_SKILLS_DIR, 'filesystem'),
+    ];
+
+    /**
+     * Filters Open Mira skill sources.
+     *
+     * Sources are consulted in array order. Later sources win ID conflicts.
+     *
+     * @param array<string, OpenMira_Skill_Source> $sources
+     */
+    $filtered = apply_filters('openmira_skill_sources', $sources);
+    if (!is_array($filtered)) {
+        return $sources;
+    }
+
+    $valid_sources = [];
+    foreach ($filtered as $source_name => $source) {
+        if (!is_string($source_name) || !$source instanceof OpenMira_Skill_Source) {
+            continue;
+        }
+        $valid_sources[$source_name] = $source;
+    }
+
+    return $valid_sources;
+}
+
+/**
  * Return the parsed list of installed skills.
  *
- * @return array<string, array{id: string, title: string, description: string, body: string, path: string, prompt_name: string, ability_name: string, source: string, source_label: string, overrides_built_in: bool}>
+ * @return array<string, array<string, mixed>>
  */
 function openmira_get_skills(): array
 {
-    $built_in = openmira_scan_skills_directory(OPENMIRA_SKILLS_DIR, 'built-in');
-    $user = is_dir(openmira_user_skills_dir())
-        ? openmira_scan_skills_directory(openmira_user_skills_dir(), 'user')
-        : [];
-
-    $skills = $built_in;
-    foreach ($user as $id => $skill) {
-        $skill['overrides_built_in'] = array_key_exists($id, $built_in);
-        $skill['source_label'] = $skill['overrides_built_in'] ? 'user-override' : 'user';
-        $skills[$id] = $skill;
+    $skills = [];
+    foreach (openmira_get_skill_sources() as $source_name => $source) {
+        foreach ($source->list_skills() as $id => $skill) {
+            $normalized = openmira_normalize_skill($skill);
+            if (is_wp_error(openmira_validate_skill_id((string) $normalized['id']))) {
+                continue;
+            }
+            $normalized_id = (string) $normalized['id'];
+            $normalized['overrides_built_in'] = array_key_exists($normalized_id, $skills);
+            if ($normalized['overrides_built_in']) {
+                $normalized['source_label'] = openmira_skill_source_label_for_data(
+                    (string) $normalized['source'],
+                    overrides: true,
+                );
+            }
+            $normalized['source_key'] = $source_name;
+            $skills[$normalized_id] = $normalized;
+        }
     }
 
     ksort($skills);
@@ -87,9 +201,57 @@ function openmira_get_skills(): array
 }
 
 /**
+ * Normalize a skill array returned by a source.
+ *
+ * @param array<string, mixed> $skill
+ * @return array<string, mixed>
+ */
+function openmira_normalize_skill(array $skill): array
+{
+    $id = is_string($skill['id'] ?? null) ? $skill['id'] : '';
+    $title = is_string($skill['title'] ?? null) ? $skill['title'] : $id;
+    $description = is_string($skill['description'] ?? null) ? $skill['description'] : '';
+    $body = is_string($skill['body'] ?? null) ? $skill['body'] : '';
+    $source = is_string($skill['source'] ?? null) ? $skill['source'] : 'unknown';
+    $overrides = ($skill['overrides_built_in'] ?? false) === true;
+
+    return array_merge($skill, [
+        'id' => $id,
+        'title' => $title !== '' ? $title : $id,
+        'description' => $description,
+        'body' => $body,
+        'path' => is_string($skill['path'] ?? null) ? $skill['path'] : '',
+        'prompt_name' => openmira_skill_prompt_name($id),
+        'ability_name' => openmira_skill_ability_name($id),
+        'source' => $source,
+        'source_label' => openmira_skill_source_label_for_data($source, $overrides),
+        'overrides_built_in' => $overrides,
+        'enabled' => ($skill['enabled'] ?? true) !== false,
+    ]);
+}
+
+/**
+ * Return source label for data responses.
+ */
+function openmira_skill_source_label_for_data(string $source, bool $overrides): string
+{
+    if ($overrides) {
+        return 'CPT (overrides built-in)';
+    }
+    if ($source === 'cpt') {
+        return 'CPT';
+    }
+    if ($source === 'filesystem') {
+        return 'Filesystem';
+    }
+
+    return $source;
+}
+
+/**
  * Scan one skills directory.
  *
- * @return array<string, array{id: string, title: string, description: string, body: string, path: string, prompt_name: string, ability_name: string, source: string, source_label: string, overrides_built_in: bool}>
+ * @return array<string, array{id: string, title: string, description: string, body: string, path: string, source: string, enabled: bool}>
  */
 function openmira_scan_skills_directory(string $base_dir, string $source): array
 {
@@ -120,11 +282,8 @@ function openmira_scan_skills_directory(string $base_dir, string $source): array
             'description' => $parsed['description'],
             'body' => $parsed['body'],
             'path' => $file,
-            'prompt_name' => openmira_skill_prompt_name($entry),
-            'ability_name' => openmira_skill_ability_name($entry),
             'source' => $source,
-            'source_label' => $source,
-            'overrides_built_in' => false,
+            'enabled' => true,
         ];
     }
 
@@ -217,7 +376,7 @@ function openmira_skill_prompt_name(string $skill_id): string
 /**
  * Resolve a skill from a skill ID.
  *
- * @return array{id: string, title: string, description: string, body: string, path: string, prompt_name: string, ability_name: string, source: string, source_label: string, overrides_built_in: bool}|null
+ * @return array<string, mixed>|null
  */
 function openmira_get_skill(string $skill_id): ?array
 {
@@ -225,8 +384,15 @@ function openmira_get_skill(string $skill_id): ?array
         return null;
     }
 
-    $skills = openmira_get_skills();
-    return $skills[$skill_id] ?? null;
+    foreach (array_reverse(openmira_get_skill_sources(), true) as $source) {
+        $skill = $source->get_skill($skill_id);
+        if (is_array($skill)) {
+            $skills = openmira_get_skills();
+            return $skills[$skill_id] ?? openmira_normalize_skill($skill);
+        }
+    }
+
+    return null;
 }
 
 /**
@@ -235,14 +401,23 @@ function openmira_get_skill(string $skill_id): ?array
 function openmira_register_skill_prompt_abilities(): void
 {
     foreach (openmira_get_skills() as $skill) {
-        $ability_name = $skill['ability_name'];
+        if (($skill['enabled'] ?? true) === false) {
+            continue;
+        }
+
+        $ability_name = (string) $skill['ability_name'];
         if (wp_has_ability($ability_name)) {
             continue;
         }
 
+        $skill_title = (string) $skill['title'];
+        $skill_description = (string) $skill['description'];
+        $skill_body = (string) $skill['body'];
+        $skill_id = (string) $skill['id'];
+
         wp_register_ability($ability_name, [
-            'label' => $skill['title'],
-            'description' => $skill['description'],
+            'label' => $skill_title,
+            'description' => $skill_description,
             'category' => 'skills',
             'input_schema' => [
                 'type' => 'object',
@@ -251,13 +426,13 @@ function openmira_register_skill_prompt_abilities(): void
             ],
             'output_schema' => ['type' => 'object'],
             'execute_callback' => static fn(array $_input = []): array => [
-                'description' => $skill['description'],
+                'description' => $skill_description,
                 'messages' => [
                     [
                         'role' => 'user',
                         'content' => [
                             'type' => 'text',
-                            'text' => $skill['body'],
+                            'text' => $skill_body,
                         ],
                     ],
                 ],
@@ -268,7 +443,7 @@ function openmira_register_skill_prompt_abilities(): void
                 'mcp' => [
                     'public' => true,
                     'type' => 'prompt',
-                    '_openmira_skill_id' => $skill['id'],
+                    '_openmira_skill_id' => $skill_id,
                     'arguments' => [],
                 ],
                 'annotations' => [

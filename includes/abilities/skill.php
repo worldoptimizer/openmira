@@ -57,7 +57,7 @@ wp_register_ability('openmira/get-skill', [
             'skill_id' => [
                 'type' => 'string',
                 'description' => 'Skill ID, e.g. wp-aware-editing.',
-                'pattern' => '^[a-z0-9][\-a-z0-9._]{0,79}$',
+                'pattern' => '^[a-z0-9][-a-z0-9._]{0,79}$',
             ],
         ],
         'required' => ['skill_id'],
@@ -74,6 +74,7 @@ wp_register_ability('openmira/get-skill', [
             'source' => ['type' => 'string'],
             'source_label' => ['type' => 'string'],
             'overrides_built_in' => ['type' => 'boolean'],
+            'enabled' => ['type' => 'boolean'],
         ],
         'required' => ['id', 'title', 'description', 'body'],
     ],
@@ -94,20 +95,21 @@ wp_register_ability('openmira/get-skill', [
 /**
  * List installed skills.
  *
- * @return array{skills: list<array{id: string, title: string, description: string, prompt_name: string, source: string, source_label: string, overrides_built_in: bool}>, count: int}
+ * @return array{skills: list<array{id: string, title: string, description: string, prompt_name: string, source: string, source_label: string, overrides_built_in: bool, enabled: bool}>, count: int}
  */
 function openmira_list_skills_ability(): array
 {
     $skills = [];
     foreach (openmira_get_skills() as $skill) {
         $skills[] = [
-            'id' => $skill['id'],
-            'title' => $skill['title'],
-            'description' => $skill['description'],
-            'prompt_name' => $skill['prompt_name'],
-            'source' => $skill['source'],
-            'source_label' => $skill['source_label'],
-            'overrides_built_in' => $skill['overrides_built_in'],
+            'id' => (string) $skill['id'],
+            'title' => (string) $skill['title'],
+            'description' => (string) $skill['description'],
+            'prompt_name' => (string) $skill['prompt_name'],
+            'source' => (string) $skill['source'],
+            'source_label' => (string) $skill['source_label'],
+            'overrides_built_in' => ($skill['overrides_built_in'] ?? false) === true,
+            'enabled' => ($skill['enabled'] ?? true) !== false,
         ];
     }
 
@@ -118,7 +120,7 @@ function openmira_list_skills_ability(): array
  * Return one installed skill body.
  *
  * @param array<string, mixed> $input
- * @return array{id: string, title: string, description: string, body: string, prompt_name: string, source: string, source_label: string, overrides_built_in: bool}|WP_Error
+ * @return array{id: string, title: string, description: string, body: string, prompt_name: string, source: string, source_label: string, overrides_built_in: bool, enabled: bool}|WP_Error
  */
 function openmira_get_skill_ability(array $input): array|WP_Error
 {
@@ -131,13 +133,14 @@ function openmira_get_skill_ability(array $input): array|WP_Error
     }
 
     return [
-        'id' => $skill['id'],
-        'title' => $skill['title'],
-        'description' => $skill['description'],
-        'body' => $skill['body'],
-        'prompt_name' => $skill['prompt_name'],
-        'source' => $skill['source'],
-        'source_label' => $skill['source_label'],
-        'overrides_built_in' => $skill['overrides_built_in'],
+        'id' => (string) $skill['id'],
+        'title' => (string) $skill['title'],
+        'description' => (string) $skill['description'],
+        'body' => (string) $skill['body'],
+        'prompt_name' => (string) $skill['prompt_name'],
+        'source' => (string) $skill['source'],
+        'source_label' => (string) $skill['source_label'],
+        'overrides_built_in' => ($skill['overrides_built_in'] ?? false) === true,
+        'enabled' => ($skill['enabled'] ?? true) !== false,
     ];
 }

@@ -341,7 +341,7 @@ function openmira_render_memory_editor(string $editing_key, ?array $editing_entr
                         id="openmira-memory-key"
                         class="regular-text"
                         name="memory_key"
-                        pattern="^[a-z0-9][\-a-z0-9._]{0,79}$"
+                        pattern="^[a-z0-9][-a-z0-9._]{0,79}$"
                         required
                         value="<?php echo esc_attr($editing_key); ?>"
                     >

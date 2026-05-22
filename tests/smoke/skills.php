@@ -10,6 +10,8 @@ wp_set_current_user(1);
 $smoke_skills_dir = WP_CONTENT_DIR . '/openmira-smoke-skills';
 openmira_smoke_remove_dir($smoke_skills_dir);
 add_filter('openmira_user_skills_dir', static fn(string $_dir): string => $smoke_skills_dir);
+openmira_smoke_delete_cpt_skills();
+delete_option(OPENMIRA_SKILLS_CPT_MIGRATION_OPTION);
 
 $expected = ['build-a-block-theme', 'feedback', 'wp-aware-editing'];
 
@@ -23,6 +25,11 @@ foreach ($expected as $skill_id) {
 
 if (!function_exists('openmira_list_skills_ability') || !function_exists('openmira_get_skill_ability')) {
     fwrite(STDERR, "Open Mira skill abilities are not loaded.\n");
+    exit(1);
+}
+
+if (!post_type_exists(OPENMIRA_SKILL_POST_TYPE)) {
+    fwrite(STDERR, "Open Mira Skill CPT is not registered.\n");
     exit(1);
 }
 
@@ -43,6 +50,10 @@ if ($ids !== $expected) {
 foreach ($skills as $skill) {
     if (($skill['title'] ?? '') === '' || ($skill['description'] ?? '') === '') {
         fwrite(STDERR, 'Skill has empty title or description: ' . wp_json_encode($skill) . PHP_EOL);
+        exit(1);
+    }
+    if (($skill['source'] ?? '') !== 'filesystem' || ($skill['enabled'] ?? false) !== true) {
+        fwrite(STDERR, 'Built-in skill did not report filesystem source + enabled prompt: ' . wp_json_encode($skill) . PHP_EOL);
         exit(1);
     }
 }
@@ -124,10 +135,11 @@ if (is_wp_error($save)) {
 }
 $skills_with_user = openmira_get_skills();
 if (
-    ($skills_with_user['test-user-skill']['source'] ?? '') !== 'user'
-    || ($skills_with_user['test-user-skill']['source_label'] ?? '') !== 'user'
+    ($skills_with_user['test-user-skill']['source'] ?? '') !== 'cpt'
+    || ($skills_with_user['test-user-skill']['source_label'] ?? '') !== 'CPT'
+    || !(openmira_get_cpt_skill_post('test-user-skill') instanceof WP_Post)
 ) {
-    fwrite(STDERR, "User-content skill did not load with source=user.\n");
+    fwrite(STDERR, "CPT skill did not load with source=cpt.\n");
     exit(1);
 }
 
@@ -143,11 +155,38 @@ if (is_wp_error($override)) {
 }
 $skills_with_override = openmira_get_skills();
 if (
-    ($skills_with_override['feedback']['source'] ?? '') !== 'user'
-    || ($skills_with_override['feedback']['source_label'] ?? '') !== 'user-override'
+    ($skills_with_override['feedback']['source'] ?? '') !== 'cpt'
+    || ($skills_with_override['feedback']['source_label'] ?? '') !== 'CPT (overrides built-in)'
     || ($skills_with_override['feedback']['overrides_built_in'] ?? false) !== true
 ) {
-    fwrite(STDERR, "User override for built-in feedback skill did not win.\n");
+    fwrite(STDERR, "CPT override for built-in feedback skill did not win.\n");
+    exit(1);
+}
+
+$disabled = openmira_upsert_cpt_skill([
+    'id' => 'disabled-smoke-skill',
+    'title' => 'Disabled Smoke Skill',
+    'description' => 'Disabled prompt smoke.',
+    'body' => '# Disabled Smoke Skill' . PHP_EOL . PHP_EOL . 'Body.',
+    'enabled' => false,
+]);
+if (is_wp_error($disabled)) {
+    fwrite(STDERR, $disabled->get_error_message() . PHP_EOL);
+    exit(1);
+}
+openmira_register_skill_prompt_abilities();
+if (wp_has_ability(openmira_skill_ability_name('disabled-smoke-skill'))) {
+    fwrite(STDERR, "Disabled CPT skill registered a prompt ability.\n");
+    exit(1);
+}
+$enabled = openmira_set_cpt_skill_prompt_enabled('disabled-smoke-skill', true);
+if (is_wp_error($enabled)) {
+    fwrite(STDERR, $enabled->get_error_message() . PHP_EOL);
+    exit(1);
+}
+openmira_register_skill_prompt_abilities();
+if (!wp_has_ability(openmira_skill_ability_name('disabled-smoke-skill'))) {
+    fwrite(STDERR, "Enabled CPT skill did not register a prompt ability.\n");
     exit(1);
 }
 
@@ -185,12 +224,12 @@ if (is_wp_error($roundtrip)) {
     fwrite(STDERR, $roundtrip->get_error_message() . PHP_EOL);
     exit(1);
 }
-$roundtrip_file = openmira_user_skill_file_path('roundtrip-skill');
-$exported = file_get_contents($roundtrip_file);
-if (!is_string($exported)) {
-    fwrite(STDERR, "Could not read exported skill file.\n");
-    exit(1);
-}
+$roundtrip_skill = openmira_get_skill('roundtrip-skill');
+$exported = openmira_build_skill_markdown(
+    (string) ($roundtrip_skill['title'] ?? ''),
+    (string) ($roundtrip_skill['description'] ?? ''),
+    (string) ($roundtrip_skill['body'] ?? ''),
+);
 $deleted = openmira_delete_user_skill('roundtrip-skill');
 if (is_wp_error($deleted)) {
     fwrite(STDERR, $deleted->get_error_message() . PHP_EOL);
@@ -207,15 +246,69 @@ if (($roundtrip_skill['body'] ?? '') !== "# Roundtrip Skill\n\nOriginal body.\n"
     exit(1);
 }
 
-global $admin_page_hooks;
+$zip_path = openmira_create_user_skills_zip();
+if (is_wp_error($zip_path)) {
+    fwrite(STDERR, $zip_path->get_error_message() . PHP_EOL);
+    exit(1);
+}
+$zip = new ZipArchive();
+if ($zip->open($zip_path) !== true || $zip->getFromName('test-user-skill/SKILL.md') === false) {
+    fwrite(STDERR, "CPT skill ZIP export did not include test-user-skill/SKILL.md.\n");
+    exit(1);
+}
+$zip->close();
+if (is_file($zip_path)) {
+    unlink($zip_path);
+}
+
+$import_zip_path = wp_tempnam('openmira-skill-import.zip');
+$import_zip = new ZipArchive();
+if ($import_zip_path === '' || $import_zip->open($import_zip_path, ZipArchive::OVERWRITE) !== true) {
+    fwrite(STDERR, "Could not create skill import ZIP.\n");
+    exit(1);
+}
+$import_zip->addFromString(
+    'zip-import-skill/SKILL.md',
+    openmira_build_skill_markdown('ZIP Import Skill', 'ZIP import smoke.', "# ZIP Import Skill\n\nBody."),
+);
+$import_zip->close();
+$zip_imported = openmira_import_skills_zip($import_zip_path, false);
+if (is_file($import_zip_path)) {
+    unlink($import_zip_path);
+}
+if (is_wp_error($zip_imported) || !(openmira_get_cpt_skill_post('zip-import-skill') instanceof WP_Post)) {
+    fwrite(
+        STDERR,
+        is_wp_error($zip_imported) ? $zip_imported->get_error_message() . PHP_EOL : "ZIP import did not create CPT skill.\n",
+    );
+    exit(1);
+}
+
+openmira_smoke_remove_dir($smoke_skills_dir);
+$legacy_dir = $smoke_skills_dir . '/legacy-skill';
+wp_mkdir_p($legacy_dir);
+file_put_contents(
+    $legacy_dir . '/SKILL.md',
+    openmira_build_skill_markdown('Legacy Skill', 'Legacy migration smoke.', "# Legacy Skill\n\nBody."),
+);
+delete_option(OPENMIRA_SKILLS_CPT_MIGRATION_OPTION);
+$migration = openmira_migrate_legacy_user_skills_to_cpt();
+if (is_wp_error($migration) || ($migration['migrated'] ?? 0) !== 1) {
+    fwrite(
+        STDERR,
+        is_wp_error($migration) ? $migration->get_error_message() . PHP_EOL : 'Legacy filesystem migration did not migrate exactly one skill.' . PHP_EOL,
+    );
+    exit(1);
+}
+if (!(openmira_get_cpt_skill_post('legacy-skill') instanceof WP_Post)) {
+    fwrite(STDERR, "Legacy filesystem skill did not migrate into CPT storage.\n");
+    exit(1);
+}
+
 if (!did_action('admin_menu')) {
     do_action('admin_menu');
 }
-if (!isset($admin_page_hooks['openmira-connect'])) {
-    fwrite(STDERR, "Parent menu openmira-connect not registered\n");
-    exit(1);
-}
-$expected_hook = $admin_page_hooks['openmira-connect'] . '_page_openmira-skills';
+$expected_hook = 'open-mira_page_openmira-skills';
 if (!has_action($expected_hook)) {
     fwrite(STDERR, "Skills page callback not registered against expected hook: {$expected_hook}\n");
     exit(1);
@@ -227,7 +320,7 @@ ob_start();
 openmira_render_skills_page();
 $add_page_html = ob_get_clean();
 $_GET = $original_get;
-if (!is_string($add_page_html) || !str_contains($add_page_html, 'pattern="^[a-z0-9][\-a-z0-9._]{0,79}$"')) {
+if (!is_string($add_page_html) || !str_contains($add_page_html, 'pattern="^[a-z0-9][-a-z0-9._]{0,79}$"')) {
     fwrite(STDERR, "Skills add form did not render the fixed browser-safe pattern attribute.\n");
     exit(1);
 }
@@ -246,10 +339,12 @@ echo wp_json_encode([
     'status' => 'ok',
     'skills' => $ids,
     'prompts' => $expected_prompts,
-    'user_skill_dir' => $smoke_skills_dir,
+    'legacy_user_skill_dir' => $smoke_skills_dir,
 ], JSON_PRETTY_PRINT) . PHP_EOL;
 
 openmira_smoke_remove_dir($smoke_skills_dir);
+openmira_smoke_delete_cpt_skills();
+delete_option(OPENMIRA_SKILLS_CPT_MIGRATION_OPTION);
 
 /**
  * Remove a smoke directory recursively.
@@ -269,7 +364,21 @@ function openmira_smoke_remove_dir(string $dir): void
             openmira_smoke_remove_dir($path);
             continue;
         }
-        @unlink($path);
+        if (is_file($path)) {
+            unlink($path);
+        }
     }
-    @rmdir($dir);
+    if (is_dir($dir)) {
+        rmdir($dir);
+    }
+}
+
+/**
+ * Delete smoke-created CPT skill posts.
+ */
+function openmira_smoke_delete_cpt_skills(): void
+{
+    foreach (openmira_get_cpt_skill_posts() as $post) {
+        wp_delete_post($post->ID, true);
+    }
 }
