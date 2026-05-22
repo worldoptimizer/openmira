@@ -7,6 +7,13 @@ if (!defined('ABSPATH')) {
 
 wp_set_current_user(1);
 
+function openmira_smoke_register_skill_prompt_abilities(): void
+{
+    add_action('wp_abilities_api_init', 'openmira_register_skill_prompt_abilities', priority: 999);
+    do_action('wp_abilities_api_init');
+    remove_action('wp_abilities_api_init', 'openmira_register_skill_prompt_abilities', priority: 999);
+}
+
 $smoke_skills_dir = WP_CONTENT_DIR . '/openmira-smoke-skills';
 openmira_smoke_remove_dir($smoke_skills_dir);
 add_filter('openmira_user_skills_dir', static fn(string $_dir): string => $smoke_skills_dir);
@@ -174,7 +181,7 @@ if (is_wp_error($disabled)) {
     fwrite(STDERR, $disabled->get_error_message() . PHP_EOL);
     exit(1);
 }
-openmira_register_skill_prompt_abilities();
+openmira_smoke_register_skill_prompt_abilities();
 if (wp_has_ability(openmira_skill_ability_name('disabled-smoke-skill'))) {
     fwrite(STDERR, "Disabled CPT skill registered a prompt ability.\n");
     exit(1);
@@ -184,7 +191,7 @@ if (is_wp_error($enabled)) {
     fwrite(STDERR, $enabled->get_error_message() . PHP_EOL);
     exit(1);
 }
-openmira_register_skill_prompt_abilities();
+openmira_smoke_register_skill_prompt_abilities();
 if (!wp_has_ability(openmira_skill_ability_name('disabled-smoke-skill'))) {
     fwrite(STDERR, "Enabled CPT skill did not register a prompt ability.\n");
     exit(1);
