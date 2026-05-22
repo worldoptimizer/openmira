@@ -30,6 +30,7 @@ rm -f "$COOKIE_JAR" "$LOGIN_HTML" "$ADMIN_HTML" "$ACT_JSON" "$THEME_JSON" "$ABSP
 
 wp-env start
 wp-env run cli wp plugin activate openmira >/dev/null
+wp-env run cli wp user update "$USERNAME" --user_pass="$PASSWORD" --skip-email >/dev/null
 wp-env run cli wp eval '
 update_option("openmira_ai_abilities_enabled", "1");
 update_option("openmira_ai_abilities_domain", (string) wp_parse_url(home_url(), PHP_URL_HOST));

@@ -99,6 +99,7 @@ jobs:
         run: |
           npm run wp-env -- start
           npm run wp-env -- run cli wp plugin activate openmira
+          npm run wp-env -- run cli wp user update admin --user_pass=password --skip-email
           npm run wp-env -- run cli wp eval '
           update_option("openmira_ai_abilities_enabled", "1");
           update_option("openmira_ai_abilities_domain", (string) wp_parse_url(home_url(), PHP_URL_HOST));
