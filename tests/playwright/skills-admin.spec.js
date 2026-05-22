@@ -5,10 +5,14 @@ const username = process.env.OPENMIRA_WP_ENV_USERNAME || 'admin';
 const password = process.env.OPENMIRA_WP_ENV_PASSWORD || 'password';
 
 test('Skills admin renders and creates a CPT-backed skill', async ({ page }) => {
-  await page.goto(`${baseURL}/wp-login.php`);
-  await page.locator('#user_login').fill(username);
-  await page.locator('#user_pass').fill(password);
-  await page.locator('#wp-submit').click();
+  if (process.env.OPENMIRA_WP_ENV_AUTO_LOGIN === '1') {
+    await page.goto(`${baseURL}/?openmira_ci_login=1&openmira_ci_redirect=openmira-skills`);
+  } else {
+    await page.goto(`${baseURL}/wp-login.php`);
+    await page.locator('#user_login').fill(username);
+    await page.locator('#user_pass').fill(password);
+    await page.locator('#wp-submit').click();
+  }
   await page.waitForURL(/\/wp-admin\//, { timeout: 15000 });
 
   await page.goto(`${baseURL}/wp-admin/admin.php?page=openmira-skills`);

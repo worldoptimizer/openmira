@@ -100,6 +100,7 @@ jobs:
           npm run wp-env -- start
           npm run wp-env -- run cli wp plugin activate openmira
           npm run wp-env -- run cli wp user update admin --user_pass=password --skip-email
+          npm run wp-env -- run cli bash -lc 'mkdir -p /var/www/html/wp-content/mu-plugins && cp /var/www/html/wp-content/plugins/openmira/tests/mu-plugins/openmira-wp-env-autologin.php /var/www/html/wp-content/mu-plugins/openmira-wp-env-autologin.php'
           npm run wp-env -- run cli wp eval '
           update_option("openmira_ai_abilities_enabled", "1");
           update_option("openmira_ai_abilities_domain", (string) wp_parse_url(home_url(), PHP_URL_HOST));
@@ -107,3 +108,5 @@ jobs:
 
       - name: Run Skills admin Playwright smoke
         run: npx playwright test tests/playwright/skills-admin.spec.js --browser=chromium --reporter=list
+        env:
+          OPENMIRA_WP_ENV_AUTO_LOGIN: '1'
