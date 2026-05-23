@@ -1,3 +1,10 @@
+v1.6.1 - 2026/05/23
+* New: Added a built-in `skill-creator` Skill, adapted from Anthropic's Apache-2.0 skill-creator source for Open Mira's flat WordPress Skill format.
+* Improvement: Custom Skills now use native WordPress trash semantics. Admin users can move CPT-backed Skills to trash, review trashed Skills, restore them, or permanently delete them.
+* Improvement: Skills import now accepts multiple Markdown files in one upload and reports per-file import results.
+* Improvement: Built-in Skill frontmatter now includes `enable_prompt: true`, and frontmatter `enable_prompt: false` suppresses MCP Prompt registration when no CPT meta exists.
+* Minor fixes.
+
 v1.6.0 - 2026/05/22
 * Security: Custom Skills now store user-created prompt content in a private WordPress CPT (`openmira_skill`) instead of writing prompt files under `wp-content/openmira-skills/`. This removes the writable-filesystem prompt injection surface from the Skills admin.
 * New: Custom Skills now get native WordPress revisions. Admin users can open the native revision viewer for CPT-backed Skills after revisions exist.

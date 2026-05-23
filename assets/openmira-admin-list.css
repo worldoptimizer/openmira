@@ -95,6 +95,15 @@
     gap: 8px;
 }
 
+.openmira-admin-form-row {
+    margin: 1em 0;
+}
+
+.openmira-admin-result-list {
+    list-style: disc;
+    margin-left: 1.5em;
+}
+
 .openmira-admin-skill-preview {
     background: #f6f7f7;
     border: 1px solid #dcdcde;

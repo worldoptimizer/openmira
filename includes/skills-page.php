@@ -126,7 +126,9 @@ function openmira_render_skill_notice(): void
     $message = match (true) {
         $result === 'created' => __('Skill created.', domain: 'open-mira'),
         $result === 'updated' => __('Skill updated.', domain: 'open-mira'),
-        $result === 'deleted' => __('Skill deleted.', domain: 'open-mira'),
+        $result === 'trashed' => __('Skill moved to trash.', domain: 'open-mira'),
+        $result === 'restored' => __('Skill restored.', domain: 'open-mira'),
+        $result === 'deleted' => __('Skill permanently deleted.', domain: 'open-mira'),
         $result === 'customized' => __(
             'Built-in skill copied to a custom skill. You can edit it now.',
             domain: 'open-mira',
@@ -142,6 +144,40 @@ function openmira_render_skill_notice(): void
     };
     ?>
     <div class="notice notice-success is-dismissible"><p><?php echo esc_html($message); ?></p></div>
+    <?php openmira_render_skill_import_summary(); ?>
+    <?php
+}
+
+/**
+ * Render a per-file import summary after PRG redirects.
+ */
+function openmira_render_skill_import_summary(): void
+{
+    $key = is_string($_GET['openmira_skill_import_key'] ?? null)
+        ? sanitize_text_field(wp_unslash($_GET['openmira_skill_import_key']))
+        : '';
+    if ($key === '' || !function_exists('openmira_take_skill_import_results')) {
+        return;
+    }
+
+    $result = openmira_take_skill_import_results($key);
+    $file_results = is_array($result['file_results'] ?? null) ? $result['file_results'] : [];
+    if ($file_results === []) {
+        return;
+    }
+    ?>
+    <div class="notice notice-info is-dismissible">
+        <p><strong><?php esc_html_e('Per-file import results', domain: 'open-mira'); ?></strong></p>
+        <ul class="openmira-admin-result-list">
+            <?php foreach ($file_results as $file_result): ?>
+                <li>
+                    <code><?php echo esc_html((string) ($file_result['file'] ?? '')); ?></code>
+                    —
+                    <?php echo esc_html((string) ($file_result['message'] ?? $file_result['status'] ?? '')); ?>
+                </li>
+            <?php endforeach; ?>
+        </ul>
+    </div>
     <?php
 }
 
@@ -186,32 +222,56 @@ function openmira_render_skills_list(array $skills): void
 {
     $user_skills = array_filter($skills, static fn(array $skill): bool => $skill['source'] === 'cpt');
     $built_in_skills = array_filter($skills, static fn(array $skill): bool => $skill['source'] === 'filesystem');
+    $trashed_skills = openmira_get_trashed_skill_rows();
+    $filter = openmira_skill_request_string($_GET['skill_status'] ?? null);
+    if (!in_array($filter, ['all', 'active', 'trashed'], true)) {
+        $filter = 'all';
+    }
     ?>
-    <h2><?php esc_html_e('Custom Skills', domain: 'open-mira'); ?></h2>
-    <div class="openmira-admin-toolbar">
-        <a class="button button-primary" href="<?php echo
-            esc_url(add_query_arg([
-                'page' => 'openmira-skills',
-                'skill_action' => 'add',
-            ], admin_url('admin.php')))
-        ; ?>"><?php esc_html_e('Add Skill', domain: 'open-mira'); ?></a>
-        <button type="button" class="button" onclick="document.getElementById('openmira-skill-import-panel').toggleAttribute('hidden');"><?php esc_html_e(
-            'Import',
-            domain: 'open-mira',
-        ); ?></button>
-        <?php if ($user_skills !== []): ?>
-            <a class="button" href="<?php echo
-                esc_url(wp_nonce_url(
-                    admin_url('admin.php?page=openmira-skills&openmira_skill_export=1'),
-                    action: 'openmira_skill_export',
-                ))
-            ; ?>"><?php esc_html_e('Export all user skills', domain: 'open-mira'); ?></a>
-        <?php endif; ?>
+    <div class="openmira-admin-toolbar openmira-admin-filter-toolbar">
+        <?php foreach ([
+            'all' => __('All', domain: 'open-mira'),
+            'active' => __('Active', domain: 'open-mira'),
+            'trashed' => __('Trashed', domain: 'open-mira'),
+        ] as $status => $label): ?>
+            <a class="<?php echo
+                esc_attr($filter === $status ? 'button button-primary' : 'button')
+            ; ?>" href="<?php echo
+                esc_url(add_query_arg(['page' => 'openmira-skills', 'skill_status' => $status], admin_url('admin.php')))
+            ; ?>"><?php echo esc_html($label); ?></a>
+        <?php endforeach; ?>
     </div>
-    <?php openmira_render_skill_import_panel(); ?>
-    <?php openmira_render_skill_table($user_skills, true); ?>
-    <h2><?php esc_html_e('Built-in Skills', domain: 'open-mira'); ?></h2>
-    <?php openmira_render_skill_table($built_in_skills, false); ?>
+        <?php if ($filter !== 'trashed'): ?>
+            <h2><?php esc_html_e('Custom Skills', domain: 'open-mira'); ?></h2>
+            <div class="openmira-admin-toolbar">
+                <a class="button button-primary" href="<?php echo
+                    esc_url(add_query_arg([
+                        'page' => 'openmira-skills',
+                        'skill_action' => 'add',
+                    ], admin_url('admin.php')))
+                ; ?>"><?php esc_html_e('Add Skill', domain: 'open-mira'); ?></a>
+                <button type="button" class="button" onclick="document.getElementById('openmira-skill-import-panel').toggleAttribute('hidden');"><?php esc_html_e(
+                    'Import',
+                    domain: 'open-mira',
+                ); ?></button>
+                <?php if ($user_skills !== []): ?>
+                    <a class="button" href="<?php echo
+                        esc_url(wp_nonce_url(
+                            admin_url('admin.php?page=openmira-skills&openmira_skill_export=1'),
+                            action: 'openmira_skill_export',
+                        ))
+                    ; ?>"><?php esc_html_e('Export all user skills', domain: 'open-mira'); ?></a>
+                <?php endif; ?>
+            </div>
+            <?php openmira_render_skill_import_panel(); ?>
+            <?php openmira_render_skill_table($user_skills, true); ?>
+            <h2><?php esc_html_e('Built-in Skills', domain: 'open-mira'); ?></h2>
+            <?php openmira_render_skill_table($built_in_skills, false); ?>
+        <?php endif; ?>
+        <?php if ($filter !== 'active'): ?>
+            <h2><?php esc_html_e('Trashed Skills', domain: 'open-mira'); ?></h2>
+            <?php openmira_render_skill_table($trashed_skills, true, trashed: true); ?>
+        <?php endif; ?>
     <?php
 }
 
@@ -227,20 +287,28 @@ function openmira_render_skill_import_panel(): void
         ; ?>">
             <?php wp_nonce_field(action: 'openmira_skill_action', name: '_openmira_skill_nonce'); ?>
             <input type="hidden" name="openmira_skill_action" value="import">
-            <p>
+            <div class="openmira-admin-form-row">
                 <label for="openmira-skill-import-file"><strong><?php esc_html_e(
                     'File',
                     domain: 'open-mira',
                 ); ?></strong></label><br>
-                <input id="openmira-skill-import-file" type="file" name="skill_import_file" accept=".md,.markdown,.zip" required>
-            </p>
-            <p>
+                <input id="openmira-skill-import-file" type="file" name="skill_import_file[]" accept=".md,.markdown,.zip" multiple required>
+                <p class="description"><?php esc_html_e(
+                    'Choose one ZIP archive or one or more Markdown skill files.',
+                    domain: 'open-mira',
+                ); ?></p>
+            </div>
+            <div class="openmira-admin-form-row">
                 <label for="openmira-single-skill-id"><strong><?php esc_html_e(
                     'Skill ID for single SKILL.md imports',
                     domain: 'open-mira',
                 ); ?></strong></label><br>
                 <input id="openmira-single-skill-id" class="regular-text" name="single_skill_id" pattern="^[a-z0-9][-a-z0-9._]{0,79}$">
-            </p>
+                <p class="description"><?php esc_html_e(
+                    'Only used when uploading one file named SKILL.md.',
+                    domain: 'open-mira',
+                ); ?></p>
+            </div>
             <p>
                 <label><input type="checkbox" name="skip_existing" value="1"> <?php esc_html_e(
                     'Skip existing user skills',
@@ -262,7 +330,7 @@ function openmira_render_skill_import_panel(): void
  *
  * @param array<string, array<string, mixed>> $skills
  */
-function openmira_render_skill_table(array $skills, bool $is_user_group): void
+function openmira_render_skill_table(array $skills, bool $is_user_group, bool $trashed = false): void
 { ?>
     <table class="wp-list-table widefat fixed striped openmira-admin-skills-table">
         <thead>
@@ -281,14 +349,18 @@ function openmira_render_skill_table(array $skills, bool $is_user_group): void
                     <td colspan="6"><?php echo
                         esc_html(
                             $is_user_group
-                                ? __('No custom skills yet.', domain: 'open-mira')
+                                ? (
+                                    $trashed
+                                        ? __('No trashed skills.', domain: 'open-mira')
+                                        : __('No custom skills yet.', domain: 'open-mira')
+                                )
                                 : __('No built-in skills found.', domain: 'open-mira'),
                         )
                     ; ?></td>
                 </tr>
             <?php else: ?>
                 <?php foreach ($skills as $skill): ?>
-                    <?php openmira_render_skill_row($skill); ?>
+                    <?php openmira_render_skill_row($skill, trashed: $trashed); ?>
                 <?php endforeach; ?>
             <?php endif; ?>
         </tbody>
@@ -300,7 +372,7 @@ function openmira_render_skill_table(array $skills, bool $is_user_group): void
  *
  * @param array<string, mixed> $skill
  */
-function openmira_render_skill_row(array $skill): void
+function openmira_render_skill_row(array $skill, bool $trashed = false): void
 {
     $skill_id = (string) $skill['id'];
     $source = (string) $skill['source'];
@@ -319,9 +391,13 @@ function openmira_render_skill_row(array $skill): void
     <tr>
         <td>
             <strong>
-                <a href="<?php echo esc_url($source === 'cpt' ? $edit_url : $view_url); ?>">
+                <?php if ($trashed): ?>
                     <?php echo esc_html((string) $skill['title']); ?>
-                </a>
+                <?php else: ?>
+                    <a href="<?php echo esc_url($source === 'cpt' ? $edit_url : $view_url); ?>">
+                        <?php echo esc_html((string) $skill['title']); ?>
+                    </a>
+                <?php endif; ?>
             </strong>
             <p class="description"><?php echo esc_html((string) $skill['description']); ?></p>
         </td>
@@ -335,14 +411,20 @@ function openmira_render_skill_row(array $skill): void
         </td>
         <td><code><?php echo esc_html((string) $skill['prompt_name']); ?></code></td>
         <td class="openmira-admin-table-actions">
-            <?php if ($source === 'cpt'): ?>
+            <?php if ($source === 'cpt' && !$trashed): ?>
                 <?php openmira_render_skill_prompt_toggle_form($skill_id, ($skill['enabled'] ?? true) !== false); ?>
+            <?php elseif ($trashed): ?>
+                <?php esc_html_e('Not registered', domain: 'open-mira'); ?>
             <?php else: ?>
                 <?php esc_html_e('Always enabled', domain: 'open-mira'); ?>
             <?php endif; ?>
         </td>
         <td class="openmira-admin-table-actions">
-            <?php if ($source === 'cpt'): ?>
+            <?php if ($source === 'cpt' && $trashed): ?>
+                <?php openmira_render_skill_restore_form($skill_id); ?>
+                <span class="openmira-admin-action-separator">|</span>
+                <?php openmira_render_skill_delete_form($skill_id, permanent: true); ?>
+            <?php elseif ($source === 'cpt'): ?>
                 <a class="openmira-admin-action-link" href="<?php echo esc_url($edit_url); ?>"><?php esc_html_e(
                     'Edit',
                     domain: 'open-mira',
@@ -365,7 +447,7 @@ function openmira_render_skill_row(array $skill): void
                     ))
                 ; ?>"><?php esc_html_e('Export', domain: 'open-mira'); ?></a>
                 <span class="openmira-admin-action-separator">|</span>
-                <?php openmira_render_skill_delete_form($skill_id); ?>
+                <?php openmira_render_skill_trash_form($skill_id); ?>
             <?php else: ?>
                 <?php openmira_render_skill_customize_form($skill_id); ?>
                 <span class="openmira-admin-action-separator">|</span>
@@ -519,19 +601,54 @@ function openmira_render_skill_edit_form(?array $skill): void
 }
 
 /**
- * Render delete form.
+ * Render trash form.
  */
-function openmira_render_skill_delete_form(string $skill_id): void
+function openmira_render_skill_trash_form(string $skill_id): void
 { ?>
     <form class="openmira-admin-inline-form" method="post" action="<?php echo
         esc_url(admin_url('admin.php?page=openmira-skills'))
     ; ?>">
         <?php wp_nonce_field(action: 'openmira_skill_action', name: '_openmira_skill_nonce'); ?>
+        <input type="hidden" name="openmira_skill_action" value="trash">
+        <input type="hidden" name="skill_id" value="<?php echo esc_attr($skill_id); ?>">
+        <button type="submit" class="button-link-delete openmira-admin-action-link" onclick="return confirm('<?php echo
+            esc_js(__('Move this user skill to trash?', domain: 'open-mira'))
+        ; ?>');"><?php esc_html_e('Trash', domain: 'open-mira'); ?></button>
+    </form>
+    <?php }
+
+/**
+ * Render restore form.
+ */
+function openmira_render_skill_restore_form(string $skill_id): void
+{ ?>
+    <form class="openmira-admin-inline-form" method="post" action="<?php echo
+        esc_url(admin_url('admin.php?page=openmira-skills&skill_status=trashed'))
+    ; ?>">
+        <?php wp_nonce_field(action: 'openmira_skill_action', name: '_openmira_skill_nonce'); ?>
+        <input type="hidden" name="openmira_skill_action" value="restore">
+        <input type="hidden" name="skill_id" value="<?php echo esc_attr($skill_id); ?>">
+        <button type="submit" class="button-link openmira-admin-action-link"><?php esc_html_e(
+            'Restore',
+            domain: 'open-mira',
+        ); ?></button>
+    </form>
+    <?php }
+
+/**
+ * Render permanent delete form.
+ */
+function openmira_render_skill_delete_form(string $skill_id, bool $permanent = false): void
+{ ?>
+    <form class="openmira-admin-inline-form" method="post" action="<?php echo
+        esc_url(admin_url('admin.php?page=openmira-skills' . ($permanent ? '&skill_status=trashed' : '')))
+    ; ?>">
+        <?php wp_nonce_field(action: 'openmira_skill_action', name: '_openmira_skill_nonce'); ?>
         <input type="hidden" name="openmira_skill_action" value="delete">
         <input type="hidden" name="skill_id" value="<?php echo esc_attr($skill_id); ?>">
         <button type="submit" class="button-link-delete openmira-admin-action-link" onclick="return confirm('<?php echo
-            esc_js(__('Delete this user skill?', domain: 'open-mira'))
-        ; ?>');"><?php esc_html_e('Delete', domain: 'open-mira'); ?></button>
+            esc_js(__('Permanently delete this user skill?', domain: 'open-mira'))
+        ; ?>');"><?php esc_html_e('Permanently delete', domain: 'open-mira'); ?></button>
     </form>
     <?php }
 
@@ -610,4 +727,28 @@ function openmira_skill_source_label(string $source, bool $overrides): string
     }
 
     return __('Filesystem', domain: 'open-mira');
+}
+
+/**
+ * Return trashed CPT skills as canonical skill rows.
+ *
+ * @return array<string, array<string, mixed>>
+ */
+function openmira_get_trashed_skill_rows(): array
+{
+    if (!function_exists('openmira_get_cpt_skill_posts') || !function_exists('openmira_skill_from_cpt_post')) {
+        return [];
+    }
+
+    $skills = [];
+    foreach (openmira_get_cpt_skill_posts(['trash']) as $post) {
+        $skill = openmira_skill_from_cpt_post($post);
+        if (!is_array($skill)) {
+            continue;
+        }
+        $skills[(string) $skill['id']] = $skill;
+    }
+    ksort($skills);
+
+    return $skills;
 }

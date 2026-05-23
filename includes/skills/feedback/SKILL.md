@@ -1,6 +1,7 @@
 ---
 title: "Open Mira Feedback Report"
 description: "Compose a sanitized issue report from recent agent activity in Open Mira."
+enable_prompt: true
 ---
 
 # Open Mira Feedback Report

@@ -85,7 +85,7 @@ final class OpenMira_Filesystem_Skill_Source implements OpenMira_Skill_Source
             'body' => $parsed['body'],
             'path' => $file,
             'source' => $this->source,
-            'enabled' => true,
+            'enabled' => $parsed['enable_prompt'] ?? true,
         ]);
     }
 }
@@ -283,7 +283,7 @@ function openmira_scan_skills_directory(string $base_dir, string $source): array
             'body' => $parsed['body'],
             'path' => $file,
             'source' => $source,
-            'enabled' => true,
+            'enabled' => $parsed['enable_prompt'] ?? true,
         ];
     }
 
@@ -291,14 +291,15 @@ function openmira_scan_skills_directory(string $base_dir, string $source): array
 }
 
 /**
- * Parse a SKILL.md file: YAML frontmatter (title, description) + markdown body.
+ * Parse a SKILL.md file: YAML frontmatter (title, description, enable_prompt) + markdown body.
  *
- * @return array{title: string, description: string, body: string}
+ * @return array{title: string, description: string, enable_prompt: bool|null, body: string}
  */
 function openmira_parse_skill_markdown(string $raw): array
 {
     $title = '';
     $description = '';
+    $enable_prompt = null;
     $body = $raw;
 
     $match = [];
@@ -308,7 +309,7 @@ function openmira_parse_skill_markdown(string $raw): array
         $front_lines = preg_split('/\r?\n/', $front);
         foreach ($front_lines === false ? [] : $front_lines as $line) {
             $kv = [];
-            if (preg_match('/^\s*(title|description)\s*:\s*(.*)\s*$/i', $line, $kv)) {
+            if (preg_match('/^\s*(title|description|enable_prompt)\s*:\s*(.*)\s*$/i', $line, $kv)) {
                 $key = strtolower($kv[1]);
                 $value = trim($kv[2], characters: " \t\"'");
                 if ($key === 'title') {
@@ -317,19 +318,27 @@ function openmira_parse_skill_markdown(string $raw): array
                 }
                 if ($key === 'description') {
                     $description = $value;
+                    continue;
+                }
+                if ($key === 'enable_prompt') {
+                    $enable_prompt = rest_sanitize_boolean($value);
                 }
             }
         }
     }
 
-    return ['title' => $title, 'description' => $description, 'body' => $body];
+    return ['title' => $title, 'description' => $description, 'enable_prompt' => $enable_prompt, 'body' => $body];
 }
 
 /**
  * Return a complete SKILL.md document.
  */
-function openmira_build_skill_markdown(string $title, string $description, string $body): string
-{
+function openmira_build_skill_markdown(
+    string $title,
+    string $description,
+    string $body,
+    bool $enable_prompt = true,
+): string {
     return (
         "---\n"
         . 'title: "'
@@ -339,6 +348,9 @@ function openmira_build_skill_markdown(string $title, string $description, strin
         . 'description: "'
         . openmira_skill_frontmatter_escape($description)
         . '"'
+        . "\n"
+        . 'enable_prompt: '
+        . ($enable_prompt ? 'true' : 'false')
         . "\n"
         . "---\n\n"
         . rtrim($body)

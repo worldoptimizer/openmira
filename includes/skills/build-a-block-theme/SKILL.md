@@ -1,6 +1,7 @@
 ---
 title: "Build a Block Theme"
 description: "End-to-end workflow for scaffolding and styling a block theme with Open Mira."
+enable_prompt: true
 ---
 
 # Build a Block Theme
