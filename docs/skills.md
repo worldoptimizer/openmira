@@ -14,6 +14,7 @@ Open Mira ships starter Skills as MCP Prompts. Skills are Markdown documents reg
 | `feedback` | `openmira.feedback` | Compose a sanitized issue report from recent Open Mira activity. |
 | `wp-aware-editing` | `openmira.wp-aware-editing` | Follow the canonical safe-edit workflow for WordPress code changes. |
 | `build-a-block-theme` | `openmira.build-a-block-theme` | Scaffold and style a WordPress block theme end to end. |
+| `skill-creator` | `openmira.skill-creator` | Create and refine Open Mira skills for WordPress-aware workflows. |
 
 ## File format
 
@@ -29,6 +30,7 @@ The file starts with YAML-style frontmatter followed by the Markdown prompt body
 ---
 title: "Human-readable title"
 description: "Short one-line description for prompt-selection UIs"
+enable_prompt: true
 ---
 
 # Skill Body
@@ -51,7 +53,7 @@ Built-in skills live in the plugin directory and update with Open Mira. Custom s
 
 If a custom CPT skill uses the same ID as a built-in skill, the custom version wins. The admin page labels that state as **Custom (overrides built-in)** so it is clear that the plugin copy is still present but shadowed.
 
-Use **Open Mira → Skills** to create, edit, delete, import, and export custom skills. Built-in skills are read-only; click **Customize** to create a CPT-backed custom copy before editing. Custom skills also include an **Enable prompt** toggle; disabled skills remain visible in the admin and abilities, but are not registered as MCP Prompts.
+Use **Open Mira → Skills** to create, edit, trash, restore, permanently delete, import, and export custom skills. Built-in skills are read-only; click **Customize** to create a CPT-backed custom copy before editing. Custom skills also include an **Enable prompt** toggle; disabled skills remain visible in the admin and abilities, but are not registered as MCP Prompts.
 
 Open Mira 1.6.0 migrates legacy 1.5.x files from `wp-content/openmira-skills/<id>/SKILL.md` into CPT storage on first boot. The files are left on disk for one minor version as a safety fallback, but Open Mira no longer loads custom prompts directly from that writable filesystem path.
 
@@ -69,7 +71,7 @@ openmira-skills.zip
     └── SKILL.md
 ```
 
-This ZIP shape is the stable interchange format for sharing Open Mira skills across local and staging sites. Importing either a single `SKILL.md` file or a ZIP creates or updates CPT-backed custom skills.
+This ZIP shape is the stable interchange format for sharing Open Mira skills across local and staging sites. Importing a ZIP, one `SKILL.md` file, or multiple Markdown skill files creates or updates CPT-backed custom skills.
 
 ## Admin view
 

@@ -20,7 +20,7 @@ add_filter('openmira_user_skills_dir', static fn(string $_dir): string => $smoke
 openmira_smoke_delete_cpt_skills();
 delete_option(OPENMIRA_SKILLS_CPT_MIGRATION_OPTION);
 
-$expected = ['build-a-block-theme', 'feedback', 'wp-aware-editing'];
+$expected = ['build-a-block-theme', 'feedback', 'skill-creator', 'wp-aware-editing'];
 
 foreach ($expected as $skill_id) {
     $path = WP_PLUGIN_DIR . '/openmira/includes/skills/' . $skill_id . '/SKILL.md';
@@ -42,8 +42,8 @@ if (!post_type_exists(OPENMIRA_SKILL_POST_TYPE)) {
 
 $list = openmira_list_skills_ability();
 $skills = $list['skills'] ?? [];
-if (!is_array($skills) || count($skills) !== 3) {
-    fwrite(STDERR, "Expected exactly three installed skills.\n");
+if (!is_array($skills) || count($skills) !== 4) {
+    fwrite(STDERR, "Expected exactly four installed skills.\n");
     exit(1);
 }
 
@@ -75,6 +75,20 @@ if (strlen((string) ($feedback['body'] ?? '')) <= 500) {
     exit(1);
 }
 
+$skill_creator = openmira_get_skill_ability(['skill_id' => 'skill-creator']);
+if (is_wp_error($skill_creator)) {
+    fwrite(STDERR, $skill_creator->get_error_message() . PHP_EOL);
+    exit(1);
+}
+$skill_creator_body = (string) ($skill_creator['body'] ?? '');
+if (
+    !str_contains($skill_creator_body, 'SPDX-FileCopyrightText: 2024 Anthropic, PBC')
+    || !str_contains($skill_creator_body, 'SPDX-FileCopyrightText: 2026 Open Mira contributors')
+) {
+    fwrite(STDERR, "skill-creator attribution is missing.\n");
+    exit(1);
+}
+
 if (!class_exists('WP\\MCP\\Core\\McpAdapter')) {
     fwrite(STDERR, "MCP Adapter class is not loaded.\n");
     exit(1);
@@ -93,6 +107,7 @@ sort($prompt_names);
 $expected_prompts = [
     'openmira.build-a-block-theme',
     'openmira.feedback',
+    'openmira.skill-creator',
     'openmira.wp-aware-editing',
 ];
 foreach ($expected_prompts as $prompt_name) {
@@ -197,6 +212,53 @@ if (!wp_has_ability(openmira_skill_ability_name('disabled-smoke-skill'))) {
     exit(1);
 }
 
+$disabled_frontmatter_raw = "---\n"
+    . "title: \"Disabled Frontmatter Smoke\"\n"
+    . "description: \"Disabled frontmatter smoke.\"\n"
+    . "enable_prompt: false\n"
+    . "---\n\n"
+    . "# Disabled Frontmatter Smoke\n\nBody.\n";
+$disabled_frontmatter_parsed = openmira_parse_skill_markdown($disabled_frontmatter_raw);
+$disabled_frontmatter_filter = static function (array $sources) use ($disabled_frontmatter_parsed): array {
+    $sources['disabled-frontmatter-smoke'] = new class ($disabled_frontmatter_parsed) implements OpenMira_Skill_Source {
+        /**
+         * @param array{title: string, description: string, enable_prompt: bool|null, body: string} $parsed
+         */
+        public function __construct(private array $parsed)
+        {
+        }
+
+        public function list_skills(): array
+        {
+            return [
+                'disabled-frontmatter-source-smoke' => openmira_normalize_skill([
+                    'id' => 'disabled-frontmatter-source-smoke',
+                    'title' => $this->parsed['title'],
+                    'description' => $this->parsed['description'],
+                    'body' => $this->parsed['body'],
+                    'path' => '',
+                    'source' => 'frontmatter-smoke',
+                    'enabled' => $this->parsed['enable_prompt'] ?? true,
+                ]),
+            ];
+        }
+
+        public function get_skill(string $id): ?array
+        {
+            return $id === 'disabled-frontmatter-source-smoke' ? $this->list_skills()[$id] : null;
+        }
+    };
+
+    return $sources;
+};
+add_filter('openmira_skill_sources', $disabled_frontmatter_filter);
+openmira_smoke_register_skill_prompt_abilities();
+if (wp_has_ability(openmira_skill_ability_name('disabled-frontmatter-source-smoke'))) {
+    fwrite(STDERR, "Disabled frontmatter skill registered a prompt ability.\n");
+    exit(1);
+}
+remove_filter('openmira_skill_sources', $disabled_frontmatter_filter);
+
 wp_set_current_user(0);
 $denied_save = openmira_handle_skill_save_action([
     'skill_id' => 'denied-skill',
@@ -253,6 +315,29 @@ if (($roundtrip_skill['body'] ?? '') !== "# Roundtrip Skill\n\nOriginal body.\n"
     exit(1);
 }
 
+$trashed = openmira_trash_user_skill('roundtrip-skill');
+if (is_wp_error($trashed)) {
+    fwrite(STDERR, $trashed->get_error_message() . PHP_EOL);
+    exit(1);
+}
+if (openmira_get_skill('roundtrip-skill') !== null) {
+    fwrite(STDERR, "Trashed skill still loaded as an active skill.\n");
+    exit(1);
+}
+$trashed_post = openmira_get_cpt_skill_post('roundtrip-skill', include_trash: true);
+if (!$trashed_post instanceof WP_Post || $trashed_post->post_status !== 'trash') {
+    fwrite(STDERR, "Trashed skill did not enter native WP trash.\n");
+    exit(1);
+}
+$restored = openmira_restore_user_skill('roundtrip-skill');
+if (is_wp_error($restored) || !(openmira_get_skill('roundtrip-skill') !== null)) {
+    fwrite(
+        STDERR,
+        is_wp_error($restored) ? $restored->get_error_message() . PHP_EOL : "Restored skill did not load as active.\n",
+    );
+    exit(1);
+}
+
 $zip_path = openmira_create_user_skills_zip();
 if (is_wp_error($zip_path)) {
     fwrite(STDERR, $zip_path->get_error_message() . PHP_EOL);
@@ -289,6 +374,53 @@ if (is_wp_error($zip_imported) || !(openmira_get_cpt_skill_post('zip-import-skil
         is_wp_error($zip_imported) ? $zip_imported->get_error_message() . PHP_EOL : "ZIP import did not create CPT skill.\n",
     );
     exit(1);
+}
+
+$multi_upload_paths = [];
+foreach (['multi-one', 'multi-two', 'multi-three'] as $multi_skill_id) {
+    $multi_path = wp_tempnam($multi_skill_id . '.md');
+    if ($multi_path === '') {
+        fwrite(STDERR, "Could not create temporary multi-import file.\n");
+        exit(1);
+    }
+    file_put_contents(
+        $multi_path,
+        openmira_build_skill_markdown(
+            ucwords(str_replace('-', ' ', $multi_skill_id)),
+            'Multi-file import smoke.',
+            '# ' . ucwords(str_replace('-', ' ', $multi_skill_id)) . "\n\nBody.",
+        ),
+    );
+    $multi_upload_paths[$multi_skill_id] = $multi_path;
+}
+$multi_import = openmira_handle_skill_import_action(
+    ['skip_existing' => ''],
+    [
+        'skill_import_file' => [
+            'name' => array_map(static fn(string $id): string => $id . '.md', array_keys($multi_upload_paths)),
+            'tmp_name' => array_values($multi_upload_paths),
+        ],
+    ],
+);
+foreach ($multi_upload_paths as $multi_path) {
+    if (is_file($multi_path)) {
+        unlink($multi_path);
+    }
+}
+if (is_wp_error($multi_import) || ($multi_import['imported'] ?? 0) !== 3) {
+    fwrite(
+        STDERR,
+        is_wp_error($multi_import)
+            ? $multi_import->get_error_message() . PHP_EOL
+            : 'Multi-file SKILL.md import did not import three skills.' . PHP_EOL,
+    );
+    exit(1);
+}
+foreach (array_keys($multi_upload_paths) as $multi_skill_id) {
+    if (!(openmira_get_cpt_skill_post($multi_skill_id) instanceof WP_Post)) {
+        fwrite(STDERR, "Multi-file import did not create {$multi_skill_id}.\n");
+        exit(1);
+    }
 }
 
 openmira_smoke_remove_dir($smoke_skills_dir);
@@ -385,7 +517,7 @@ function openmira_smoke_remove_dir(string $dir): void
  */
 function openmira_smoke_delete_cpt_skills(): void
 {
-    foreach (openmira_get_cpt_skill_posts() as $post) {
+    foreach (openmira_get_cpt_skill_posts(['publish', 'draft', 'private', 'trash']) as $post) {
         wp_delete_post($post->ID, true);
     }
 }

@@ -1,6 +1,7 @@
 ---
 title: "WP-Aware Editing Workflow"
 description: "Use Open Mira's abilities safely and efficiently when editing a WordPress codebase."
+enable_prompt: true
 ---
 
 # WP-Aware Editing Workflow

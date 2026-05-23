@@ -119,17 +119,26 @@ add_filter('openmira_skill_sources', static function (array $sources): array {
 /**
  * Return all user Skill posts.
  *
+ * @param list<string> $post_statuses
  * @return list<WP_Post>
  */
-function openmira_get_cpt_skill_posts(): array
+function openmira_get_cpt_skill_posts(array $post_statuses = ['publish', 'draft', 'private']): array
 {
     if (!post_type_exists(OPENMIRA_SKILL_POST_TYPE)) {
         return [];
     }
 
+    $statuses = array_values(array_filter(
+        $post_statuses,
+        static fn(mixed $status): bool => is_string($status) && $status !== '',
+    ));
+    if ($statuses === []) {
+        $statuses = ['publish', 'draft', 'private'];
+    }
+
     $raw_posts = get_posts([
         'post_type' => OPENMIRA_SKILL_POST_TYPE,
-        'post_status' => ['publish', 'draft', 'private'],
+        'post_status' => $statuses,
         'posts_per_page' => -1,
         'orderby' => 'title',
         'order' => 'ASC',
@@ -151,7 +160,7 @@ function openmira_get_cpt_skill_posts(): array
 /**
  * Return one user Skill post by canonical Skill ID.
  */
-function openmira_get_cpt_skill_post(string $skill_id): ?WP_Post
+function openmira_get_cpt_skill_post(string $skill_id, bool $include_trash = false): ?WP_Post
 {
     $valid = openmira_validate_skill_id($skill_id);
     if (is_wp_error($valid) || !post_type_exists(OPENMIRA_SKILL_POST_TYPE)) {
@@ -160,7 +169,7 @@ function openmira_get_cpt_skill_post(string $skill_id): ?WP_Post
 
     $raw_posts = get_posts([
         'post_type' => OPENMIRA_SKILL_POST_TYPE,
-        'post_status' => ['publish', 'draft', 'private'],
+        'post_status' => $include_trash ? ['publish', 'draft', 'private', 'trash'] : ['publish', 'draft', 'private'],
         'posts_per_page' => 1,
         'no_found_rows' => true,
         'meta_key' => OPENMIRA_SKILL_ID_META,
@@ -292,7 +301,7 @@ function openmira_delete_cpt_skill(string $skill_id): array|WP_Error
         return $valid;
     }
 
-    $post = openmira_get_cpt_skill_post($skill_id);
+    $post = openmira_get_cpt_skill_post($skill_id, include_trash: true);
     if (!$post instanceof WP_Post) {
         return new WP_Error(
             'openmira_skill_not_user_editable',
@@ -306,6 +315,59 @@ function openmira_delete_cpt_skill(string $skill_id): array|WP_Error
     }
 
     return ['status' => 'deleted', 'id' => $skill_id];
+}
+
+/**
+ * Move a CPT user Skill to the native WordPress trash.
+ *
+ * @return array{status: string, id: string}|WP_Error
+ */
+function openmira_trash_cpt_skill(string $skill_id): array|WP_Error
+{
+    $valid = openmira_validate_skill_id($skill_id);
+    if (is_wp_error($valid)) {
+        return $valid;
+    }
+
+    $post = openmira_get_cpt_skill_post($skill_id);
+    if (!$post instanceof WP_Post) {
+        return new WP_Error(
+            'openmira_skill_not_user_editable',
+            'Only active CPT-backed user skills can be trashed. Built-in skills are read-only.',
+        );
+    }
+
+    $trashed = wp_trash_post($post->ID);
+    if (!$trashed instanceof WP_Post) {
+        return new WP_Error('openmira_skill_trash_failed', 'Could not trash the user skill.');
+    }
+
+    return ['status' => 'trashed', 'id' => $skill_id];
+}
+
+/**
+ * Restore a CPT user Skill from the native WordPress trash.
+ *
+ * @return array{status: string, id: string}|WP_Error
+ */
+function openmira_restore_cpt_skill(string $skill_id): array|WP_Error
+{
+    $valid = openmira_validate_skill_id($skill_id);
+    if (is_wp_error($valid)) {
+        return $valid;
+    }
+
+    $post = openmira_get_cpt_skill_post($skill_id, include_trash: true);
+    if (!$post instanceof WP_Post || $post->post_status !== 'trash') {
+        return new WP_Error('openmira_skill_not_trashed', 'Only trashed CPT-backed user skills can be restored.');
+    }
+
+    $restored = wp_untrash_post($post->ID);
+    if (!$restored instanceof WP_Post) {
+        return new WP_Error('openmira_skill_restore_failed', 'Could not restore the user skill.');
+    }
+
+    return ['status' => 'restored', 'id' => $skill_id];
 }
 
 /**
@@ -359,7 +421,7 @@ function openmira_migrate_legacy_user_skills_to_cpt(): array|WP_Error
             'title' => $skill['title'],
             'description' => $skill['description'],
             'body' => $skill['body'],
-            'enabled' => true,
+            'enabled' => $skill['enabled'] !== false,
         ], require_capability: false);
         if (is_wp_error($result)) {
             return $result;

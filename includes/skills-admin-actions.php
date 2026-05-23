@@ -33,6 +33,8 @@ function openmira_handle_skill_admin_actions(): void
     $action = openmira_skill_request_string($_POST['openmira_skill_action'] ?? null);
     $result = match ($action) {
         'save' => openmira_handle_skill_save_action($_POST),
+        'trash' => openmira_handle_skill_trash_action($_POST),
+        'restore' => openmira_handle_skill_restore_action($_POST),
         'delete' => openmira_handle_skill_delete_action($_POST),
         'customize' => openmira_handle_skill_customize_action($_POST),
         'toggle_prompt' => openmira_handle_skill_toggle_prompt_action($_POST),
@@ -48,13 +50,73 @@ function openmira_handle_skill_admin_actions(): void
     }
 
     $redirect_args['openmira_skill_result'] = $result['status'];
+    if (is_array($result['file_results'] ?? null)) {
+        $notice_key = openmira_store_skill_import_results($result);
+        if ($notice_key !== '') {
+            $redirect_args['openmira_skill_import_key'] = $notice_key;
+        }
+    }
     if ($result['status'] === 'customized' && is_string($result['id'] ?? null)) {
         $redirect_args['skill_action'] = 'edit';
         $redirect_args['skill_id'] = $result['id'];
     }
+    if ($result['status'] === 'trashed' || $result['status'] === 'deleted') {
+        $redirect_args['skill_status'] = 'trashed';
+    }
+    if ($result['status'] === 'restored') {
+        $redirect_args['skill_status'] = 'active';
+    }
 
     wp_safe_redirect(add_query_arg($redirect_args, admin_url('admin.php')));
     exit();
+}
+
+/**
+ * Handle trash requests.
+ *
+ * @param array<array-key, mixed>|null $input
+ * @return array{status: string, id: string}|WP_Error
+ */
+function openmira_handle_skill_trash_action(?array $input = null): array|WP_Error
+{
+    if (!current_user_can('manage_options')) {
+        return new WP_Error(
+            'openmira_skill_permission_denied',
+            'You do not have permission to trash Open Mira Skills.',
+        );
+    }
+
+    $input ??= $_POST;
+    if ($input === $_POST) {
+        check_admin_referer(action: 'openmira_skill_action', query_arg: '_openmira_skill_nonce');
+    }
+
+    $skill_id = openmira_skill_request_string($input['skill_id'] ?? null);
+    return openmira_trash_user_skill($skill_id);
+}
+
+/**
+ * Handle restore requests.
+ *
+ * @param array<array-key, mixed>|null $input
+ * @return array{status: string, id: string}|WP_Error
+ */
+function openmira_handle_skill_restore_action(?array $input = null): array|WP_Error
+{
+    if (!current_user_can('manage_options')) {
+        return new WP_Error(
+            'openmira_skill_permission_denied',
+            'You do not have permission to restore Open Mira Skills.',
+        );
+    }
+
+    $input ??= $_POST;
+    if ($input === $_POST) {
+        check_admin_referer(action: 'openmira_skill_action', query_arg: '_openmira_skill_nonce');
+    }
+
+    $skill_id = openmira_skill_request_string($input['skill_id'] ?? null);
+    return openmira_restore_user_skill($skill_id);
 }
 
 /**
@@ -113,7 +175,7 @@ function openmira_handle_skill_save_action(?array $input = null): array|WP_Error
 }
 
 /**
- * Handle delete requests.
+ * Handle permanent delete requests.
  *
  * @param array<array-key, mixed>|null $input
  * @return array{status: string, id: string}|WP_Error
@@ -123,7 +185,7 @@ function openmira_handle_skill_delete_action(?array $input = null): array|WP_Err
     if (!current_user_can('manage_options')) {
         return new WP_Error(
             'openmira_skill_permission_denied',
-            'You do not have permission to delete Open Mira Skills.',
+            'You do not have permission to permanently delete Open Mira Skills.',
         );
     }
 
@@ -181,6 +243,7 @@ function openmira_handle_skill_export_action(): void
             (string) $skill['title'],
             (string) $skill['description'],
             (string) $skill['body'],
+            ($skill['enabled'] ?? true) !== false,
         );
         openmira_stream_download(
             filename: $skill_id . '-SKILL.md',
@@ -203,7 +266,7 @@ function openmira_handle_skill_export_action(): void
  *
  * @param array<array-key, mixed>|null $input
  * @param array<array-key, mixed>|null $files
- * @return array{status: string, imported: int, updated: int, skipped: int}|WP_Error
+ * @return array<string, mixed>|WP_Error
  */
 function openmira_handle_skill_import_action(?array $input = null, ?array $files = null): array|WP_Error
 {
@@ -220,25 +283,72 @@ function openmira_handle_skill_import_action(?array $input = null, ?array $files
         check_admin_referer(action: 'openmira_skill_action', query_arg: '_openmira_skill_nonce');
     }
 
-    $upload = openmira_skill_import_upload_info($files);
-    if ($upload instanceof WP_Error) {
-        return $upload;
+    $uploads = openmira_skill_import_uploads_info($files);
+    if ($uploads instanceof WP_Error) {
+        return $uploads;
     }
     $skip_existing = array_key_exists('skip_existing', $input) && $input['skip_existing'] !== '';
     $single_skill_id = openmira_skill_request_string($input['single_skill_id'] ?? null);
 
+    $counts = ['imported' => 0, 'updated' => 0, 'skipped' => 0, 'failed' => 0];
+    $file_results = [];
+    $is_single_upload = count($uploads) === 1;
+    foreach ($uploads as $upload) {
+        $result = openmira_import_one_uploaded_skill_file(
+            upload: $upload,
+            skip_existing: $skip_existing,
+            single_skill_id: $is_single_upload ? $single_skill_id : '',
+        );
+        if (is_wp_error($result)) {
+            $counts['failed']++;
+            $file_results[] = [
+                'file' => $upload['name'],
+                'status' => 'failed',
+                'message' => $result->get_error_message(),
+            ];
+            continue;
+        }
+
+        foreach (['imported', 'updated', 'skipped'] as $count_key) {
+            $counts[$count_key] += (int) ($result[$count_key] ?? 0);
+        }
+        $file_results[] = [
+            'file' => $upload['name'],
+            'status' => (string) ($result['status'] ?? 'imported'),
+            'message' => (string) ($result['message'] ?? openmira_skill_import_result_message($result)),
+        ];
+    }
+
+    return array_merge($counts, [
+        'status' => openmira_skill_import_status($counts),
+        'file_results' => $file_results,
+    ]);
+}
+
+/**
+ * Import one uploaded SKILL.md or ZIP file.
+ *
+ * @param array{name: string, tmp_name: string} $upload
+ * @return array<string, mixed>|WP_Error
+ */
+function openmira_import_one_uploaded_skill_file(
+    array $upload,
+    bool $skip_existing,
+    string $single_skill_id,
+): array|WP_Error {
     if (strtolower(pathinfo($upload['name'], PATHINFO_EXTENSION)) === 'zip') {
         return openmira_import_skills_zip($upload['tmp_name'], $skip_existing);
     }
 
-    if ($single_skill_id === '') {
+    $skill_id = $single_skill_id;
+    if ($skill_id === '') {
         $filename_id = preg_replace(pattern: '/\.(md|markdown)$/i', replacement: '', subject: $upload['name']);
-        $single_skill_id = is_string($filename_id) ? $filename_id : '';
+        $skill_id = is_string($filename_id) ? $filename_id : '';
     }
-    if ($single_skill_id === '' || strtoupper($single_skill_id) === 'SKILL') {
+    if ($skill_id === '' || strtoupper($skill_id) === 'SKILL') {
         return new WP_Error(
             'openmira_skill_import_missing_id',
-            'Provide a Skill ID when importing a single SKILL.md file.',
+            'Provide a Skill ID when importing a single SKILL.md file, or name each file after its Skill ID.',
         );
     }
 
@@ -247,31 +357,118 @@ function openmira_handle_skill_import_action(?array $input = null, ?array $files
         return new WP_Error('openmira_skill_import_read_failed', 'Could not read the uploaded skill file.');
     }
 
-    return openmira_import_skill_markdown($single_skill_id, $raw, $skip_existing);
+    return openmira_import_skill_markdown($skill_id, $raw, $skip_existing);
 }
 
 /**
  * Return uploaded skill file metadata.
  *
  * @param array<array-key, mixed> $files
- * @return array{name: string, tmp_name: string}|WP_Error
+ * @return list<array{name: string, tmp_name: string}>|WP_Error
  */
-function openmira_skill_import_upload_info(array $files): array|WP_Error
+function openmira_skill_import_uploads_info(array $files): array|WP_Error
 {
     $upload = is_array($files['skill_import_file'] ?? null) ? $files['skill_import_file'] : [];
-    $tmp_name = is_string($upload['tmp_name'] ?? null) ? $upload['tmp_name'] : '';
-    $name = is_string($upload['name'] ?? null) ? $upload['name'] : '';
-    if ($tmp_name === '' || !is_readable($tmp_name)) {
+    $tmp_names = is_array($upload['tmp_name'] ?? null) ? $upload['tmp_name'] : [$upload['tmp_name'] ?? ''];
+    $names = is_array($upload['name'] ?? null) ? $upload['name'] : [$upload['name'] ?? ''];
+    $uploads = [];
+    foreach ($tmp_names as $index => $tmp_name) {
+        $tmp_name = is_string($tmp_name) ? $tmp_name : '';
+        $name = is_string($names[$index] ?? null) ? $names[$index] : '';
+        if ($tmp_name === '' || !is_readable($tmp_name)) {
+            continue;
+        }
+        $uploads[] = ['name' => $name, 'tmp_name' => $tmp_name];
+    }
+
+    if ($uploads === []) {
         return new WP_Error('openmira_skill_import_missing_file', 'Choose a SKILL.md file or ZIP archive to import.');
     }
 
-    return ['name' => $name, 'tmp_name' => $tmp_name];
+    return $uploads;
+}
+
+/**
+ * Store a per-file import summary for the next PRG page load.
+ *
+ * @param array<string, mixed> $result
+ */
+function openmira_store_skill_import_results(array $result): string
+{
+    $generated_key = wp_generate_uuid4();
+    $key = is_string($generated_key) && $generated_key !== ''
+        ? $generated_key
+        : md5(uniqid('openmira_skill_import_', true));
+    set_transient('openmira_skill_import_' . get_current_user_id() . '_' . $key, $result, 5 * 60);
+    return $key;
+}
+
+/**
+ * Fetch and clear a per-file import summary.
+ *
+ * @return array<string, mixed>|null
+ */
+function openmira_take_skill_import_results(string $key): ?array
+{
+    if ($key === '') {
+        return null;
+    }
+    $transient_key = 'openmira_skill_import_' . get_current_user_id() . '_' . $key;
+    $result = get_transient($transient_key);
+    delete_transient($transient_key);
+
+    if (!is_array($result)) {
+        return null;
+    }
+
+    /** @var array<string, mixed> $result */
+    return $result;
+}
+
+/**
+ * Return the compact import status token used in PRG redirects.
+ *
+ * @param array{imported: int, updated: int, skipped: int, failed?: int} $counts
+ */
+function openmira_skill_import_status(array $counts): string
+{
+    return sprintf(
+        'imported-%d-updated-%d-skipped-%d-failed-%d',
+        $counts['imported'],
+        $counts['updated'],
+        $counts['skipped'],
+        (int) ($counts['failed'] ?? 0),
+    );
+}
+
+/**
+ * Return a human-readable per-file import message.
+ *
+ * @param array<string, mixed> $result
+ */
+function openmira_skill_import_result_message(array $result): string
+{
+    $imported = (int) ($result['imported'] ?? 0);
+    $updated = (int) ($result['updated'] ?? 0);
+    $skipped = (int) ($result['skipped'] ?? 0);
+
+    if ($imported > 0 && $updated === 0 && $skipped === 0) {
+        return sprintf('%d imported', $imported);
+    }
+    if ($updated > 0 && $imported === 0 && $skipped === 0) {
+        return sprintf('%d updated', $updated);
+    }
+    if ($skipped > 0 && $imported === 0 && $updated === 0) {
+        return sprintf('%d skipped (already exists)', $skipped);
+    }
+
+    return sprintf('%d imported, %d updated, %d skipped', $imported, $updated, $skipped);
 }
 
 /**
  * Save one user skill.
  *
- * @param array{id?: string, title?: string, description?: string, body?: string} $input
+ * @param array{id?: string, title?: string, description?: string, body?: string, enabled?: bool} $input
  * @return array{status: string, id: string, post_id?: int}|WP_Error
  */
 function openmira_save_user_skill(array $input): array|WP_Error
@@ -303,14 +500,16 @@ function openmira_save_user_skill(array $input): array|WP_Error
     }
 
     $existing_post = openmira_get_cpt_skill_post($skill_id);
+    $enabled = array_key_exists('enabled', $input)
+        ? $input['enabled'] !== false
+        : ($existing_post instanceof WP_Post ? openmira_is_cpt_skill_prompt_enabled($existing_post->ID) : true);
+
     return openmira_upsert_cpt_skill([
         'id' => $skill_id,
         'title' => $title,
         'description' => $description,
         'body' => $body,
-        'enabled' => $existing_post instanceof WP_Post
-            ? openmira_is_cpt_skill_prompt_enabled($existing_post->ID)
-            : true,
+        'enabled' => $enabled,
     ]);
 }
 
@@ -327,6 +526,36 @@ function openmira_delete_user_skill(string $skill_id): array|WP_Error
     }
 
     return openmira_delete_cpt_skill($skill_id);
+}
+
+/**
+ * Trash one user skill.
+ *
+ * @return array{status: string, id: string}|WP_Error
+ */
+function openmira_trash_user_skill(string $skill_id): array|WP_Error
+{
+    $valid = openmira_validate_skill_id($skill_id);
+    if (is_wp_error($valid)) {
+        return $valid;
+    }
+
+    return openmira_trash_cpt_skill($skill_id);
+}
+
+/**
+ * Restore one user skill.
+ *
+ * @return array{status: string, id: string}|WP_Error
+ */
+function openmira_restore_user_skill(string $skill_id): array|WP_Error
+{
+    $valid = openmira_validate_skill_id($skill_id);
+    if (is_wp_error($valid)) {
+        return $valid;
+    }
+
+    return openmira_restore_cpt_skill($skill_id);
 }
 
 /**
@@ -355,7 +584,7 @@ function openmira_customize_built_in_skill(string $skill_id): array|WP_Error
         'title' => $built_in[$skill_id]['title'],
         'description' => $built_in[$skill_id]['description'],
         'body' => $built_in[$skill_id]['body'],
-        'enabled' => true,
+        'enabled' => ($built_in[$skill_id]['enabled'] ?? true) !== false,
     ]);
     if (is_wp_error($result)) {
         return $result;
@@ -382,6 +611,13 @@ function openmira_import_skill_markdown(string $skill_id, string $raw, bool $ski
     }
 
     $parsed = openmira_parse_skill_markdown($raw);
+    if ($parsed['title'] === '' || $parsed['description'] === '') {
+        return new WP_Error(
+            'openmira_skill_invalid_frontmatter',
+            'Invalid SKILL.md frontmatter. A title and description are required.',
+        );
+    }
+
     $body = $parsed['body'];
     if (strlen($body) > OPENMIRA_SKILL_BODY_MAX_BYTES) {
         return new WP_Error('openmira_skill_body_too_large', 'Skill body must not exceed 64 KB.');
@@ -390,9 +626,12 @@ function openmira_import_skill_markdown(string $skill_id, string $raw, bool $ski
     $created = !$existing instanceof WP_Post;
     $result = openmira_save_user_skill([
         'id' => $skill_id,
-        'title' => $parsed['title'] !== '' ? $parsed['title'] : $skill_id,
-        'description' => $parsed['description'] !== '' ? $parsed['description'] : 'Imported Open Mira Skill.',
+        'title' => $parsed['title'],
+        'description' => $parsed['description'],
         'body' => $body,
+        'enabled' =>
+            $parsed['enable_prompt']
+                ?? ($existing instanceof WP_Post ? openmira_is_cpt_skill_prompt_enabled($existing->ID) : true),
     ]);
     if (is_wp_error($result)) {
         return $result;
@@ -485,6 +724,7 @@ function openmira_create_user_skills_zip(): string|WP_Error
             (string) $skill['title'],
             (string) $skill['description'],
             (string) $skill['body'],
+            ($skill['enabled'] ?? true) !== false,
         );
         $zip->addFromString((string) $skill['id'] . '/SKILL.md', $contents);
     }
