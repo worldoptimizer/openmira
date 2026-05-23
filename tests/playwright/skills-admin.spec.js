@@ -56,7 +56,7 @@ test('Skills admin renders and creates a CPT-backed skill', async ({ page }) => 
   await expect(customSkillsTable).toContainText('Enabled');
 
   await page.getByRole('button', { name: 'Import' }).click();
-  const importIds = [`ci-multi-one-${Date.now()}`, `ci-multi-two-${Date.now()}`, `ci-multi-three-${Date.now()}`];
+  const importIds = [`ci-multi-one-${Date.now()}`, `ci-multi-two-${Date.now()}`];
   const importDir = fs.mkdtempSync(path.join(os.tmpdir(), 'openmira-skills-'));
   const importFiles = importIds.map((id) => {
     const filePath = path.join(importDir, `${id}.md`);
@@ -70,7 +70,11 @@ test('Skills admin renders and creates a CPT-backed skill', async ({ page }) => 
   await page.locator('#openmira-skill-import-file').setInputFiles(importFiles);
   await page.getByRole('button', { name: 'Import Skills' }).click();
   await expect(page.locator('.notice-success')).toContainText('Skills import complete', { timeout: 15000 });
+  const importSummary = page.locator('.openmira-admin-result-list');
+  await expect(importSummary).toBeVisible();
   for (const importId of importIds) {
+    await expect(importSummary).toContainText(`${importId}.md`);
+    await expect(importSummary).toContainText('1 imported');
     await expect(page.locator('table.wp-list-table').first()).toContainText(importId);
   }
 
@@ -79,13 +83,19 @@ test('Skills admin renders and creates a CPT-backed skill', async ({ page }) => 
   });
   await page.locator('tr', { hasText: skillId }).getByRole('button', { name: 'Trash' }).click();
   await expect(page.locator('.notice-success')).toContainText('Skill moved to trash', { timeout: 15000 });
+  await expect(page.getByRole('heading', { name: 'Trashed Skills' })).toBeVisible();
+  const trashedSkillsTable = page.locator('h2:has-text("Trashed Skills") + table.wp-list-table');
+  await expect(trashedSkillsTable).toContainText(skillId);
+  await expect(trashedSkillsTable.locator('tr', { hasText: skillId })).toContainText('Not registered');
 
   await page.getByRole('link', { name: 'Active' }).click();
   await expect(page.locator('table.wp-list-table').first()).not.toContainText(skillId);
 
   await page.getByRole('link', { name: 'Trashed' }).click();
-  await expect(page.locator('tr', { hasText: skillId })).toContainText('Not registered');
-  await page.locator('tr', { hasText: skillId }).getByRole('button', { name: 'Restore' }).click();
+  const trashedOnlyTable = page.locator('table.wp-list-table').first();
+  await expect(trashedOnlyTable).toContainText(skillId);
+  await expect(trashedOnlyTable.locator('tr', { hasText: skillId })).toContainText('Not registered');
+  await trashedOnlyTable.locator('tr', { hasText: skillId }).getByRole('button', { name: 'Restore' }).click();
   await expect(page.locator('.notice-success')).toContainText('Skill restored', { timeout: 15000 });
 
   await page.getByRole('link', { name: 'Active' }).click();
