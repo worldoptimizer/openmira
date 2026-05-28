@@ -99,6 +99,7 @@ echo wp_json_encode(["status" => "ok", "theme" => $slug, "files" => $files], JSO
 ' > "$ABSPATH_JSON"
 
 wp-env run cli wp eval-file wp-content/plugins/openmira/tests/smoke/scaffold-theme.php
+wp-env run cli wp eval-file wp-content/plugins/openmira/tests/smoke/path-security.php
 wp-env run cli wp eval-file wp-content/plugins/openmira/tests/smoke/apply-theme-json-patch.php
 wp-env run cli wp eval-file wp-content/plugins/openmira/tests/smoke/block-editing.php
 wp-env run cli wp eval-file wp-content/plugins/openmira/tests/smoke/wpcli-async.php

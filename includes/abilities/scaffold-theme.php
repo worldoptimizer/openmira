@@ -301,6 +301,10 @@ function openmira_scaffold_theme_move_existing_directory(string $theme_dir, stri
     if (!is_dir($theme_dir)) {
         return [];
     }
+    $symlink_error = openmira_reject_final_path_symlink($theme_dir);
+    if (is_wp_error($symlink_error)) {
+        return $symlink_error;
+    }
 
     $backup_root = OPENMIRA_FILE_BACKUPS_DIR . '/theme-cleanups';
     if (!wp_mkdir_p($backup_root)) {
@@ -467,6 +471,16 @@ function openmira_scaffold_child_theme_files(
 // @mago-expect lint:no-boolean-flag-parameter
 function openmira_scaffold_theme_write_file(string $path, string $contents, bool $overwrite): array|WP_Error
 {
+    $resolved = openmira_resolve_path($path, must_exist: false);
+    if (is_wp_error($resolved)) {
+        return $resolved;
+    }
+    $symlink_error = openmira_reject_final_path_symlink($resolved);
+    if (is_wp_error($symlink_error)) {
+        return $symlink_error;
+    }
+    $path = $resolved;
+
     $exists = file_exists($path);
     if ($exists && !$overwrite) {
         return new WP_Error('theme_file_exists', sprintf('File already exists: %s', openmira_display_path($path)));

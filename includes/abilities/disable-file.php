@@ -77,6 +77,10 @@ function openmira_disable_file($input)
     if (is_wp_error($sandbox_check)) {
         return $sandbox_check;
     }
+    $symlink_error = openmira_reject_final_path_symlink($resolved);
+    if (is_wp_error($symlink_error)) {
+        return $symlink_error;
+    }
 
     if (!is_file($resolved)) {
         return new WP_Error('not_a_file', sprintf('Path is not a file: %s', $resolved));
@@ -92,6 +96,10 @@ function openmira_disable_file($input)
     }
 
     $disabled_path = $resolved . '.disabled';
+    $symlink_error = openmira_reject_final_path_symlink($disabled_path);
+    if (is_wp_error($symlink_error)) {
+        return $symlink_error;
+    }
 
     if (file_exists($disabled_path)) {
         return new WP_Error('disabled_file_exists', sprintf('A disabled version already exists: %s', $disabled_path));

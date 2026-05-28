@@ -172,6 +172,10 @@ function openmira_prepare_upload_destination(array $payload): array|WP_Error
     if (is_wp_error($resolved)) {
         return $resolved;
     }
+    $symlink_error = openmira_reject_final_path_symlink($resolved);
+    if (is_wp_error($symlink_error)) {
+        return $symlink_error;
+    }
 
     if (strtolower(pathinfo($resolved, PATHINFO_EXTENSION)) === 'php') {
         $sandbox_error = openmira_check_php_sandbox($resolved);
@@ -310,6 +314,10 @@ function openmira_open_multipart_upload_source(array $file): array|WP_Error
  */
 function openmira_create_upload_stream($source, string $resolved, int $max_bytes): array|WP_Error
 {
+    $symlink_error = openmira_reject_final_path_symlink($resolved);
+    if (is_wp_error($symlink_error)) {
+        return $symlink_error;
+    }
     $target = fopen($resolved, mode: 'xb');
     if ($target === false) {
         if (file_exists($resolved)) {
@@ -342,6 +350,10 @@ function openmira_create_upload_stream($source, string $resolved, int $max_bytes
  */
 function openmira_overwrite_upload_stream($source, string $resolved, int $max_bytes): array|WP_Error
 {
+    $symlink_error = openmira_reject_final_path_symlink($resolved);
+    if (is_wp_error($symlink_error)) {
+        return $symlink_error;
+    }
     $created = !file_exists($resolved);
     $temporary_path = tempnam(dirname($resolved), prefix: '.openmira-upload-');
     if ($temporary_path === false) {

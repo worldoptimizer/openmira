@@ -1,3 +1,6 @@
+v1.7.1 - 2026-05-28
+* Security: Hardened filesystem path handling. Directory boundary checks now require a true path-segment boundary (fixing a sibling-prefix bypass), writes and deletes through symlinked final paths are rejected, and not-yet-existing paths are normalized to collapse "../" before the boundary check. No configuration change required.
+
 v1.7.0 - 2026/05/28
 * New: Dynamic/server-rendered Gutenberg block-level editing. Agents can call `openmira/read-blocks` to inspect a post as a side-effect-free block tree with stable refs, then call `openmira/patch-blocks` to update, insert, or delete dynamic/server-rendered blocks atomically with ETag conflict checks. Static/core block editing returns `block_runtime_required` and is coming in a follow-up via the Block Editor Runtime; use `write-gutenberg-content` when a full-page rewrite of static content is explicitly intended.
 * New: Block hunks in `openmira/apply-patch`. The patch grammar now supports `*** Update Block`, `*** Insert Block`, and `*** Delete Block` hunks routed through the same dynamic/server-rendered block patch engine.
@@ -5,6 +8,7 @@ v1.7.0 - 2026/05/28
 * New: Built-in `block-editing` Skill documenting the safe read-first, ref-targeted Gutenberg editing workflow.
 * Improvement: `openmira/patch-gutenberg-blocks` remains available for backwards compatibility but is demoted from compact discovery in favor of the ref-based block editing surface.
 * Security: `openmira/run-wpcli` is now marked destructive and refuses to run as root unless `OPENMIRA_WPCLI_ALLOW_ROOT` is explicitly defined.
+* Security: Hardened filesystem path handling. Directory boundary checks now require a true path-segment boundary (fixing a sibling-prefix bypass), writes and deletes through symlinked final paths are rejected, and not-yet-existing paths are normalized to collapse "../" before the boundary check. No configuration change required.
 * Note: Static/core block patching intentionally returns `block_runtime_required` in this release. The browser-backed Block Editor Runtime is deferred rather than risking invalid Gutenberg saved markup.
 * Minor fixes.
 

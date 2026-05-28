@@ -153,6 +153,10 @@ function openmira_write_file($input)
     if (is_wp_error($resolved)) {
         return $resolved;
     }
+    $symlink_error = openmira_reject_final_path_symlink($resolved);
+    if (is_wp_error($symlink_error)) {
+        return $symlink_error;
+    }
 
     $encoding = (string) ($input['encoding'] ?? 'utf-8');
     $mode = (string) ($input['mode'] ?? 'overwrite');

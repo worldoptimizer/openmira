@@ -26,6 +26,7 @@ function openmira_resolve_path($path, $must_exist = false)
     if (!str_starts_with($path, '/') && !str_starts_with($path, '\\')) {
         $path = ABSPATH . $path;
     }
+    $path = openmira_normalize_absolute_path($path);
 
     /**
      * Filter the base directory for filesystem operations.
@@ -36,9 +37,8 @@ function openmira_resolve_path($path, $must_exist = false)
     /** @var string|false $base_dir */
     $base_dir = apply_filters('openmira_filesystem_base_dir', ABSPATH);
 
-    // Resolve path that may not exist yet via parent directory.
-    $resolved_parent = realpath(dirname($path));
-    $resolved = $resolved_parent !== false ? $resolved_parent . DIRECTORY_SEPARATOR . basename($path) : $path;
+    // Resolve path that may not exist yet via nearest existing ancestor.
+    $resolved = openmira_resolve_candidate_path($path);
 
     // For paths that must exist, override with realpath.
     if ($must_exist) {
@@ -50,12 +50,17 @@ function openmira_resolve_path($path, $must_exist = false)
 
     // Enforce base directory restriction.
     if ($base_dir !== false) {
+        if (!str_starts_with($base_dir, '/') && !str_starts_with($base_dir, '\\')) {
+            $base_dir = ABSPATH . $base_dir;
+        }
+        $base_dir = openmira_normalize_absolute_path($base_dir);
         $real_base = realpath($base_dir);
+
         if ($real_base === false) {
-            $real_base = rtrim($base_dir, characters: '/\\');
+            $real_base = $base_dir;
         }
 
-        if (!str_starts_with($resolved, $real_base)) {
+        if (!openmira_path_within_boundary($resolved, $real_base)) {
             return new WP_Error('path_outside_base', sprintf(
                 __('Path "%s" is outside the allowed base directory "%s".', domain: 'open-mira'),
                 $resolved,
@@ -65,6 +70,103 @@ function openmira_resolve_path($path, $must_exist = false)
     }
 
     return $resolved;
+}
+
+/**
+ * Resolve an absolute candidate path, preserving a non-existing final path,
+ * by anchoring on the nearest existing ancestor and collapsing the tail.
+ */
+function openmira_resolve_candidate_path(string $path): string
+{
+    $resolved_parent = realpath(dirname($path));
+    if ($resolved_parent !== false) {
+        return openmira_normalize_absolute_path($resolved_parent . DIRECTORY_SEPARATOR . basename($path));
+    }
+
+    $tail = [basename($path)];
+    $cursor = dirname($path);
+    while ($cursor !== '' && $cursor !== '.' && $cursor !== dirname($cursor)) {
+        $real_cursor = realpath($cursor);
+        if ($real_cursor !== false) {
+            return openmira_normalize_absolute_path(
+                $real_cursor . DIRECTORY_SEPARATOR . implode(DIRECTORY_SEPARATOR, array_reverse($tail)),
+            );
+        }
+        $tail[] = basename($cursor);
+        $cursor = dirname($cursor);
+    }
+
+    return openmira_normalize_absolute_path($path);
+}
+
+/**
+ * Collapse '.', '..', and redundant separators in an absolute path lexically.
+ */
+function openmira_normalize_absolute_path(string $path): string
+{
+    $normalized = str_replace('\\', '/', $path);
+    $is_absolute = str_starts_with($normalized, '/');
+    $out = [];
+    foreach (explode('/', $normalized) as $segment) {
+        if ($segment === '' || $segment === '.') {
+            continue;
+        }
+        if ($segment === '..') {
+            if ($out !== []) {
+                array_pop($out);
+            }
+            continue;
+        }
+        $out[] = $segment;
+    }
+
+    return ($is_absolute ? '/' : '') . implode('/', $out);
+}
+
+/**
+ * Whether a path is the boundary directory itself or strictly contained by it.
+ */
+function openmira_path_within_boundary(string $path, string $directory): bool
+{
+    $p = openmira_normalize_boundary_path($path);
+    $d = openmira_normalize_boundary_path($directory);
+    if ($d === '') {
+        return false;
+    }
+    if ($d === '/') {
+        return str_starts_with($p, '/');
+    }
+
+    return $p === $d || str_starts_with($p, $d . '/');
+}
+
+/**
+ * Normalize separators and strip trailing separators for boundary comparison.
+ */
+function openmira_normalize_boundary_path(string $path): string
+{
+    $normalized = str_replace('\\', '/', $path);
+
+    return $normalized === '/' ? '/' : rtrim($normalized, '/');
+}
+
+/**
+ * Reject writing or deleting through a symlinked final path.
+ *
+ * Reads may follow symlinks; mutations must not.
+ *
+ * @return true|WP_Error
+ */
+function openmira_reject_final_path_symlink(string $resolved): bool|WP_Error
+{
+    if (is_link($resolved)) {
+        return new WP_Error('symlink_write_rejected', sprintf(
+            __('Refusing to operate through a symlink path: %s', domain: 'open-mira'),
+            openmira_display_path($resolved),
+        ));
+    }
+
+    return true;
 }
 
 /**
@@ -98,10 +200,10 @@ function openmira_validate_sandbox_path($resolved)
 
     $real_resolved = realpath($resolved);
     if ($real_resolved === false) {
-        $real_resolved = $resolved;
+        $real_resolved = openmira_resolve_candidate_path($resolved);
     }
 
-    if (!str_starts_with($real_resolved, $real_sandbox . DIRECTORY_SEPARATOR)) {
+    if (!openmira_path_within_boundary($real_resolved, $real_sandbox)) {
         return new WP_Error('outside_sandbox', sprintf(
             /* translators: %s: sandbox directory path */
             __('Only files inside the sandbox (%s) can be modified.', domain: 'open-mira'),
@@ -126,13 +228,13 @@ function openmira_check_php_sandbox(string $resolved): bool|WP_Error
 
     // If sandbox doesn't exist yet, compare normalized paths.
     if ($real_sandbox === false) {
-        $real_sandbox = rtrim(string: $sandbox_dir, characters: '/\\');
+        $real_sandbox = openmira_normalize_absolute_path($sandbox_dir);
     }
     if ($parent_dir === false) {
-        $parent_dir = dirname($resolved);
+        $parent_dir = openmira_normalize_absolute_path(dirname($resolved));
     }
 
-    if (!str_starts_with($parent_dir, $real_sandbox)) {
+    if (!openmira_path_within_boundary($parent_dir, $real_sandbox)) {
         return new WP_Error('php_sandbox_required', sprintf(
             'PHP files can only be written to the sandbox directory: %s. Use a path like "wp-content/openmira-sandbox/my-feature.php".',
             $sandbox_dir,

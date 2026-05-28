@@ -91,6 +91,10 @@ function openmira_delete_file($input)
     if (is_wp_error($resolved)) {
         return $resolved;
     }
+    $symlink_error = openmira_reject_final_path_symlink($resolved);
+    if (is_wp_error($symlink_error)) {
+        return $symlink_error;
+    }
 
     $recursive = ($input['recursive'] ?? false) === true;
 
@@ -236,6 +240,10 @@ function openmira_delete_directory($resolved, $recursive)
             continue;
         }
         $item_path = $item->getPathname();
+        $symlink_error = openmira_reject_final_path_symlink($item_path);
+        if (is_wp_error($symlink_error)) {
+            return $symlink_error;
+        }
         $deleted = $item->isDir() ? rmdir($item_path) : unlink($item_path);
         if (!$deleted) {
             return new WP_Error('delete_failed', sprintf('Failed to delete: %s', $item_path));

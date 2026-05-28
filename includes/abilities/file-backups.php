@@ -196,6 +196,10 @@ function openmira_restore_file_backup_ability(array $input): array|WP_Error
     if (!is_string($resolved)) {
         return $resolved;
     }
+    $symlink_error = openmira_reject_final_path_symlink($resolved);
+    if (is_wp_error($symlink_error)) {
+        return $symlink_error;
+    }
     if ($backup_path === '' || !is_file($backup_path) || !is_readable($backup_path)) {
         return new WP_Error('backup_payload_missing', 'Backup payload file is missing or unreadable.');
     }

@@ -147,6 +147,11 @@ function openmira_scaffold_block(array $input): array|WP_Error
 
     $theme_dir = trailingslashit(get_theme_root()) . $theme_slug;
     $block_dir = $theme_dir . '/blocks/' . $slug;
+    $resolved_block_dir = openmira_resolve_path($block_dir, must_exist: false);
+    if (is_wp_error($resolved_block_dir)) {
+        return $resolved_block_dir;
+    }
+    $block_dir = $resolved_block_dir;
     if (!wp_mkdir_p($block_dir)) {
         return new WP_Error('block_directory_failed', sprintf('Could not create block directory: %s', $block_dir));
     }
@@ -582,6 +587,16 @@ function openmira_scaffold_block_registration_snippet(
  */
 function openmira_scaffold_block_write_file(string $path, string $contents, bool $overwrite): array|WP_Error
 {
+    $resolved = openmira_resolve_path($path, must_exist: false);
+    if (is_wp_error($resolved)) {
+        return $resolved;
+    }
+    $symlink_error = openmira_reject_final_path_symlink($resolved);
+    if (is_wp_error($symlink_error)) {
+        return $symlink_error;
+    }
+    $path = $resolved;
+
     $exists = file_exists($path);
     if ($exists && !$overwrite) {
         return new WP_Error('file_exists', sprintf('File already exists: %s', openmira_display_path($path)));

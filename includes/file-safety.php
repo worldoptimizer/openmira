@@ -310,6 +310,11 @@ function openmira_php_lint_file(string $resolved): array
  */
 function openmira_rollback_failed_php_write(string $resolved, ?string $old_content): bool
 {
+    $symlink_error = openmira_reject_final_path_symlink($resolved);
+    if (is_wp_error($symlink_error)) {
+        return false;
+    }
+
     if ($old_content === null) {
         return !is_file($resolved) || unlink($resolved);
     }

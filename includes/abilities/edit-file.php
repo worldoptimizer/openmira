@@ -125,6 +125,10 @@ function openmira_edit_file($input)
     if (is_wp_error($resolved)) {
         return $resolved;
     }
+    $symlink_error = openmira_reject_final_path_symlink($resolved);
+    if (is_wp_error($symlink_error)) {
+        return $symlink_error;
+    }
 
     if (!is_file($resolved)) {
         return new WP_Error('not_a_file', sprintf('Path is not a file: %s', $resolved));

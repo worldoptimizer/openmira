@@ -90,6 +90,18 @@ function openmira_handle_sandbox_actions()
     if (!file_exists($path)) {
         return;
     }
+    $symlink_error = openmira_reject_final_path_symlink($path);
+    if (is_wp_error($symlink_error)) {
+        return;
+    }
+    if ($action === 'disable') {
+        $symlink_error = openmira_reject_final_path_symlink($path . '.disabled');
+    } elseif ($action === 'enable') {
+        $symlink_error = openmira_reject_final_path_symlink(substr($path, offset: 0, length: -9));
+    }
+    if (is_wp_error($symlink_error)) {
+        return;
+    }
 
     $result = match ($action) {
         'delete' => unlink($path),

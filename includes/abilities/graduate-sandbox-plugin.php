@@ -143,6 +143,10 @@ function openmira_graduate_sandbox_plugin(array $input): array|WP_Error
     if (is_wp_error($target_check)) {
         return $target_check;
     }
+    $symlink_error = openmira_reject_final_path_symlink($target);
+    if (is_wp_error($symlink_error)) {
+        return $symlink_error;
+    }
 
     $overwrite = ($input['overwrite'] ?? false) === true;
     $target_exists = is_file($target);
@@ -358,7 +362,7 @@ function openmira_graduate_validate_target(string $target): bool|WP_Error
     $normalized_parent = wp_normalize_path($target_parent);
     $normalized_plugin_dir = wp_normalize_path($plugin_dir);
 
-    if (!str_starts_with($normalized_parent, $normalized_plugin_dir)) {
+    if (!openmira_path_within_boundary($normalized_parent, $normalized_plugin_dir)) {
         return new WP_Error('target_outside_plugins', 'Promoted plugin target must stay inside wp-content/plugins.');
     }
 
@@ -370,7 +374,15 @@ function openmira_graduate_validate_target(string $target): bool|WP_Error
  */
 function openmira_graduate_disable_source(string $source): string|WP_Error
 {
+    $symlink_error = openmira_reject_final_path_symlink($source);
+    if (is_wp_error($symlink_error)) {
+        return $symlink_error;
+    }
     $disabled = $source . '.disabled';
+    $symlink_error = openmira_reject_final_path_symlink($disabled);
+    if (is_wp_error($symlink_error)) {
+        return $symlink_error;
+    }
     clearstatcache(clear_realpath_cache: true, filename: $disabled);
     if (is_file($disabled)) {
         return new WP_Error('disabled_source_exists', sprintf('A disabled source already exists: %s', $disabled), [
