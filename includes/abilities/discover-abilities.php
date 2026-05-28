@@ -92,6 +92,16 @@ wp_register_ability('mcp-adapter/discover-abilities', [
 
         $ability_list = [];
         foreach (wp_get_abilities() as $ability) {
+            if (
+                $detail !== 'full'
+                && in_array(
+                    needle: $ability->get_name(),
+                    haystack: openmira_compact_discovery_demoted_abilities(),
+                    strict: true,
+                )
+            ) {
+                continue;
+            }
             $meta = $ability->get_meta();
             if (!($meta['mcp']['public'] ?? false)) {
                 continue;
@@ -226,6 +236,8 @@ function openmira_discover_usage_hint(\WP_Ability $ability): string
         'openmira/apply-patch',
         'openmira/search-code',
         'openmira/write-file',
+        'openmira/read-blocks',
+        'openmira/patch-blocks',
         'openmira/scaffold-theme',
         'openmira/create-gutenberg-page',
         'openmira/screenshot-url',
@@ -240,6 +252,18 @@ function openmira_discover_usage_hint(\WP_Ability $ability): string
     }
 
     return openmira_truncate_discovery_text($instructions, limit: 800);
+}
+
+/**
+ * Abilities still registered for compatibility but hidden from compact discovery.
+ *
+ * @return list<string>
+ */
+function openmira_compact_discovery_demoted_abilities(): array
+{
+    return [
+        'openmira/patch-gutenberg-blocks',
+    ];
 }
 
 /**

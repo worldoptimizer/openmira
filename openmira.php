@@ -9,7 +9,7 @@ declare(strict_types=1);
  * Plugin Name: Open Mira
  * Plugin URI: https://github.com/worldoptimizer/openmira
  * Description: Open WordPress MCP server with filesystem, PHP execution, builder context, and persistent project memory. For development and staging environments only.
- * Version: 1.6.1
+ * Version: 1.7.0
  * Requires at least: 6.9
  * Requires PHP: 8.0
  * Author: Open Mira contributors
@@ -37,7 +37,7 @@ if (!defined('ABSPATH')) {
     exit();
 }
 
-define(constant_name: 'OPENMIRA_VERSION', value: '1.6.1');
+define(constant_name: 'OPENMIRA_VERSION', value: '1.7.0');
 define(constant_name: 'OPENMIRA_MAX_EXECUTION_TIME', value: 30);
 if (!defined('OPENMIRA_BLOCK_PRODUCTION')) {
     define(constant_name: 'OPENMIRA_BLOCK_PRODUCTION', value: false);
@@ -729,6 +729,7 @@ if ($is_enabled) {
         require_once $dir . 'block-registry.php';
         require_once $dir . 'builder-authoring.php';
         require_once $dir . 'builder-write.php';
+        require_once $dir . 'block-editing.php';
         require_once $dir . 'memory.php';
         if (!wp_has_ability('mcp-adapter/get-ability-info')) {
             \WP\MCP\Abilities\GetAbilityInfoAbility::register();

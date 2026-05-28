@@ -20,7 +20,7 @@ add_filter('openmira_user_skills_dir', static fn(string $_dir): string => $smoke
 openmira_smoke_delete_cpt_skills();
 delete_option(OPENMIRA_SKILLS_CPT_MIGRATION_OPTION);
 
-$expected = ['build-a-block-theme', 'feedback', 'skill-creator', 'wp-aware-editing'];
+$expected = ['block-editing', 'build-a-block-theme', 'feedback', 'skill-creator', 'wp-aware-editing'];
 
 foreach ($expected as $skill_id) {
     $path = WP_PLUGIN_DIR . '/openmira/includes/skills/' . $skill_id . '/SKILL.md';
@@ -42,8 +42,8 @@ if (!post_type_exists(OPENMIRA_SKILL_POST_TYPE)) {
 
 $list = openmira_list_skills_ability();
 $skills = $list['skills'] ?? [];
-if (!is_array($skills) || count($skills) !== 4) {
-    fwrite(STDERR, "Expected exactly four installed skills.\n");
+if (!is_array($skills) || count($skills) !== 5) {
+    fwrite(STDERR, "Expected exactly five installed skills.\n");
     exit(1);
 }
 
@@ -105,6 +105,7 @@ $prompts = $server->get_prompts();
 $prompt_names = array_keys($prompts);
 sort($prompt_names);
 $expected_prompts = [
+    'openmira.block-editing',
     'openmira.build-a-block-theme',
     'openmira.feedback',
     'openmira.skill-creator',

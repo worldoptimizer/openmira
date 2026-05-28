@@ -79,7 +79,7 @@ jq -e '.success == true and .return_value.ok == true and .runaway_guard.max_call
   "${TMPDIR:-/tmp}/openmira-smoke-execute-php.json" >/dev/null
 
 ability_get "openmira/list-skills" "${TMPDIR:-/tmp}/openmira-smoke-skills.json"
-jq -e '.count == 3 and ([.skills[].id] | sort) == ["build-a-block-theme","feedback","wp-aware-editing"]' \
+jq -e '.count == 5 and ([.skills[].id] | sort) == ["block-editing","build-a-block-theme","feedback","skill-creator","wp-aware-editing"]' \
   "${TMPDIR:-/tmp}/openmira-smoke-skills.json" >/dev/null
 
 jq -n \

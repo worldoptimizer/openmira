@@ -6,7 +6,7 @@ description: WordPress-aware MCP development toolkit for AI agents.
 <section class="hero">
   <div>
     <h1>WordPress-aware development tools for AI agents.</h1>
-    <p class="lead">Open Mira turns a local or staging WordPress site into an MCP server with WordPress-native abilities for themes, plugins, hooks, external screenshot jobs, project memory, and guarded file edits.</p>
+    <p class="lead">Open Mira turns a local or staging WordPress site into an MCP server with WordPress-native abilities for themes, plugins, hooks, dynamic Gutenberg block edits, async WP-CLI jobs, external screenshot jobs, project memory, and guarded file edits.</p>
     <div class="actions">
       <a class="button primary" href="https://github.com/worldoptimizer/openmira/releases/latest">Download latest release</a>
       <a class="button" href="{{ '/install/' | relative_url }}">Install guide</a>
@@ -28,7 +28,7 @@ Open Mira is for developers and evaluators who want AI agents to work inside Wor
 <div class="grid">
   <div class="card">
     <h3>Build WordPress sites</h3>
-    <p>Scaffold themes and blocks, write CSS and templates, update <code>theme.json</code>, and capture front-end output through the external Playwright bridge.</p>
+    <p>Scaffold themes and blocks, write CSS and templates, update <code>theme.json</code>, patch dynamic Gutenberg blocks by ref, and capture front-end output through the external Playwright bridge.</p>
   </div>
   <div class="card">
     <h3>Maintain plugins</h3>

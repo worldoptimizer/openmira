@@ -100,6 +100,8 @@ echo wp_json_encode(["status" => "ok", "theme" => $slug, "files" => $files], JSO
 
 wp-env run cli wp eval-file wp-content/plugins/openmira/tests/smoke/scaffold-theme.php
 wp-env run cli wp eval-file wp-content/plugins/openmira/tests/smoke/apply-theme-json-patch.php
+wp-env run cli wp eval-file wp-content/plugins/openmira/tests/smoke/block-editing.php
+wp-env run cli wp eval-file wp-content/plugins/openmira/tests/smoke/wpcli-async.php
 wp-env run cli wp eval-file wp-content/plugins/openmira/tests/smoke/search-code-guardrails.php
 wp-env run cli wp eval-file wp-content/plugins/openmira/tests/smoke/permission-controls.php
 wp-env run cli wp eval-file wp-content/plugins/openmira/tests/smoke/execute-php-runaway.php

@@ -12,6 +12,7 @@ Open Mira ships starter Skills as MCP Prompts. Skills are Markdown documents reg
 | Skill ID | Prompt name | Purpose |
 | --- | --- | --- |
 | `feedback` | `openmira.feedback` | Compose a sanitized issue report from recent Open Mira activity. |
+| `block-editing` | `openmira.block-editing` | Read and patch Gutenberg content by stable block refs. |
 | `wp-aware-editing` | `openmira.wp-aware-editing` | Follow the canonical safe-edit workflow for WordPress code changes. |
 | `build-a-block-theme` | `openmira.build-a-block-theme` | Scaffold and style a WordPress block theme end to end. |
 | `skill-creator` | `openmira.skill-creator` | Create and refine Open Mira skills for WordPress-aware workflows. |
