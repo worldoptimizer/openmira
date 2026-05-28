@@ -6,6 +6,10 @@
   },
   "versions": [
     {
+      "version": "1.7.0",
+      "release_date": "2026-05-28 12:00:00"
+    },
+    {
       "version": "1.6.1",
       "release_date": "2026-05-23 12:00:00"
     },
