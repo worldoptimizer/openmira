@@ -5,11 +5,11 @@ description: Technical overview of Open Mira's MCP and WordPress-aware design.
 
 # Architecture
 
-Open Mira is a WordPress plugin that exposes a WordPress-aware development surface over MCP. It builds on the WordPress Abilities API and the WordPress MCP Adapter, then adds Open Mira abilities for project context, safe file edits, external screenshot jobs, WordPress navigation, and agent memory.
+Open Mira is a WordPress plugin that exposes a WordPress-aware development surface over MCP. It builds on the WordPress Abilities API and the WordPress MCP Adapter, then adds Open Mira abilities for project context, safe file edits, dynamic Gutenberg block patches, async WP-CLI jobs, external screenshot jobs, WordPress navigation, and agent memory.
 
 ## MCP and Abilities API
 
-Open Mira registers abilities such as project-map, read-file, edit-file, search-code, screenshot-url, and apply-patch. MCP clients call those abilities through the WordPress REST API using Application Password authentication.
+Open Mira registers abilities such as project-map, read-file, edit-file, search-code, read-blocks, patch-blocks, run-wpcli, screenshot-url, and apply-patch. MCP clients call those abilities through the WordPress REST API using Application Password authentication.
 
 The canonical MCP endpoint is:
 
@@ -23,7 +23,7 @@ The project map gives agents a bounded overview of the WordPress install: active
 
 ## Patch grammar
 
-Open Mira includes a V4A-style patch grammar with WordPress semantics. The first validated operation is Update theme.json, including bulk path merges and selectors for design-system values.
+Open Mira includes a V4A-style patch grammar with WordPress semantics. Validated operations include Update theme.json, including bulk path merges and selectors for design-system values, and block hunks for dynamic Gutenberg block patches.
 
 Example shape:
 
@@ -36,6 +36,16 @@ Example shape:
 &#42;&#42;&#42; End Patch</code></pre>
 
 The server handles path resolution, validation, stale-write checks, backups, audit diffs, and dry-run behavior.
+
+## Block editing
+
+`openmira/read-blocks` reads a post as a side-effect-free block tree. Blocks with durable refs use `attrs.metadata._openmira_ref`; untagged blocks receive virtual refs bound to the current ETag so the first patch can still target them safely.
+
+`openmira/patch-blocks` applies update, insert, and delete operations to dynamic/server-rendered blocks as one atomic batch and one WordPress revision. Static/core blocks return `block_runtime_required` until the browser-backed Block Editor Runtime ships, because PHP should not guess Gutenberg's JavaScript saved markup.
+
+## Async WP-CLI
+
+`openmira/run-wpcli` supports synchronous execution for short allowlisted commands and asynchronous execution for longer jobs. Async jobs store state under `wp-content/openmira-wpcli-jobs/`; `openmira/get-wpcli-job` returns incremental logs and completion status. WP-CLI execution is treated as destructive because WordPress bootstrap and plugin code can run even for read-like commands.
 
 ## External screenshot jobs
 

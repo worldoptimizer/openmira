@@ -1,3 +1,13 @@
+v1.7.0 - 2026/05/28
+* New: Dynamic Gutenberg block-level editing. Agents can call `openmira/read-blocks` to inspect a post as a side-effect-free block tree with stable refs, then call `openmira/patch-blocks` to update, insert, or delete dynamic/server-rendered blocks atomically with ETag conflict checks.
+* New: Block hunks in `openmira/apply-patch`. The patch grammar now supports `*** Update Block`, `*** Insert Block`, and `*** Delete Block` hunks routed through the same dynamic block patch engine.
+* New: Async WP-CLI jobs. `openmira/run-wpcli` accepts `mode: "async"` for allowlisted long-running commands, and `openmira/get-wpcli-job` returns incremental logs and completion status.
+* New: Built-in `block-editing` Skill documenting the safe read-first, ref-targeted Gutenberg editing workflow.
+* Improvement: `openmira/patch-gutenberg-blocks` remains available for backwards compatibility but is demoted from compact discovery in favor of the ref-based block editing surface.
+* Security: `openmira/run-wpcli` is now marked destructive and refuses to run as root unless `OPENMIRA_WPCLI_ALLOW_ROOT` is explicitly defined.
+* Note: Static/core block patching intentionally returns `block_runtime_required` in this release. The browser-backed Block Editor Runtime is deferred rather than risking invalid Gutenberg saved markup.
+* Minor fixes.
+
 v1.6.1 - 2026/05/23
 * New: Added a built-in `skill-creator` Skill, adapted from Anthropic's Apache-2.0 skill-creator source for Open Mira's flat WordPress Skill format.
 * Improvement: Custom Skills now use native WordPress trash semantics. Admin users can move CPT-backed Skills to trash, review trashed Skills, restore them, or permanently delete them.

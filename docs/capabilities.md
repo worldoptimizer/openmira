@@ -11,6 +11,8 @@ This table is the source of truth for what is actually shipped and validated. Op
 | --- | --- | --- |
 | Theme and landing-page development | Validated | Repeated external-client pilots built and refined Gutenberg/block-theme pages. |
 | WordPress `theme.json` patch grammar | Validated | Bulk path merges and WordPress-aware selectors reduced repeated file rewrites. |
+| Dynamic Gutenberg block-level editing | Validated for dynamic blocks | `read-blocks` returns stable refs; `patch-blocks` updates/inserts/deletes dynamic blocks atomically with ETag conflict checks. |
+| Async WP-CLI execution | Supported | Long-running allowlisted commands can run as job files with incremental log polling. |
 | External screenshot capture for human/CI inspection | Supported | Screenshot jobs are captured through the Playwright bridge and stored on disk under `wp-content/openmira-screenshots/`. |
 | Plugin bug fixing in real third-party plugins | Validated | Agent diagnosed, patched, linted, and verified real plugin issues. |
 | Hook conflict navigation and repair | Validated | Agent used hook registrant discovery to locate callback priorities and fix conflicts. |
@@ -27,6 +29,6 @@ Hook navigation is useful. A dedicated Add Hook Callback patch operation is not 
 - Project context: `openmira/get-project-map`, memory resources, project rules.
 - Safe file work: read/write/edit/delete, hash guards, backups, audit diffs.
 - WordPress navigation: hook callers, hook registrants, template resolution, code search.
-- Theme work: scaffold theme, scaffold block, `theme.json` patch grammar.
-- Verification: lint file, WP-CLI allowlist, probe URL, external screenshot jobs.
+- Theme and content work: scaffold theme, scaffold block, `theme.json` patch grammar, dynamic block-level patching.
+- Verification: lint file, sync/async WP-CLI allowlist, probe URL, external screenshot jobs.
 - Sandbox: execute PHP, sandbox plugins, graduate sandbox plugin.

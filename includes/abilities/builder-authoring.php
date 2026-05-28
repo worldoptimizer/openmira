@@ -90,7 +90,7 @@ wp_register_ability('openmira/render-gutenberg-pattern', [
         'show_in_rest' => true,
         'mcp' => ['public' => true],
         'annotations' => [
-            'instructions' => 'Read-only preview. Use markup with write-gutenberg-content, patch-gutenberg-blocks, or create-gutenberg-page.',
+            'instructions' => 'Read-only preview. Use markup with create-gutenberg-page, write-gutenberg-content for full rewrites, or read-blocks plus patch-blocks for dynamic block-level edits.',
             'readonly' => true,
             'destructive' => false,
             'idempotent' => true,
@@ -174,7 +174,7 @@ wp_register_ability('openmira/create-gutenberg-page', [
         'show_in_rest' => true,
         'mcp' => ['public' => true],
         'annotations' => [
-            'instructions' => 'Use patterns for clean page drafts, then refine with patch-gutenberg-blocks. Updating existing content should pass expected_current_hash.',
+            'instructions' => 'Use patterns for clean page drafts. For existing content, prefer read-blocks plus patch-blocks for dynamic block-level edits; use expected_current_hash for full-content replacement.',
             'readonly' => false,
             'destructive' => false,
             'idempotent' => false,

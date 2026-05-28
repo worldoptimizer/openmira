@@ -53,6 +53,15 @@ wp_register_ability('openmira/apply-patch', [
                 'description' => 'Optional SHA-256 hash for theme.json. If it matches the current file, this can replace an explicit read-file call.',
                 'pattern' => '^[a-f0-9]{64}$',
             ],
+            'post_id' => [
+                'type' => 'integer',
+                'description' => 'Post ID for block patch hunks such as *** Update Block (ref: ...):.',
+                'minimum' => 1,
+            ],
+            'expected_etag' => [
+                'type' => 'string',
+                'description' => 'Optional ETag from read-blocks for block patch hunks. Required when using virtual refs.',
+            ],
         ],
         'required' => ['patch'],
         'additionalProperties' => false,
@@ -86,8 +95,11 @@ wp_register_ability('openmira/apply-patch', [
                 '[JSON value]',
                 '*** Update theme.json (paths, mode: merge):',
                 '{"settings.typography.fontFamilies": [ ... ], "styles.elements.button": { ... }}',
+                '*** Update Block (ref: omr_...):',
+                '{"attrs": {"heading": "Updated"}, "attrs_mode": "merge"}',
                 '*** End Patch',
                 'Prefer the paths bulk form for landing-page/theme design-system setup: palette, typography, spacing, layout, and element styles in one call.',
+                'For post content, use read-blocks first, then block hunks with post_id and expected_etag.',
                 'Use single path: only for tiny surgical edits. Use write-file only when replacing the whole file is truly intended.',
                 'Use mode: merge when updating an object without replacing sibling keys.',
                 'Set include_diff=false for large successful patches when a summary is enough.',
@@ -108,6 +120,7 @@ wp_register_ability('openmira/apply-patch', [
  */
 // @mago-expect lint:cyclomatic-complexity
 // @mago-expect lint:halstead
+// @mago-expect lint:kan-defect
 function openmira_apply_patch(array $input): array|WP_Error
 {
     $mode_error = openmira_require_act_mode('openmira/apply-patch');
@@ -122,16 +135,20 @@ function openmira_apply_patch(array $input): array|WP_Error
     $theme_slug = sanitize_key((string) ($input['theme_slug'] ?? ''));
     $expected_current_hash = (string) ($input['expected_current_hash'] ?? '');
     $path = (string) ($input['path'] ?? '');
+
+    $operations = openmira_parse_wp_patch($patch);
+    if (is_wp_error($operations)) {
+        return $operations;
+    }
+    if (openmira_wp_patch_has_block_operations($operations)) {
+        return openmira_apply_block_patch_operations($operations, $input, $dry_run);
+    }
+
     $theme = $path !== ''
         ? openmira_patch_resolve_theme_json_path($path, $theme_slug)
         : openmira_patch_resolve_theme($theme_slug);
     if (is_wp_error($theme)) {
         return $theme;
-    }
-
-    $operations = openmira_parse_wp_patch($patch);
-    if (is_wp_error($operations)) {
-        return $operations;
     }
 
     $theme_json_path = $theme['theme_json_path'] ?? trailingslashit($theme['directory']) . 'theme.json';
@@ -427,7 +444,7 @@ function openmira_parse_wp_patch(string $patch): array|WP_Error
 /**
  * Parse a patch hunk header into a dispatchable hunk.
  *
- * @return array{type: string, options: string, body: string}|null
+ * @return array<string, string>|null
  */
 function openmira_parse_wp_patch_header(string $line): ?array
 {
@@ -440,13 +457,26 @@ function openmira_parse_wp_patch_header(string $line): ?array
         ];
     }
 
+    if (preg_match(
+        '/^\*\*\* (?<operation>Update|Insert|Delete) Block(?:\s*\((?<options>[^)]*)\))?:\s*$/',
+        $line,
+        $match,
+    )) {
+        return [
+            'type' => 'block',
+            'options' => trim($match['options'] ?? ''),
+            'body' => '',
+            'operation' => strtolower($match['operation']),
+        ];
+    }
+
     return null;
 }
 
 /**
  * Dispatch one parsed hunk to its operation builder.
  *
- * @param array{type: string, options: string, body: string} $hunk
+ * @param array<string, string> $hunk
  * @return array<string, mixed>|WP_Error
  */
 function openmira_build_wp_patch_operation(array $hunk): array|WP_Error
@@ -454,8 +484,211 @@ function openmira_build_wp_patch_operation(array $hunk): array|WP_Error
     if ($hunk['type'] === 'theme-json') {
         return openmira_build_theme_json_operation($hunk['options'], $hunk['body']);
     }
+    if ($hunk['type'] === 'block') {
+        return openmira_build_block_patch_operation($hunk['operation'] ?? '', $hunk['options'], $hunk['body']);
+    }
 
     return new WP_Error('unsupported_patch_operation', sprintf('Unsupported patch hunk type: %s', $hunk['type']));
+}
+
+/**
+ * Return whether parsed operations contain block patch hunks.
+ *
+ * @param list<array<string, mixed>> $operations
+ */
+function openmira_wp_patch_has_block_operations(array $operations): bool
+{
+    foreach ($operations as $operation) {
+        if (($operation['type'] ?? '') === 'block') {
+            return true;
+        }
+    }
+
+    return false;
+}
+
+/**
+ * Apply parsed block hunks through patch-blocks.
+ *
+ * @param list<array<string, mixed>> $operations
+ * @param array<string, mixed>       $input
+ * @return array<string, mixed>|WP_Error
+ */
+function openmira_apply_block_patch_operations(array $operations, array $input, bool $dry_run): array|WP_Error
+{
+    $block_operations = [];
+    foreach ($operations as $operation) {
+        if (($operation['type'] ?? '') !== 'block') {
+            return new WP_Error(
+                'mixed_patch_operations',
+                'Block hunks cannot be mixed with theme.json hunks in one apply-patch call.',
+            );
+        }
+        $patch_operation = is_array($operation['operation'] ?? null) ? $operation['operation'] : null;
+        if ($patch_operation === null) {
+            return new WP_Error(
+                'invalid_block_patch_operation',
+                'Parsed block hunk is missing its patch-blocks operation.',
+            );
+        }
+        $block_operations[] = $patch_operation;
+    }
+
+    $post_id = (int) ($input['post_id'] ?? 0);
+    if ($post_id < 1) {
+        return new WP_Error('missing_post_id', 'post_id is required for block patch hunks.');
+    }
+
+    if ($dry_run) {
+        return [
+            'dry_run' => true,
+            'post_id' => $post_id,
+            'operations' => $block_operations,
+            'instructions' => 'Dry run parsed block operations only. Run again with dry_run=false to apply through openmira/patch-blocks.',
+        ];
+    }
+
+    $result = openmira_patch_blocks([
+        'post_id' => $post_id,
+        'expected_etag' => (string) ($input['expected_etag'] ?? ''),
+        'operations' => $block_operations,
+        'create_backup' => true,
+        'backup_note' => 'Automatic backup before apply-patch block hunks',
+    ]);
+    if (is_wp_error($result)) {
+        return $result;
+    }
+
+    $result['dry_run'] = false;
+    $result['operations'] = $block_operations;
+
+    // @mago-expect analysis:less-specific-return-statement
+    return $result;
+}
+
+/**
+ * Build one block operation from parsed hunk pieces.
+ *
+ * @return array<string, mixed>|WP_Error
+ */
+// @mago-expect lint:cyclomatic-complexity
+// @mago-expect lint:halstead
+function openmira_build_block_patch_operation(string $operation, string $options, string $body): array|WP_Error
+{
+    $parsed_options = openmira_parse_block_patch_options($options);
+    if (is_wp_error($parsed_options)) {
+        return $parsed_options;
+    }
+
+    if ($operation === 'update') {
+        // @mago-expect analysis:mixed-assignment
+        $value = openmira_decode_patch_json_value(trim($body));
+        if (is_wp_error($value)) {
+            return $value;
+        }
+        if (!is_array($value) || array_is_list($value)) {
+            return new WP_Error('invalid_block_update_body', 'Update Block requires a JSON object body.');
+        }
+        if (!is_string($parsed_options['ref'] ?? null) || $parsed_options['ref'] === '') {
+            return new WP_Error('missing_block_ref', 'Update Block requires a ref option.');
+        }
+        $patch_operation = [
+            'operation' => 'update',
+            'ref' => $parsed_options['ref'],
+        ];
+        $uses_wrapped_shape =
+            array_key_exists('attrs', $value)
+            || array_key_exists('attrs_mode', $value)
+            || array_key_exists('inner_html', $value);
+        if (array_key_exists('attrs', $value)) {
+            if (!is_array($value['attrs'])) {
+                return new WP_Error('invalid_block_attrs', 'Update Block attrs must be a JSON object.');
+            }
+            $patch_operation['attrs'] = $value['attrs'];
+        } elseif (!$uses_wrapped_shape) {
+            $patch_operation['attrs'] = $value;
+        }
+        if (is_string($value['attrs_mode'] ?? null)) {
+            $patch_operation['attrs_mode'] = $value['attrs_mode'];
+        }
+        if (is_string($value['inner_html'] ?? null)) {
+            $patch_operation['inner_html'] = $value['inner_html'];
+        }
+
+        return ['type' => 'block', 'operation' => $patch_operation];
+    }
+
+    if ($operation === 'insert') {
+        $block_markup = trim($body);
+        if ($block_markup === '') {
+            return new WP_Error(
+                'missing_block_markup',
+                'Insert Block requires serialized block markup in the hunk body.',
+            );
+        }
+        $patch_operation = [
+            'operation' => 'insert',
+            'block_markup' => $block_markup,
+        ];
+        foreach (['before', 'after', 'parent_ref'] as $key) {
+            if (is_string($parsed_options[$key] ?? null) && $parsed_options[$key] !== '') {
+                $patch_operation[$key] = $parsed_options[$key];
+            }
+        }
+        if (is_int($parsed_options['index'] ?? null)) {
+            $patch_operation['index'] = $parsed_options['index'];
+        }
+
+        return ['type' => 'block', 'operation' => $patch_operation];
+    }
+
+    if ($operation === 'delete') {
+        if (!is_string($parsed_options['ref'] ?? null) || $parsed_options['ref'] === '') {
+            return new WP_Error('missing_block_ref', 'Delete Block requires a ref option.');
+        }
+
+        return [
+            'type' => 'block',
+            'operation' => [
+                'operation' => 'delete',
+                'ref' => $parsed_options['ref'],
+            ],
+        ];
+    }
+
+    return new WP_Error('unsupported_block_patch_operation', sprintf(
+        'Unsupported block patch operation: %s',
+        $operation,
+    ));
+}
+
+/**
+ * Parse block hunk options like "ref: omr_..., after: omr_...".
+ *
+ * @return array<string, string|int>|WP_Error
+ */
+function openmira_parse_block_patch_options(string $options): array|WP_Error
+{
+    $parsed = [];
+    foreach (array_filter(array_map('trim', explode(',', $options))) as $part) {
+        if (!str_contains($part, ':')) {
+            return new WP_Error('invalid_block_patch_option', sprintf('Invalid block hunk option: %s', $part));
+        }
+        [$key, $value] = array_map('trim', explode(':', $part, 2));
+        if (!in_array($key, ['ref', 'before', 'after', 'parent_ref', 'index'], strict: true)) {
+            return new WP_Error('invalid_block_patch_option', sprintf('Unsupported block hunk option: %s', $key));
+        }
+        if ($key === 'index') {
+            if (!ctype_digit($value)) {
+                return new WP_Error('invalid_block_patch_index', 'Block hunk index must be a zero-based integer.');
+            }
+            $parsed[$key] = (int) $value;
+            continue;
+        }
+        $parsed[$key] = $value;
+    }
+
+    return $parsed;
 }
 
 /**

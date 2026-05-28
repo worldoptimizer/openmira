@@ -729,6 +729,7 @@ if ($is_enabled) {
         require_once $dir . 'block-registry.php';
         require_once $dir . 'builder-authoring.php';
         require_once $dir . 'builder-write.php';
+        require_once $dir . 'block-editing.php';
         require_once $dir . 'memory.php';
         if (!wp_has_ability('mcp-adapter/get-ability-info')) {
             \WP\MCP\Abilities\GetAbilityInfoAbility::register();
