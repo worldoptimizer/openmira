@@ -156,6 +156,10 @@ function openmira_apply_patch(array $input): array|WP_Error
     if (is_wp_error($resolved)) {
         return $resolved;
     }
+    $symlink_error = openmira_reject_final_path_symlink($resolved);
+    if (is_wp_error($symlink_error)) {
+        return $symlink_error;
+    }
 
     $created = !is_file($resolved);
     if (!$created) {

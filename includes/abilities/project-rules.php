@@ -108,6 +108,7 @@ function openmira_read_project_rules_ability(): array
  * @param array<string, mixed> $input
  * @return array<string, mixed>|WP_Error
  */
+// @mago-expect lint:cyclomatic-complexity
 function openmira_write_project_rules_ability(array $input): array|WP_Error
 {
     $mode_error = openmira_require_act_mode('openmira/write-project-rules');
@@ -123,7 +124,15 @@ function openmira_write_project_rules_ability(array $input): array|WP_Error
         $rules = openmira_merge_project_rules(openmira_default_project_rules(), $rules);
     }
 
-    $path = ABSPATH . OPENMIRA_RULES_PATH;
+    $path = openmira_resolve_path(ABSPATH . OPENMIRA_RULES_PATH, must_exist: false);
+    if (is_wp_error($path)) {
+        return $path;
+    }
+    $symlink_error = openmira_reject_final_path_symlink($path);
+    if (is_wp_error($symlink_error)) {
+        return $symlink_error;
+    }
+
     $old_content = is_file($path) ? file_get_contents($path) : null;
     if ($old_content === false) {
         return new WP_Error('read_failed', sprintf(

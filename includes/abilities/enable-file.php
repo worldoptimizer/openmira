@@ -94,6 +94,10 @@ function openmira_enable_file($input)
     if (is_wp_error($sandbox_check)) {
         return $sandbox_check;
     }
+    $symlink_error = openmira_reject_final_path_symlink($resolved);
+    if (is_wp_error($symlink_error)) {
+        return $symlink_error;
+    }
 
     if (!is_file($resolved)) {
         return new WP_Error('not_a_file', sprintf('Path is not a file: %s', $resolved));
@@ -109,6 +113,10 @@ function openmira_enable_file($input)
     }
 
     $enabled_path = substr($resolved, offset: 0, length: -9);
+    $symlink_error = openmira_reject_final_path_symlink($enabled_path);
+    if (is_wp_error($symlink_error)) {
+        return $symlink_error;
+    }
 
     if (file_exists($enabled_path)) {
         return new WP_Error('enabled_file_exists', sprintf('An enabled version already exists: %s', $enabled_path));
