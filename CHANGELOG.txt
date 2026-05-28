@@ -1,3 +1,6 @@
+v1.7.1 - 2026-05-28
+* Security: Hardened filesystem path handling. Directory boundary checks now require a true path-segment boundary (fixing a sibling-prefix bypass), writes and deletes through symlinked final paths are rejected, and not-yet-existing paths are normalized to collapse "../" before the boundary check. No configuration change required.
+
 v1.7.0 - 2026/05/28
 * New: Dynamic/server-rendered Gutenberg block-level editing. Agents can call `openmira/read-blocks` to inspect a post as a side-effect-free block tree with stable refs, then call `openmira/patch-blocks` to update, insert, or delete dynamic/server-rendered blocks atomically with ETag conflict checks. Static/core block editing returns `block_runtime_required` and is coming in a follow-up via the Block Editor Runtime; use `write-gutenberg-content` when a full-page rewrite of static content is explicitly intended.
 * New: Block hunks in `openmira/apply-patch`. The patch grammar now supports `*** Update Block`, `*** Insert Block`, and `*** Delete Block` hunks routed through the same dynamic/server-rendered block patch engine.
